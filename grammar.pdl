@@ -1,0 +1,54 @@
+module 
+    = '(' "module" sections ')';
+
+
+sections
+    = '(' "func" function ')' sections
+    | ;
+
+function 
+    = id? parameters locals returns body;
+
+parameters 
+    = '(' parameter ')' parameters
+    | ;
+
+parameter 
+    = "param" type ;
+
+locals 
+    = '(' local ')' locals
+    | ;
+
+local 
+    = "local" type;
+
+returns 
+    = '(' return ')' 
+    | ;
+
+return 
+    = "return" type;
+
+body 
+    = block body
+    | plain body
+    | ;
+
+block
+    = "block" 
+    | "loop"
+    | "if" ;
+
+plain
+    = "unreachable"
+    | "noop"
+    | "br"
+    | "br_if"
+    | "br_table"
+    | "return"
+    | "call"
+    | "call_indirect";
+
+id ~ '$' idchar +;
+idchar ~ /[a-zA-Z0-9!#$&'*+-./:<=>?@\^_`|~]
