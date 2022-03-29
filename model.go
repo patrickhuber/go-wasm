@@ -2,10 +2,12 @@ package wasm
 
 type Module struct {
 	Functions []Function
+	Memory    []Memory
 }
 
 type Section struct {
 	Function *Function
+	Memory   *Memory
 }
 
 type Function struct {
@@ -13,6 +15,16 @@ type Function struct {
 	Parameters   []Parameter
 	Results      []Result
 	Instructions []Instruction
+}
+
+type Memory struct {
+	ID     *Identifier
+	Limits Limits
+}
+
+type Limits struct {
+	Min uint32
+	Max *uint32
 }
 
 type Identifier string

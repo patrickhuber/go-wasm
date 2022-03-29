@@ -4,11 +4,22 @@ module
 
 sections
     = '(' "func" function ')' sections
+    | '(' "memory" memory ')' sections
     | ;
 
 function 
     = id? parameters locals returns body;
+    
+memory
+    = limits;
 
+limits
+    = min max?;
+min 
+    = integer;
+max
+    = integer;
+    
 parameters 
     = '(' parameter ')' parameters
     | ;
@@ -51,4 +62,5 @@ plain
     | "call_indirect";
 
 id ~ '$' idchar +;
-idchar ~ /[a-zA-Z0-9!#$&'*+-./:<=>?@\^_`|~]
+idchar ~ /[a-zA-Z0-9!#$&'*+-.\/:<=>?@\\^_`|~]/
+integer ~ /[0-9]+/;

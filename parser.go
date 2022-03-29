@@ -55,7 +55,12 @@ func (p *parser) ParseModule() (*Module, error) {
 		if !ok {
 			break
 		}
-		module.Functions = append(module.Functions, *section.Function)
+		if section.Function != nil {
+			module.Functions = append(module.Functions, *section.Function)
+		}
+		if section.Memory != nil {
+			module.Memory = append(module.Memory, *section.Memory)
+		}
 	}
 	err = p.ExpectToken(CloseParen)
 	if err != nil {
@@ -106,6 +111,14 @@ func (p *parser) ParseSection() (*Section, error) {
 		section = &Section{
 			Function: function,
 		}
+	case "memory":
+		memory, err := p.ParseMemory()
+		if err != nil {
+			return nil, err
+		}
+		section = &Section{
+			Memory: memory,
+		}
 	default:
 		return nil, p.parseError(tok, fmt.Errorf("unexpected token %s found", tok.Type))
 	}
@@ -123,6 +136,41 @@ func (p *parser) ParseFunction() (*Function, error) {
 	}
 	function.Instructions = instructions
 	return function, nil
+}
+
+func (p *parser) ParseMemory() (*Memory, error) {
+	memory := &Memory{
+		Limits: Limits{},
+	}
+	identifier, ok, err := p.TryParseIdentifier()
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		memory.ID = identifier
+	}
+
+	min, err := p.ParseUInt32()
+	if err != nil {
+		return nil, err
+	}
+	memory.Limits.Min = min
+
+	peek, err := p.peekToken()
+	if err != nil {
+		return nil, err
+	}
+
+	if peek.Type == OpenParen || peek.Type == CloseParen {
+		return memory, nil
+	}
+
+	max, err := p.ParseUInt32()
+	if err != nil {
+		return nil, err
+	}
+	memory.Limits.Max = Pointer(max)
+	return memory, nil
 }
 
 func (p *parser) ParseSignature() (*Function, error) {
@@ -204,7 +252,7 @@ func (p *parser) ParseResult() (*Result, error) {
 }
 
 func (p *parser) ParseInstructions() ([]Instruction, error) {
-	instructions := []Instruction{}
+	var instructions []Instruction
 	for {
 		instruction, ok, err := p.TryParseInstruction()
 		if err != nil {
@@ -323,6 +371,32 @@ func (p *parser) ParseLocal(instruction string) (*LocalInstruction, error) {
 		local.Index = &i
 	}
 	return local, nil
+}
+
+func (p *parser) TryParseIdentifier() (*Identifier, bool, error) {
+	token, err := p.peekToken()
+	if err != nil {
+		return nil, false, err
+	}
+	if token.Type != String {
+		return nil, false, nil
+	}
+	if strings.HasPrefix(token.Capture, "$") {
+		return Pointer(Identifier(token.Capture)), true, nil
+	}
+	return nil, false, nil
+}
+
+func (p *parser) ParseUInt32() (uint32, error) {
+	str, err := p.ParseString()
+	if err != nil {
+		return 0, err
+	}
+	result, err := strconv.ParseUint(str.Capture, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(result), err
 }
 
 func (p *parser) ParseString() (*Token, error) {

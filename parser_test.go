@@ -11,6 +11,21 @@ var _ = Describe("Parser", func() {
 		It("module", func() {
 			canParse("(module)", &wasm.Module{})
 		})
+		It("memory", func() {
+			canParse("(module (memory 1) (func))", &wasm.Module{
+
+				Functions: []wasm.Function{
+					{},
+				},
+				Memory: []wasm.Memory{
+					{
+						Limits: wasm.Limits{
+							Min: 1,
+						},
+					},
+				},
+			})
+		})
 		It("function", func() {
 			canParse(`
 			(module
