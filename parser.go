@@ -233,12 +233,18 @@ func (p *parser) ParseParameter() (*Parameter, error) {
 }
 
 func (p *parser) ParseType(str string) Type {
-	switch str {
-	case "i32":
+	switch Type(str) {
+	case I32:
 		return I32
+	case I64:
+		return I64
+	case F64:
+		return F64
+	case F32:
+		return F32
+	default:
+		return ""
 	}
-
-	return 0
 }
 
 func (p *parser) ParseResult() (*Result, error) {
@@ -294,7 +300,7 @@ func (p *parser) ParseInstruction() (*Instruction, error) {
 	split := strings.Split(str.Capture, ".")
 	switch split[0] {
 	case "local":
-		local, err := p.ParseLocal(str.Capture)
+		local, err := p.ParseLocalInstruction(str.Capture)
 		if err != nil {
 			return nil, err
 		}
@@ -302,7 +308,7 @@ func (p *parser) ParseInstruction() (*Instruction, error) {
 			Local: local,
 		}
 	case "i32":
-		i32, err := p.ParseI32(str.Capture)
+		i32, err := p.ParseI32Instruction(str.Capture)
 		if err != nil {
 			return nil, err
 		}
@@ -318,7 +324,7 @@ func (p *parser) ParseInstruction() (*Instruction, error) {
 	return instruction, nil
 }
 
-func (p *parser) ParseI32(instruction string) (*I32Instruction, error) {
+func (p *parser) ParseI32Instruction(instruction string) (*I32Instruction, error) {
 	split := strings.Split(instruction, ".")
 	if len(split) != 2 {
 		return nil, fmt.Errorf("expected i32.<operation>, found %s", instruction)
@@ -335,7 +341,7 @@ func (p *parser) ParseI32(instruction string) (*I32Instruction, error) {
 	return i32, nil
 }
 
-func (p *parser) ParseLocal(instruction string) (*LocalInstruction, error) {
+func (p *parser) ParseLocalInstruction(instruction string) (*LocalInstruction, error) {
 	split := strings.Split(instruction, ".")
 	if len(split) != 2 {
 		return nil, fmt.Errorf("expected local.<operation>, found %s", instruction)

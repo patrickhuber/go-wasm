@@ -46,11 +46,13 @@ type Result struct {
 	Type Type
 }
 
-type Type int
+type Type string
 
 const (
-	I32 Type = iota
-	I64
+	I32 = "i32"
+	I64 = "i64"
+	F32 = "f32"
+	F64 = "f64"
 )
 
 type Instruction struct {
