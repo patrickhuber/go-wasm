@@ -175,6 +175,13 @@ func (p *parser) ParseMemory() (*Memory, error) {
 
 func (p *parser) ParseSignature() (*Function, error) {
 	function := &Function{}
+	identifier, ok, err := p.TryParseIdentifier()
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		function.ID = identifier
+	}
 	for {
 		tok, err := p.peekToken()
 		if err != nil {
@@ -388,6 +395,7 @@ func (p *parser) TryParseIdentifier() (*Identifier, bool, error) {
 		return nil, false, nil
 	}
 	if strings.HasPrefix(token.Capture, "$") {
+		p.nextToken()
 		return Pointer(Identifier(token.Capture)), true, nil
 	}
 	return nil, false, nil

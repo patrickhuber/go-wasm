@@ -16,6 +16,7 @@ type Memory interface {
 }
 
 type Function interface {
+	ID(id string)
 	Parameters(func(Parameters))
 	Results(func(Results))
 	Instructions(func(Instructions))
@@ -94,6 +95,11 @@ func (b *sectionBuilder) Memory(m func(Memory)) {
 
 type function struct {
 	function *wasm.Function
+}
+
+func (b *function) ID(id string) {
+	identifier := wasm.Identifier(id)
+	b.function.ID = &identifier
 }
 
 func (b *function) Parameters(p func(Parameters)) {

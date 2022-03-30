@@ -22,77 +22,90 @@ var _ = Describe("Parser", func() {
 			canParse("(module (memory 1) (func))", b.Build())
 		})
 		Describe("function", func() {
+			It("can parse function alias", func() {
+				canParse("(module (func $alias ))", builder.NewModule(
+					func(s builder.Section) {
+						s.Function(func(f builder.Function) {
+							f.ID("$alias")
+						})
+					}).Build())
+			})
+			It("can parse i32 parameter", func() {
+				canParse("(module (func (param i32)))", builder.NewModule(
+					func(s builder.Section) {
+						s.Function(func(f builder.Function) {
+							f.Parameters(func(p builder.Parameters) {
+								p.Parameter(wasm.I32)
+							})
+						})
+					}).Build())
+			})
 			It("can parse i64 parameter", func() {
-				canParse("(module (func (param i64)))", &wasm.Module{
-					Functions: []wasm.Function{
-						{
-							Parameters: []wasm.Parameter{
-								{
-									Type: wasm.I64,
-								},
-							},
-						},
-					},
-				})
-			})
-			It("can parse f32 parameter", func() {
-				canParse("(module (func (param f32)))", &wasm.Module{
-					Functions: []wasm.Function{
-						{
-							Parameters: []wasm.Parameter{
-								{
-									Type: wasm.F32,
-								},
-							},
-						},
-					},
-				})
-			})
-			It("can parse f64 parameter", func() {
-				canParse("(module (func (param f64)))", &wasm.Module{
-					Functions: []wasm.Function{
-						{
-							Parameters: []wasm.Parameter{
-								{
-									Type: wasm.F64,
-								},
-							},
-						},
-					},
-				})
-			})
-			It("can parse i64 result", func() {
-				canParse("(module (func (param i64)))", &wasm.Module{
-					Functions: []wasm.Function{
-						{
-							Parameters: []wasm.Parameter{
-								{
-									Type: wasm.I64,
-								},
-							},
-						},
-					},
-				})
-			})
-			It("can parse f32 result", func() {
-				canParse("(module (func (result f32)))", &wasm.Module{
-					Functions: []wasm.Function{
-						{
-							Results: []wasm.Result{
-								{
-									Type: wasm.F32,
-								},
-							},
-						},
-					},
-				})
-			})
-			It("can parse f64 result", func() {
 				canParse("(module (func (param i64)))", builder.NewModule(
 					func(s builder.Section) {
 						s.Function(func(f builder.Function) {
 							f.Parameters(func(p builder.Parameters) {
 								p.Parameter(wasm.I64)
+							})
+						})
+					}).Build())
+			})
+			It("can parse f32 parameter", func() {
+				canParse("(module (func (param f32)))", builder.NewModule(
+					func(s builder.Section) {
+						s.Function(func(f builder.Function) {
+							f.Parameters(func(p builder.Parameters) {
+								p.Parameter(wasm.F32)
+							})
+						})
+					}).Build())
+			})
+			It("can parse f64 parameter", func() {
+				canParse("(module (func (param f64)))", builder.NewModule(
+					func(s builder.Section) {
+						s.Function(func(f builder.Function) {
+							f.Parameters(func(p builder.Parameters) {
+								p.Parameter(wasm.F64)
+							})
+						})
+					}).Build())
+			})
+			It("can parse i32 result", func() {
+				canParse("(module (func (result i32)))", builder.NewModule(
+					func(s builder.Section) {
+						s.Function(func(f builder.Function) {
+							f.Results(func(p builder.Results) {
+								p.Result(wasm.I32)
+							})
+						})
+					}).Build())
+			})
+			It("can parse i64 result", func() {
+				canParse("(module (func (result i64)))", builder.NewModule(
+					func(s builder.Section) {
+						s.Function(func(f builder.Function) {
+							f.Results(func(p builder.Results) {
+								p.Result(wasm.I64)
+							})
+						})
+					}).Build())
+			})
+			It("can parse f32 result", func() {
+				canParse("(module (func (result f32)))", builder.NewModule(
+					func(s builder.Section) {
+						s.Function(func(f builder.Function) {
+							f.Results(func(p builder.Results) {
+								p.Result(wasm.F32)
+							})
+						})
+					}).Build())
+			})
+			It("can parse f64 result", func() {
+				canParse("(module (func (result f64)))", builder.NewModule(
+					func(s builder.Section) {
+						s.Function(func(f builder.Function) {
+							f.Results(func(p builder.Results) {
+								p.Result(wasm.F64)
 							})
 						})
 					}).Build())
