@@ -1,8 +1,8 @@
 package model
 
 type Module struct {
-	Functions []Function
-	Memory    []Memory
+	Functions []Section
+	Memory    []Section
 }
 
 type Section struct {

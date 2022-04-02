@@ -6,7 +6,9 @@ const (
 )
 
 type Module struct {
-	Magic    uint32
-	Version  uint32
-	Sections []Section
+	Magic     uint32
+	Version   uint32
+	Functions []Section
+	Types     []Section
+	Codes     []Section
 }

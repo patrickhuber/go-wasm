@@ -52,10 +52,10 @@ func NewModule(sections func(s Section)) Module {
 	sections(sectionBuilder)
 	for _, s := range sectionBuilder.sections {
 		if s.Function != nil {
-			m.Functions = append(m.Functions, *s.Function)
+			m.Functions = append(m.Functions, s)
 		}
 		if s.Memory != nil {
-			m.Memory = append(m.Memory, *s.Memory)
+			m.Memory = append(m.Memory, s)
 		}
 	}
 	return &module{

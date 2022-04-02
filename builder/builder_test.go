@@ -28,10 +28,12 @@ var _ = Describe("Builder", func() {
 			})
 		})
 		module := &model.Module{
-			Memory: []model.Memory{
+			Memory: []model.Section{
 				{
-					Limits: model.Limits{
-						Min: 1,
+					Memory: &model.Memory{
+						Limits: model.Limits{
+							Min: 1,
+						},
 					},
 				},
 			},
@@ -56,45 +58,47 @@ var _ = Describe("Builder", func() {
 			})
 		})
 		module := &model.Module{
-			Functions: []model.Function{
+			Functions: []model.Section{
 				{
-					ID: nil,
-					Parameters: []model.Parameter{
-						{
-							ID:   to.Pointer(model.Identifier("$lhs")),
-							Type: model.I32,
-						},
-						{
-							ID:   to.Pointer(model.Identifier("$rhs")),
-							Type: model.I32,
-						},
-					},
-					Results: []model.Result{
-						{
-							Type: model.I32,
-						},
-					},
-					Instructions: []model.Instruction{
-						{
-							Plain: &model.Plain{
-								Local: &model.LocalInstruction{
-									Operation: model.LocalGet,
-									ID:        to.Pointer(model.Identifier("$lhs")),
-								},
+					Function: &model.Function{
+						ID: nil,
+						Parameters: []model.Parameter{
+							{
+								ID:   to.Pointer(model.Identifier("$lhs")),
+								Type: model.I32,
+							},
+							{
+								ID:   to.Pointer(model.Identifier("$rhs")),
+								Type: model.I32,
 							},
 						},
-						{
-							Plain: &model.Plain{
-								Local: &model.LocalInstruction{
-									Operation: model.LocalGet,
-									ID:        to.Pointer(model.Identifier("$rhs")),
-								},
+						Results: []model.Result{
+							{
+								Type: model.I32,
 							},
 						},
-						{
-							Plain: &model.Plain{
-								I32: &model.I32Instruction{
-									Operation: model.BinaryOperationAdd,
+						Instructions: []model.Instruction{
+							{
+								Plain: &model.Plain{
+									Local: &model.LocalInstruction{
+										Operation: model.LocalGet,
+										ID:        to.Pointer(model.Identifier("$lhs")),
+									},
+								},
+							},
+							{
+								Plain: &model.Plain{
+									Local: &model.LocalInstruction{
+										Operation: model.LocalGet,
+										ID:        to.Pointer(model.Identifier("$rhs")),
+									},
+								},
+							},
+							{
+								Plain: &model.Plain{
+									I32: &model.I32Instruction{
+										Operation: model.BinaryOperationAdd,
+									},
 								},
 							},
 						},

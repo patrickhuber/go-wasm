@@ -42,7 +42,7 @@ var _ = Describe("Reader", func() {
 		m := &wasm.Module{
 			Magic:   wasm.Magic,
 			Version: wasm.Version,
-			Sections: []wasm.Section{
+			Types: []wasm.Section{
 				{
 					ID:   wasm.TypeSectionType,
 					Size: 4,
@@ -58,31 +58,31 @@ var _ = Describe("Reader", func() {
 							},
 						},
 					},
-				},
+				}},
+			Functions: []wasm.Section{
 				{
 					ID:   wasm.FuncSectionType,
 					Size: 2,
 					Function: &wasm.FunctionSection{
 						Types: []uint32{0},
 					},
-				},
-				{
-					ID:   wasm.CodeSectionType,
-					Size: 4,
-					Code: &wasm.CodeSection{
-						Codes: []wasm.Code{
-							{
-								Size: 2,
-								Expression: []wasm.Instruction{
-									{
-										OpCode: wasm.End,
-									},
+				}},
+			Codes: []wasm.Section{{
+				ID:   wasm.CodeSectionType,
+				Size: 4,
+				Code: &wasm.CodeSection{
+					Codes: []wasm.Code{
+						{
+							Size: 2,
+							Expression: []wasm.Instruction{
+								{
+									OpCode: wasm.End,
 								},
 							},
 						},
 					},
 				},
-			},
+			}},
 		}
 		equal("fixtures/func.wasm", m)
 	})

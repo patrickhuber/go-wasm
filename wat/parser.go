@@ -59,10 +59,10 @@ func (p *parser) ParseModule() (*model.Module, error) {
 			break
 		}
 		if section.Function != nil {
-			module.Functions = append(module.Functions, *section.Function)
+			module.Functions = append(module.Functions, *section)
 		}
 		if section.Memory != nil {
-			module.Memory = append(module.Memory, *section.Memory)
+			module.Memory = append(module.Memory, *section)
 		}
 	}
 	err = p.ExpectToken(CloseParen)
