@@ -1,4 +1,4 @@
-package wasm
+package wat
 
 import (
 	"bufio"

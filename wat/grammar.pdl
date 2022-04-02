@@ -1,11 +1,14 @@
 module 
     = '(' "module" sections ')';
 
-
 sections
-    = '(' "func" function ')' sections
-    | '(' "memory" memory ')' sections
+    = '(' section ')' sections
     | ;
+
+section 
+    = "func" function
+    | "mem" memory
+    ;
 
 function 
     = id? parameters locals returns body;

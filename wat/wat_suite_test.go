@@ -1,4 +1,4 @@
-package wasm_test
+package wat_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestGoWasm(t *testing.T) {
+func TestWat(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "GoWasm Suite")
+	RunSpecs(t, "Wat Suite")
 }

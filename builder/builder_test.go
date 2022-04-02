@@ -4,8 +4,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/patrickhuber/go-wasm"
 	"github.com/patrickhuber/go-wasm/builder"
+	"github.com/patrickhuber/go-wasm/model"
+	"github.com/patrickhuber/go-wasm/to"
 )
 
 var _ = Describe("Builder", func() {
@@ -13,7 +14,7 @@ var _ = Describe("Builder", func() {
 		builder := builder.NewModule(func(s builder.Section) {
 			s.Function(func(f builder.Function) {
 				f.Parameters(func(p builder.Parameters) {
-					p.Parameter(wasm.I32).ID("$lhs")
+					p.Parameter(model.I32).ID("$lhs")
 				})
 			})
 		})
@@ -26,10 +27,10 @@ var _ = Describe("Builder", func() {
 				m.Limits(1)
 			})
 		})
-		module := &wasm.Module{
-			Memory: []wasm.Memory{
+		module := &model.Module{
+			Memory: []model.Memory{
 				{
-					Limits: wasm.Limits{
+					Limits: model.Limits{
 						Min: 1,
 					},
 				},
@@ -41,59 +42,59 @@ var _ = Describe("Builder", func() {
 		builder := builder.NewModule(func(s builder.Section) {
 			s.Function(func(f builder.Function) {
 				f.Parameters(func(p builder.Parameters) {
-					p.Parameter(wasm.I32).ID("$lhs")
-					p.Parameter(wasm.I32).ID("$rhs")
+					p.Parameter(model.I32).ID("$lhs")
+					p.Parameter(model.I32).ID("$rhs")
 				})
 				f.Results(func(r builder.Results) {
-					r.Result(wasm.I32)
+					r.Result(model.I32)
 				})
 				f.Instructions(func(i builder.Instructions) {
-					i.Local(wasm.LocalGet).ID("$lhs")
-					i.Local(wasm.LocalGet).ID("$rhs")
+					i.Local(model.LocalGet).ID("$lhs")
+					i.Local(model.LocalGet).ID("$rhs")
 					i.I32Add()
 				})
 			})
 		})
-		module := &wasm.Module{
-			Functions: []wasm.Function{
+		module := &model.Module{
+			Functions: []model.Function{
 				{
 					ID: nil,
-					Parameters: []wasm.Parameter{
+					Parameters: []model.Parameter{
 						{
-							ID:   wasm.Pointer(wasm.Identifier("$lhs")),
-							Type: wasm.I32,
+							ID:   to.Pointer(model.Identifier("$lhs")),
+							Type: model.I32,
 						},
 						{
-							ID:   wasm.Pointer(wasm.Identifier("$rhs")),
-							Type: wasm.I32,
-						},
-					},
-					Results: []wasm.Result{
-						{
-							Type: wasm.I32,
+							ID:   to.Pointer(model.Identifier("$rhs")),
+							Type: model.I32,
 						},
 					},
-					Instructions: []wasm.Instruction{
+					Results: []model.Result{
 						{
-							Plain: &wasm.Plain{
-								Local: &wasm.LocalInstruction{
-									Operation: wasm.LocalGet,
-									ID:        wasm.Pointer(wasm.Identifier("$lhs")),
+							Type: model.I32,
+						},
+					},
+					Instructions: []model.Instruction{
+						{
+							Plain: &model.Plain{
+								Local: &model.LocalInstruction{
+									Operation: model.LocalGet,
+									ID:        to.Pointer(model.Identifier("$lhs")),
 								},
 							},
 						},
 						{
-							Plain: &wasm.Plain{
-								Local: &wasm.LocalInstruction{
-									Operation: wasm.LocalGet,
-									ID:        wasm.Pointer(wasm.Identifier("$rhs")),
+							Plain: &model.Plain{
+								Local: &model.LocalInstruction{
+									Operation: model.LocalGet,
+									ID:        to.Pointer(model.Identifier("$rhs")),
 								},
 							},
 						},
 						{
-							Plain: &wasm.Plain{
-								I32: &wasm.I32Instruction{
-									Operation: wasm.BinaryOperationAdd,
+							Plain: &model.Plain{
+								I32: &model.I32Instruction{
+									Operation: model.BinaryOperationAdd,
 								},
 							},
 						},

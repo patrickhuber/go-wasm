@@ -1,22 +1,25 @@
-package wasm
+package wat
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/patrickhuber/go-wasm/model"
+	"github.com/patrickhuber/go-wasm/to"
 )
 
-func Parse(lexer Lexer) (*Module, error) {
+func Parse(lexer Lexer) (*model.Module, error) {
 	return NewParser(lexer).Parse()
 }
 
-func ParseString(input string) (*Module, error) {
+func ParseString(input string) (*model.Module, error) {
 	lexer := NewLexer(input)
 	return Parse(lexer)
 }
 
 type Parser interface {
-	Parse() (*Module, error)
+	Parse() (*model.Module, error)
 }
 
 type parser struct {
@@ -30,11 +33,11 @@ func NewParser(lexer Lexer) Parser {
 	}
 }
 
-func (p *parser) Parse() (*Module, error) {
+func (p *parser) Parse() (*model.Module, error) {
 	return p.ParseModule()
 }
 
-func (p *parser) ParseModule() (*Module, error) {
+func (p *parser) ParseModule() (*model.Module, error) {
 
 	err := p.ExpectToken(OpenParen)
 	if err != nil {
@@ -46,7 +49,7 @@ func (p *parser) ParseModule() (*Module, error) {
 		return nil, err
 	}
 
-	module := &Module{}
+	module := &model.Module{}
 	for {
 		section, ok, err := p.TryParseSection()
 		if err != nil {
@@ -70,7 +73,7 @@ func (p *parser) ParseModule() (*Module, error) {
 	return module, err
 }
 
-func (p *parser) TryParseSection() (*Section, bool, error) {
+func (p *parser) TryParseSection() (*model.Section, bool, error) {
 	peek, err := p.peekToken()
 	if err != nil {
 		return nil, false, err
@@ -89,7 +92,7 @@ func (p *parser) TryParseSection() (*Section, bool, error) {
 
 }
 
-func (p *parser) ParseSection() (*Section, error) {
+func (p *parser) ParseSection() (*model.Section, error) {
 	err := p.ExpectToken(OpenParen)
 	if err != nil {
 		return nil, err
@@ -100,7 +103,7 @@ func (p *parser) ParseSection() (*Section, error) {
 		return nil, err
 	}
 
-	var section *Section
+	var section *model.Section
 
 	switch tok.Capture {
 	case "func":
@@ -108,7 +111,7 @@ func (p *parser) ParseSection() (*Section, error) {
 		if err != nil {
 			return nil, err
 		}
-		section = &Section{
+		section = &model.Section{
 			Function: function,
 		}
 	case "memory":
@@ -116,7 +119,7 @@ func (p *parser) ParseSection() (*Section, error) {
 		if err != nil {
 			return nil, err
 		}
-		section = &Section{
+		section = &model.Section{
 			Memory: memory,
 		}
 	default:
@@ -125,7 +128,7 @@ func (p *parser) ParseSection() (*Section, error) {
 	return section, p.ExpectToken(CloseParen)
 }
 
-func (p *parser) ParseFunction() (*Function, error) {
+func (p *parser) ParseFunction() (*model.Function, error) {
 	function, err := p.ParseSignature()
 	if err != nil {
 		return nil, err
@@ -138,9 +141,9 @@ func (p *parser) ParseFunction() (*Function, error) {
 	return function, nil
 }
 
-func (p *parser) ParseMemory() (*Memory, error) {
-	memory := &Memory{
-		Limits: Limits{},
+func (p *parser) ParseMemory() (*model.Memory, error) {
+	memory := &model.Memory{
+		Limits: model.Limits{},
 	}
 	identifier, ok, err := p.TryParseIdentifier()
 	if err != nil {
@@ -169,12 +172,13 @@ func (p *parser) ParseMemory() (*Memory, error) {
 	if err != nil {
 		return nil, err
 	}
-	memory.Limits.Max = Pointer(max)
+	memory.Limits.Max = max
+	memory.Limits.HasMax = true
 	return memory, nil
 }
 
-func (p *parser) ParseSignature() (*Function, error) {
-	function := &Function{}
+func (p *parser) ParseSignature() (*model.Function, error) {
+	function := &model.Function{}
 	identifier, ok, err := p.TryParseIdentifier()
 	if err != nil {
 		return nil, err
@@ -222,14 +226,14 @@ func (p *parser) ParseSignature() (*Function, error) {
 	return function, nil
 }
 
-func (p *parser) ParseParameter() (*Parameter, error) {
-	param := &Parameter{}
+func (p *parser) ParseParameter() (*model.Parameter, error) {
+	param := &model.Parameter{}
 	str, err := p.ParseString()
 	if err != nil {
 		return nil, err
 	}
 	if strings.HasPrefix(str.Capture, "$") {
-		param.ID = Pointer(Identifier(str.Capture))
+		param.ID = to.Pointer(model.Identifier(str.Capture))
 		str, err = p.ParseString()
 		if err != nil {
 			return nil, err
@@ -239,23 +243,23 @@ func (p *parser) ParseParameter() (*Parameter, error) {
 	return param, nil
 }
 
-func (p *parser) ParseType(str string) Type {
-	switch Type(str) {
-	case I32:
-		return I32
-	case I64:
-		return I64
-	case F64:
-		return F64
-	case F32:
-		return F32
+func (p *parser) ParseType(str string) model.Type {
+	switch model.Type(str) {
+	case model.I32:
+		return model.I32
+	case model.I64:
+		return model.I64
+	case model.F64:
+		return model.F64
+	case model.F32:
+		return model.F32
 	default:
 		return ""
 	}
 }
 
-func (p *parser) ParseResult() (*Result, error) {
-	result := &Result{}
+func (p *parser) ParseResult() (*model.Result, error) {
+	result := &model.Result{}
 	str, err := p.ParseString()
 	if err != nil {
 		return nil, err
@@ -264,8 +268,8 @@ func (p *parser) ParseResult() (*Result, error) {
 	return result, nil
 }
 
-func (p *parser) ParseInstructions() ([]Instruction, error) {
-	var instructions []Instruction
+func (p *parser) ParseInstructions() ([]model.Instruction, error) {
+	var instructions []model.Instruction
 	for {
 		instruction, ok, err := p.TryParseInstruction()
 		if err != nil {
@@ -279,7 +283,7 @@ func (p *parser) ParseInstructions() ([]Instruction, error) {
 	return instructions, nil
 }
 
-func (p *parser) TryParseInstruction() (*Instruction, bool, error) {
+func (p *parser) TryParseInstruction() (*model.Instruction, bool, error) {
 	peek, err := p.peekToken()
 
 	if err != nil {
@@ -298,12 +302,12 @@ func (p *parser) TryParseInstruction() (*Instruction, bool, error) {
 	return instruction, true, nil
 }
 
-func (p *parser) ParseInstruction() (*Instruction, error) {
+func (p *parser) ParseInstruction() (*model.Instruction, error) {
 	str, err := p.ParseString()
 	if err != nil {
 		return nil, err
 	}
-	instruction := &Instruction{}
+	instruction := &model.Instruction{}
 	split := strings.Split(str.Capture, ".")
 	switch split[0] {
 	case "local":
@@ -311,7 +315,7 @@ func (p *parser) ParseInstruction() (*Instruction, error) {
 		if err != nil {
 			return nil, err
 		}
-		instruction.Plain = &Plain{
+		instruction.Plain = &model.Plain{
 			Local: local,
 		}
 	case "i32":
@@ -319,7 +323,7 @@ func (p *parser) ParseInstruction() (*Instruction, error) {
 		if err != nil {
 			return nil, err
 		}
-		instruction.Plain = &Plain{
+		instruction.Plain = &model.Plain{
 			I32: i32,
 		}
 	case "i64":
@@ -331,39 +335,39 @@ func (p *parser) ParseInstruction() (*Instruction, error) {
 	return instruction, nil
 }
 
-func (p *parser) ParseI32Instruction(instruction string) (*I32Instruction, error) {
+func (p *parser) ParseI32Instruction(instruction string) (*model.I32Instruction, error) {
 	split := strings.Split(instruction, ".")
 	if len(split) != 2 {
 		return nil, fmt.Errorf("expected i32.<operation>, found %s", instruction)
 	}
 
-	i32 := &I32Instruction{}
+	i32 := &model.I32Instruction{}
 	operation := split[1]
 	switch operation {
 	case "add":
-		i32.Operation = BinaryOperationAdd
+		i32.Operation = model.BinaryOperationAdd
 	default:
 		return nil, fmt.Errorf("unrecognized i32 operation %s", operation)
 	}
 	return i32, nil
 }
 
-func (p *parser) ParseLocalInstruction(instruction string) (*LocalInstruction, error) {
+func (p *parser) ParseLocalInstruction(instruction string) (*model.LocalInstruction, error) {
 	split := strings.Split(instruction, ".")
 	if len(split) != 2 {
 		return nil, fmt.Errorf("expected local.<operation>, found %s", instruction)
 	}
 
-	local := &LocalInstruction{}
+	local := &model.LocalInstruction{}
 	operation := split[1]
 
 	switch operation {
 	case "get":
-		local.Operation = LocalGet
+		local.Operation = model.LocalGet
 	case "set":
-		local.Operation = LocalSet
+		local.Operation = model.LocalSet
 	case "tee":
-		local.Operation = LocalTee
+		local.Operation = model.LocalTee
 	default:
 		return nil, fmt.Errorf("unrecognized local operation %s", operation)
 	}
@@ -374,7 +378,7 @@ func (p *parser) ParseLocalInstruction(instruction string) (*LocalInstruction, e
 	}
 
 	if strings.HasPrefix(index.Capture, "$") {
-		id := Identifier(index.Capture)
+		id := model.Identifier(index.Capture)
 		local.ID = &id
 	} else {
 		i, err := strconv.Atoi(index.Capture)
@@ -386,7 +390,7 @@ func (p *parser) ParseLocalInstruction(instruction string) (*LocalInstruction, e
 	return local, nil
 }
 
-func (p *parser) TryParseIdentifier() (*Identifier, bool, error) {
+func (p *parser) TryParseIdentifier() (*model.Identifier, bool, error) {
 	token, err := p.peekToken()
 	if err != nil {
 		return nil, false, err
@@ -396,7 +400,7 @@ func (p *parser) TryParseIdentifier() (*Identifier, bool, error) {
 	}
 	if strings.HasPrefix(token.Capture, "$") {
 		p.nextToken()
-		return Pointer(Identifier(token.Capture)), true, nil
+		return to.Pointer(model.Identifier(token.Capture)), true, nil
 	}
 	return nil, false, nil
 }

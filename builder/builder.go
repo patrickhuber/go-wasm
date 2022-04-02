@@ -1,9 +1,11 @@
 package builder
 
-import "github.com/patrickhuber/go-wasm"
+import (
+	"github.com/patrickhuber/go-wasm/model"
+)
 
 type Module interface {
-	Build() *wasm.Module
+	Build() *model.Module
 }
 
 type Section interface {
@@ -23,7 +25,7 @@ type Function interface {
 }
 
 type Parameters interface {
-	Parameter(t wasm.Type) Parameter
+	Parameter(t model.Type) Parameter
 }
 
 type Parameter interface {
@@ -31,11 +33,11 @@ type Parameter interface {
 }
 
 type Results interface {
-	Result(t wasm.Type)
+	Result(t model.Type)
 }
 
 type Instructions interface {
-	Local(op wasm.LocalOperation) LocalInstruction
+	Local(op model.LocalOperation) LocalInstruction
 	I32Add()
 }
 
@@ -45,7 +47,7 @@ type LocalInstruction interface {
 }
 
 func NewModule(sections func(s Section)) Module {
-	m := &wasm.Module{}
+	m := &model.Module{}
 	sectionBuilder := &sectionBuilder{}
 	sections(sectionBuilder)
 	for _, s := range sectionBuilder.sections {
@@ -62,43 +64,43 @@ func NewModule(sections func(s Section)) Module {
 }
 
 type module struct {
-	module *wasm.Module
+	module *model.Module
 }
 
-func (b *module) Build() *wasm.Module {
+func (b *module) Build() *model.Module {
 	return b.module
 }
 
 type sectionBuilder struct {
-	sections []wasm.Section
+	sections []model.Section
 }
 
 func (b *sectionBuilder) Function(f func(Function)) {
 	function := &function{
-		function: &wasm.Function{},
+		function: &model.Function{},
 	}
 	f(function)
-	b.sections = append(b.sections, wasm.Section{
+	b.sections = append(b.sections, model.Section{
 		Function: function.function,
 	})
 }
 
 func (b *sectionBuilder) Memory(m func(Memory)) {
 	memory := &memory{
-		memory: &wasm.Memory{},
+		memory: &model.Memory{},
 	}
 	m(memory)
-	b.sections = append(b.sections, wasm.Section{
+	b.sections = append(b.sections, model.Section{
 		Memory: memory.memory,
 	})
 }
 
 type function struct {
-	function *wasm.Function
+	function *model.Function
 }
 
 func (b *function) ID(id string) {
-	identifier := wasm.Identifier(id)
+	identifier := model.Identifier(id)
 	b.function.ID = &identifier
 }
 
@@ -127,22 +129,22 @@ func (b *function) Instructions(i func(Instructions)) {
 }
 
 type memory struct {
-	memory *wasm.Memory
+	memory *model.Memory
 }
 
 func (b *memory) Limits(min uint32) {
-	b.memory.Limits = wasm.Limits{
+	b.memory.Limits = model.Limits{
 		Min: min,
 	}
 }
 
 type parameters struct {
-	parameters []*wasm.Parameter
+	parameters []*model.Parameter
 }
 
-func (b *parameters) Parameter(t wasm.Type) Parameter {
+func (b *parameters) Parameter(t model.Type) Parameter {
 	p := &parameter{
-		parameter: &wasm.Parameter{
+		parameter: &model.Parameter{
 			Type: t,
 		},
 	}
@@ -151,37 +153,37 @@ func (b *parameters) Parameter(t wasm.Type) Parameter {
 }
 
 type parameter struct {
-	parameter *wasm.Parameter
+	parameter *model.Parameter
 }
 
 func (b *parameter) ID(id string) {
-	identifer := wasm.Identifier(id)
+	identifer := model.Identifier(id)
 	b.parameter.ID = &identifer
 }
 
 type results struct {
-	results []wasm.Result
+	results []model.Result
 }
 
-func (b *results) Result(t wasm.Type) {
-	result := wasm.Result{
+func (b *results) Result(t model.Type) {
+	result := model.Result{
 		Type: t,
 	}
 	b.results = append(b.results, result)
 }
 
 type instructions struct {
-	instructions []wasm.Instruction
+	instructions []model.Instruction
 }
 
-func (b *instructions) Local(op wasm.LocalOperation) LocalInstruction {
+func (b *instructions) Local(op model.LocalOperation) LocalInstruction {
 	inst := &localInstruction{
-		local: &wasm.LocalInstruction{
+		local: &model.LocalInstruction{
 			Operation: op,
 		},
 	}
-	b.instructions = append(b.instructions, wasm.Instruction{
-		Plain: &wasm.Plain{
+	b.instructions = append(b.instructions, model.Instruction{
+		Plain: &model.Plain{
 			Local: inst.local,
 		},
 	})
@@ -189,11 +191,11 @@ func (b *instructions) Local(op wasm.LocalOperation) LocalInstruction {
 }
 
 type localInstruction struct {
-	local *wasm.LocalInstruction
+	local *model.LocalInstruction
 }
 
 func (b *localInstruction) ID(id string) LocalInstruction {
-	identifier := wasm.Identifier(id)
+	identifier := model.Identifier(id)
 	b.local.ID = &identifier
 	return b
 }
@@ -204,10 +206,10 @@ func (b *localInstruction) Index(index int) LocalInstruction {
 }
 
 func (b *instructions) I32Add() {
-	b.instructions = append(b.instructions, wasm.Instruction{
-		Plain: &wasm.Plain{
-			I32: &wasm.I32Instruction{
-				Operation: wasm.BinaryOperationAdd,
+	b.instructions = append(b.instructions, model.Instruction{
+		Plain: &model.Plain{
+			I32: &model.I32Instruction{
+				Operation: model.BinaryOperationAdd,
 			},
 		},
 	})

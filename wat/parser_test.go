@@ -1,25 +1,25 @@
-package wasm_test
+package wat_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/patrickhuber/go-wasm"
 	"github.com/patrickhuber/go-wasm/builder"
+	"github.com/patrickhuber/go-wasm/model"
+	"github.com/patrickhuber/go-wasm/wat"
 )
 
 var _ = Describe("Parser", func() {
 	Describe("Parse", func() {
 		It("module", func() {
-			canParse("(module)", &wasm.Module{})
+			canParse("(module)", &model.Module{})
 		})
 		It("memory", func() {
-			b := builder.NewModule(func(s builder.Section) {
+			canParse("(module (memory 1) (func))", builder.NewModule(func(s builder.Section) {
 				s.Memory(func(m builder.Memory) {
 					m.Limits(1)
 				})
 				s.Function(func(f builder.Function) {})
-			})
-			canParse("(module (memory 1) (func))", b.Build())
+			}).Build())
 		})
 		Describe("function", func() {
 			It("can parse function alias", func() {
@@ -35,7 +35,7 @@ var _ = Describe("Parser", func() {
 					func(s builder.Section) {
 						s.Function(func(f builder.Function) {
 							f.Parameters(func(p builder.Parameters) {
-								p.Parameter(wasm.I32)
+								p.Parameter(model.I32)
 							})
 						})
 					}).Build())
@@ -45,7 +45,7 @@ var _ = Describe("Parser", func() {
 					func(s builder.Section) {
 						s.Function(func(f builder.Function) {
 							f.Parameters(func(p builder.Parameters) {
-								p.Parameter(wasm.I64)
+								p.Parameter(model.I64)
 							})
 						})
 					}).Build())
@@ -55,7 +55,7 @@ var _ = Describe("Parser", func() {
 					func(s builder.Section) {
 						s.Function(func(f builder.Function) {
 							f.Parameters(func(p builder.Parameters) {
-								p.Parameter(wasm.F32)
+								p.Parameter(model.F32)
 							})
 						})
 					}).Build())
@@ -65,7 +65,7 @@ var _ = Describe("Parser", func() {
 					func(s builder.Section) {
 						s.Function(func(f builder.Function) {
 							f.Parameters(func(p builder.Parameters) {
-								p.Parameter(wasm.F64)
+								p.Parameter(model.F64)
 							})
 						})
 					}).Build())
@@ -75,7 +75,7 @@ var _ = Describe("Parser", func() {
 					func(s builder.Section) {
 						s.Function(func(f builder.Function) {
 							f.Results(func(p builder.Results) {
-								p.Result(wasm.I32)
+								p.Result(model.I32)
 							})
 						})
 					}).Build())
@@ -85,7 +85,7 @@ var _ = Describe("Parser", func() {
 					func(s builder.Section) {
 						s.Function(func(f builder.Function) {
 							f.Results(func(p builder.Results) {
-								p.Result(wasm.I64)
+								p.Result(model.I64)
 							})
 						})
 					}).Build())
@@ -95,7 +95,7 @@ var _ = Describe("Parser", func() {
 					func(s builder.Section) {
 						s.Function(func(f builder.Function) {
 							f.Results(func(p builder.Results) {
-								p.Result(wasm.F32)
+								p.Result(model.F32)
 							})
 						})
 					}).Build())
@@ -105,7 +105,7 @@ var _ = Describe("Parser", func() {
 					func(s builder.Section) {
 						s.Function(func(f builder.Function) {
 							f.Results(func(p builder.Results) {
-								p.Result(wasm.F64)
+								p.Result(model.F64)
 							})
 						})
 					}).Build())
@@ -115,8 +115,8 @@ var _ = Describe("Parser", func() {
 					func(s builder.Section) {
 						s.Function(func(f builder.Function) {
 							f.Results(func(p builder.Results) {
-								p.Result(wasm.I64)
-								p.Result(wasm.I64)
+								p.Result(model.I64)
+								p.Result(model.I64)
 							})
 						})
 					}).Build())
@@ -126,15 +126,15 @@ var _ = Describe("Parser", func() {
 			builder := builder.NewModule(func(s builder.Section) {
 				s.Function(func(f builder.Function) {
 					f.Parameters(func(p builder.Parameters) {
-						p.Parameter(wasm.I32).ID("$lhs")
-						p.Parameter(wasm.I32).ID("$rhs")
+						p.Parameter(model.I32).ID("$lhs")
+						p.Parameter(model.I32).ID("$rhs")
 					})
 					f.Results(func(r builder.Results) {
-						r.Result(wasm.I32)
+						r.Result(model.I32)
 					})
 					f.Instructions(func(i builder.Instructions) {
-						i.Local(wasm.LocalGet).ID("$lhs")
-						i.Local(wasm.LocalGet).ID("$rhs")
+						i.Local(model.LocalGet).ID("$lhs")
+						i.Local(model.LocalGet).ID("$rhs")
 						i.I32Add()
 					})
 				})
@@ -151,8 +151,8 @@ var _ = Describe("Parser", func() {
 	})
 })
 
-func canParse(input string, expected *wasm.Module) {
-	result, err := wasm.ParseString(input)
+func canParse(input string, expected *model.Module) {
+	result, err := wat.ParseString(input)
 	Expect(err).To(BeNil())
 	Expect(result).ToNot(BeNil())
 	Expect(result).To(Equal(expected))

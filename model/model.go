@@ -1,4 +1,4 @@
-package wasm
+package model
 
 type Module struct {
 	Functions []Function
@@ -23,15 +23,12 @@ type Memory struct {
 }
 
 type Limits struct {
-	Min uint32
-	Max *uint32
+	HasMax bool
+	Min    uint32
+	Max    uint32
 }
 
 type Identifier string
-
-func Pointer[T any](item T) *T {
-	return &item
-}
 
 type Parameter struct {
 	ID   *Identifier
