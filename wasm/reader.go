@@ -1,26 +1,27 @@
 package wasm
 
 import (
+	"bufio"
 	"encoding/binary"
 	"fmt"
 	"io"
 
+	"github.com/patrickhuber/go-wasm/leb128"
 	"github.com/patrickhuber/go-wasm/to"
 )
 
 type Reader interface {
 	Read() (*Module, error)
-	ReadLebU128() (uint32, error)
 }
 
 func NewReader(r io.Reader) Reader {
 	return &reader{
-		reader: r,
+		reader: bufio.NewReader(r),
 	}
 }
 
 type reader struct {
-	reader io.Reader
+	reader *bufio.Reader
 }
 
 func (r *reader) Read() (*Module, error) {
@@ -97,7 +98,7 @@ func (r *reader) readSection() (*Section, error) {
 	if err != nil {
 		return nil, err
 	}
-	section.Size, err = r.ReadLebU128()
+	section.Size, err = r.readLebU128()
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +107,7 @@ func (r *reader) readSection() (*Section, error) {
 
 func (r *reader) readTypeSection() (*TypeSection, error) {
 	typeSection := &TypeSection{}
-	count, err := r.ReadLebU128()
+	count, err := r.readLebU128()
 	if err != nil {
 		return nil, err
 	}
@@ -122,12 +123,12 @@ func (r *reader) readTypeSection() (*TypeSection, error) {
 
 func (r *reader) readFunctionSection() (*FunctionSection, error) {
 	funcSection := &FunctionSection{}
-	count, err := r.ReadLebU128()
+	count, err := r.readLebU128()
 	if err != nil {
 		return nil, err
 	}
 	for i := uint32(0); i < count; i++ {
-		index, err := r.ReadLebU128()
+		index, err := r.readLebU128()
 		if err != nil {
 			return nil, err
 		}
@@ -138,7 +139,7 @@ func (r *reader) readFunctionSection() (*FunctionSection, error) {
 
 func (r *reader) readCodeSection() (*CodeSection, error) {
 	codeSection := &CodeSection{}
-	count, err := r.ReadLebU128()
+	count, err := r.readLebU128()
 	if err != nil {
 		return nil, err
 	}
@@ -154,13 +155,13 @@ func (r *reader) readCodeSection() (*CodeSection, error) {
 
 func (r *reader) readCode() (*Code, error) {
 	code := &Code{}
-	size, err := r.ReadLebU128()
+	size, err := r.readLebU128()
 	if err != nil {
 		return nil, err
 	}
 	code.Size = size
 
-	localCount, err := r.ReadLebU128()
+	localCount, err := r.readLebU128()
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +219,7 @@ func (r *reader) readInstruction() (*Instruction, error) {
 }
 
 func (r *reader) readLocalInstruction() (*LocalInstruction, error) {
-	index, err := r.ReadLebU128()
+	index, err := r.readLebU128()
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +257,7 @@ func (r *reader) readFuncType() (*Type, error) {
 
 func (r *reader) readResultType() (*ResultType, error) {
 	result := &ResultType{}
-	size, err := r.ReadLebU128()
+	size, err := r.readLebU128()
 	if err != nil {
 		return nil, err
 	}
@@ -295,20 +296,7 @@ func (r *reader) readByte() (byte, error) {
 	return b[0], nil
 }
 
-func (r *reader) ReadLebU128() (uint32, error) {
-	buf := make([]byte, 1)
-	var val uint32
-	shift := 0
-	for {
-		_, err := r.reader.Read(buf)
-		if err != nil {
-			return 0, err
-		}
-		val |= (uint32(buf[0]&0b_0111_1111) << shift)
-		if buf[0]&0b_1000_0000 == 0 {
-			break
-		}
-		shift += 7
-	}
-	return val, nil
+func (r *reader) readLebU128() (uint32, error) {
+	value, _, err := leb128.Decode(r.reader)
+	return value, err
 }

@@ -1,7 +1,6 @@
 package wasm_test
 
 import (
-	"bytes"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -9,28 +8,7 @@ import (
 	"github.com/patrickhuber/go-wasm/wasm"
 )
 
-var cases = []struct {
-	v uint32
-	b []byte
-}{
-	{b: []byte{0x08}, v: 8},
-	{b: []byte{0x80, 0x7f}, v: 16256},
-	{b: []byte{0x80, 0x80, 0x80, 0xfd, 0x07}, v: 2141192192},
-}
-
 var _ = Describe("Reader", func() {
-	DescribeTable("LebUint128",
-		func(b []byte, value uint32) {
-			reader := wasm.NewReader(bytes.NewBuffer(b))
-			result, err := reader.ReadLebU128()
-			Expect(err).To(BeNil())
-			Expect(result).To(Equal(value))
-
-		},
-		Entry("one byte", []byte{0x08}, uint32(8)),
-		Entry("two bytes", []byte{0x80, 0x7f}, uint32(16256)),
-		Entry("three bytes", []byte{0xE5, 0x8E, 0x26}, uint32(624485)),
-		Entry("five bytes", []byte{0x80, 0x80, 0x80, 0xfd, 0x07}, uint32(2141192192)))
 	It("can read empty module", func() {
 		m := &wasm.Module{
 			Magic:   wasm.Magic,
