@@ -1,4 +1,4 @@
-package model
+package wat
 
 type Module struct {
 	Functions []Section
