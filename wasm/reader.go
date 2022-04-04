@@ -229,12 +229,12 @@ func (r *reader) readLocalInstruction() (*LocalInstruction, error) {
 }
 
 func (r *reader) readOpCode() (OpCode, error) {
-	b, err := r.readByte()
+	b, err := r.reader.ReadByte()
 	return OpCode(b), err
 }
 
 func (r *reader) readFuncType() (*Type, error) {
-	b, err := r.readByte()
+	b, err := r.reader.ReadByte()
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +273,7 @@ func (r *reader) readResultType() (*ResultType, error) {
 }
 
 func (r *reader) readValueType() (*ValueType, error) {
-	b, err := r.readByte()
+	b, err := r.reader.ReadByte()
 	if err != nil {
 		return nil, err
 	}
@@ -285,15 +285,6 @@ func (r *reader) readValueType() (*ValueType, error) {
 		v.NumberType = to.Pointer(NumberType(b))
 	}
 	return v, nil
-}
-
-func (r *reader) readByte() (byte, error) {
-	b := make([]byte, 1)
-	_, err := r.reader.Read(b)
-	if err != nil {
-		return 0, err
-	}
-	return b[0], nil
 }
 
 func (r *reader) readLebU128() (uint32, error) {
