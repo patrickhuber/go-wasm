@@ -10,89 +10,50 @@ import (
 	"github.com/patrickhuber/go-wasm/to"
 )
 
-type Reader interface {
-	Read() (*Module, error)
+type SectionReader interface {
+	Read() (*Section, error)
 }
 
-func NewReader(r io.Reader) Reader {
-	return &reader{
-		reader: bufio.NewReader(r),
-	}
-}
-
-type reader struct {
+type sectionReader struct {
+	layer  Layer
 	reader *bufio.Reader
 }
 
-func (r *reader) Read() (*Module, error) {
-	module, err := r.readHeader()
-	if err != nil {
-		return nil, err
+func NewSectionReader(reader *bufio.Reader, layer Layer) SectionReader {
+	return &sectionReader{
+		reader: reader,
+		layer:  layer,
 	}
-
-	sections, err := r.readSections()
-	if err != nil {
-		return nil, err
-	}
-	for _, section := range sections {
-		switch {
-		case section.Code != nil:
-			module.Codes = append(module.Codes, section)
-		case section.Function != nil:
-			module.Functions = append(module.Functions, section)
-		case section.Type != nil:
-			module.Types = append(module.Types, section)
-		}
-	}
-
-	return module, nil
 }
 
-func (r *reader) readHeader() (*Module, error) {
-	module := &Module{}
-	err := binary.Read(r.reader, binary.BigEndian, &module.Magic)
+func (r *sectionReader) Read() (*Section, error) {
+	section, err := r.readSection()
 	if err != nil {
 		return nil, err
 	}
-	err = binary.Read(r.reader, binary.LittleEndian, &module.Version)
+	if section.Size <= 0 {
+		return section, nil
+	}
+	switch section.ID {
+	case CustomSectionType:
+		section.Custom, err = r.readCustomSection(section.Size)
+	case TypeSectionType:
+		section.Type, err = r.readTypeSection()
+	case FuncSectionType:
+		section.Function, err = r.readFunctionSection()
+	case CodeSectionType:
+		section.Code, err = r.readCodeSection()
+	default:
+		return nil, fmt.Errorf("unrecognized section ID %d", section.ID)
+	}
+
 	if err != nil {
 		return nil, err
 	}
-	return module, err
+	return section, nil
 }
 
-func (r *reader) readSections() ([]Section, error) {
-	var sections []Section
-	for {
-		section, err := r.readSection()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, err
-		}
-
-		switch section.ID {
-		case TypeSectionType:
-			section.Type, err = r.readTypeSection()
-		case FuncSectionType:
-			section.Function, err = r.readFunctionSection()
-		case CodeSectionType:
-			section.Code, err = r.readCodeSection()
-		default:
-			return nil, fmt.Errorf("unrecognized section ID %d", section.ID)
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		sections = append(sections, *section)
-	}
-	return sections, nil
-}
-
-func (r *reader) readSection() (*Section, error) {
+func (r *sectionReader) readSection() (*Section, error) {
 	section := &Section{}
 	err := binary.Read(r.reader, binary.LittleEndian, &section.ID)
 	if err != nil {
@@ -105,7 +66,61 @@ func (r *reader) readSection() (*Section, error) {
 	return section, nil
 }
 
-func (r *reader) readTypeSection() (*TypeSection, error) {
+func (r *sectionReader) readCustomSection(size uint32) (*CustomSection, error) {
+
+	name, read, err := ReadUtf8String(r.reader)
+	if err != nil {
+		return nil, err
+	}
+
+	limit := size - uint32(read)
+	nameSection, err := r.readNameSection(limit)
+	if err != nil {
+		return nil, err
+	}
+	nameSection.Key = name
+	return &CustomSection{
+		Name: nameSection,
+	}, nil
+}
+
+func (r *sectionReader) readNameSection(limit uint32) (*NameSection, error) {
+	buf := make([]byte, limit)
+	_, err := io.ReadFull(r.reader, buf)
+	if err != nil {
+		return nil, err
+	}
+	for index := 0; index < len(buf); {
+		subSectionID := buf[index]
+		index++
+
+		subSectionSize, read, err := leb128.DecodeSlice(buf[index:])
+		if err != nil {
+			return nil, err
+		}
+		index += read
+
+		switch SubSectionID(subSectionID) {
+		case SubSectionName:
+			limit := int(subSectionSize) + index
+			value, read, err := DecodeUtf8String(buf[index:limit])
+			if err != nil {
+				return nil, err
+			}
+			index += read
+			return &NameSection{
+				ID:   SubSectionID(subSectionID),
+				Name: &value,
+			}, nil
+		default:
+			return nil, fmt.Errorf("invalid subsection id %d", subSectionID)
+		}
+
+	}
+	return nil, fmt.Errorf("unable to read subsection")
+}
+
+func (r *sectionReader) readTypeSection() (*TypeSection, error) {
 	typeSection := &TypeSection{}
 	count, err := r.readLebU128()
 	if err != nil {
@@ -121,7 +136,7 @@ func (r *reader) readTypeSection() (*TypeSection, error) {
 	return typeSection, nil
 }
 
-func (r *reader) readFunctionSection() (*FunctionSection, error) {
+func (r *sectionReader) readFunctionSection() (*FunctionSection, error) {
 	funcSection := &FunctionSection{}
 	count, err := r.readLebU128()
 	if err != nil {
@@ -137,7 +152,7 @@ func (r *reader) readFunctionSection() (*FunctionSection, error) {
 	return funcSection, nil
 }
 
-func (r *reader) readCodeSection() (*CodeSection, error) {
+func (r *sectionReader) readCodeSection() (*CodeSection, error) {
 	codeSection := &CodeSection{}
 	count, err := r.readLebU128()
 	if err != nil {
@@ -153,7 +168,7 @@ func (r *reader) readCodeSection() (*CodeSection, error) {
 	return codeSection, nil
 }
 
-func (r *reader) readCode() (*Code, error) {
+func (r *sectionReader) readCode() (*Code, error) {
 	code := &Code{}
 	size, err := r.readLebU128()
 	if err != nil {
@@ -187,7 +202,7 @@ func (r *reader) readCode() (*Code, error) {
 	return code, nil
 }
 
-func (r *reader) readLocal() (*Locals, error) {
+func (r *sectionReader) readLocal() (*Locals, error) {
 	local := &Locals{}
 	t, err := r.readValueType()
 	if err != nil {
@@ -197,7 +212,7 @@ func (r *reader) readLocal() (*Locals, error) {
 	return local, nil
 }
 
-func (r *reader) readInstruction() (*Instruction, error) {
+func (r *sectionReader) readInstruction() (*Instruction, error) {
 	instruction := &Instruction{}
 	opcode, err := r.readOpCode()
 	if err != nil {
@@ -218,7 +233,7 @@ func (r *reader) readInstruction() (*Instruction, error) {
 	return instruction, err
 }
 
-func (r *reader) readLocalInstruction() (*LocalInstruction, error) {
+func (r *sectionReader) readLocalInstruction() (*LocalInstruction, error) {
 	index, err := r.readLebU128()
 	if err != nil {
 		return nil, err
@@ -228,12 +243,12 @@ func (r *reader) readLocalInstruction() (*LocalInstruction, error) {
 	}, nil
 }
 
-func (r *reader) readOpCode() (OpCode, error) {
+func (r *sectionReader) readOpCode() (OpCode, error) {
 	b, err := r.reader.ReadByte()
 	return OpCode(b), err
 }
 
-func (r *reader) readFuncType() (*Type, error) {
+func (r *sectionReader) readFuncType() (*Type, error) {
 	b, err := r.reader.ReadByte()
 	if err != nil {
 		return nil, err
@@ -255,7 +270,7 @@ func (r *reader) readFuncType() (*Type, error) {
 	}, nil
 }
 
-func (r *reader) readResultType() (*ResultType, error) {
+func (r *sectionReader) readResultType() (*ResultType, error) {
 	result := &ResultType{}
 	size, err := r.readLebU128()
 	if err != nil {
@@ -272,7 +287,7 @@ func (r *reader) readResultType() (*ResultType, error) {
 	return result, nil
 }
 
-func (r *reader) readValueType() (*ValueType, error) {
+func (r *sectionReader) readValueType() (*ValueType, error) {
 	b, err := r.reader.ReadByte()
 	if err != nil {
 		return nil, err
@@ -287,7 +302,7 @@ func (r *reader) readValueType() (*ValueType, error) {
 	return v, nil
 }
 
-func (r *reader) readLebU128() (uint32, error) {
+func (r *sectionReader) readLebU128() (uint32, error) {
 	value, _, err := leb128.Decode(r.reader)
 	return value, err
 }

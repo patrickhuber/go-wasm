@@ -11,13 +11,13 @@ import (
 var _ = Describe("Writer", func() {
 	It("can write empty module", func() {
 		expected := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
-		module := &wasm.Module{
-			Magic:   wasm.Magic,
-			Version: wasm.Version,
+		object := &wasm.Object{
+			Header: wasm.NewModuleHeader(),
+			Module: &wasm.Module{},
 		}
 		var buffer bytes.Buffer
-		writer := wasm.NewWriter(&buffer)
-		err := writer.Write(module)
+		writer := wasm.NewObjectWriter(&buffer)
+		err := writer.Write(object)
 		Expect(err).To(BeNil())
 		Expect(buffer.Bytes()).To(Equal(expected))
 	})

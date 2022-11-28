@@ -20,3 +20,19 @@ func Decode(r *bufio.Reader) (uint32, int, error) {
 	}
 	return val, total, nil
 }
+
+func DecodeSlice(s []byte) (uint32, int, error) {
+	var val uint32
+	shift := 0
+	total := 0
+	for index := 0; index < len(s); index++ {
+		b := s[index]
+		total++
+		val |= (uint32(b&0b_0111_1111) << shift)
+		if b&0b_1000_0000 == 0 {
+			break
+		}
+		shift += 7
+	}
+	return val, total, nil
+}

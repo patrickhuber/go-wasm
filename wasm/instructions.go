@@ -6,6 +6,9 @@ type Instruction struct {
 	Const  *ConstInstruction
 }
 
+//go:generate stringer -type=OpCode
+
+// OpCode represents an instruction within wasm
 type OpCode byte
 
 const (
@@ -17,6 +20,11 @@ const (
 	LocalTee    OpCode = 0x22
 	GlobalGet   OpCode = 0x23
 	GlobalSet   OpCode = 0x24
+
+	I32Const OpCode = 0x41
+	I64Const OpCode = 0x42
+	F32Const OpCode = 0x43
+	F64Const OpCode = 0x44
 
 	I32Clz    OpCode = 0x67
 	I32Ctz    OpCode = 0x68

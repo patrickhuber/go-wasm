@@ -20,12 +20,31 @@ const (
 type Section struct {
 	ID       SectionType
 	Size     uint32
+	Custom   *CustomSection
 	Start    *StartSection
 	Type     *TypeSection
 	Import   *ImportSection
 	Function *FunctionSection
 	Code     *CodeSection
 	Export   *ExportSection
+}
+
+type CustomSection struct {
+	Name *NameSection
+}
+
+type SubSectionID byte
+
+const (
+	SubSectionName          SubSectionID = 0
+	SubSectionFunctionNames SubSectionID = 1
+	SubSectionLocalNames    SubSectionID = 2
+)
+
+type NameSection struct {
+	ID   SubSectionID
+	Key  string
+	Name *string
 }
 
 type StartSection struct {
