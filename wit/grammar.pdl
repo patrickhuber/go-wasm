@@ -1,0 +1,213 @@
+wit_document = 
+    { interface_item };
+
+interface_item = 
+    'interface' id [ strlit ] '{' { interface_items } '}';
+
+interface_items = 
+    resource_item
+    | variant_items
+    | record_item
+    | union_items
+    | flags_items
+    | enum_items
+    | type_item
+    | use_item
+    | func_item;
+
+func_item = 
+    id ':' 'func' param_list '->' result_list;
+
+param_list = 
+    '(' named_type_list ')';
+
+result_list = 
+    ty
+    | '(' named_type_list ')';
+
+named_type_list = 
+    nil
+    | named_type { ',' named_type } ;
+
+named_type 
+    = id ':' ty ;
+
+use_item = 
+    'use' use_names 'from' id ;
+
+use_names =
+    '*'
+    | '{' use_names_list '}';
+
+use_names_list = 
+    use_names_item
+    | use_names_item ',' [ use_names_items ] ;
+
+use_names_item = 
+    id
+    | id 'as' id ;
+
+type_item = 
+    'type' id '=' ty;
+
+record_item = 
+    'record' id '{' record_fields '}';
+
+record_fields =
+    record_field
+    | record_field ',' [ record_fields ];
+
+record_field =
+    id ':' ty;
+
+flags_items = 
+    'flags' id '{' flags_fields '}';
+
+flags_fields =
+    id
+    | id ',' [ flags_fields ] ;
+
+// variant 
+
+variant_items =
+    'variant' id '{' variant-cases '}';
+
+variant_cases = 
+    variant_case 
+    | variant_case ',' [ variant-cases ];
+
+variant_case = 
+    id ['(' ty ')' ];
+
+// enum 
+
+enum_items =
+    'enum' id '{' enum_cases '}';
+
+enum_cases =
+    id
+    | id ',' [ enum_cases ] ;
+
+// union
+
+union_items = 
+    'union' id '{' union_cases '}';
+
+union_cases =
+    ty
+    | ty ',' [ union_cases ];
+
+// resource
+
+resource_item = 
+    'resource' id resource_contents ;
+
+resource_contents = 
+    nil 
+    | '{' resource_defs '}';
+
+resource_defs = 
+    resource_def [ reource_defs ];
+
+resource_def = 
+    [ 'static' ] func_item ;
+
+
+// types
+
+ty = 
+    'u8' | 'u16' | 'u32' | 'u64'
+    | 's8' | 's16' | 's32' | 's64'
+    | 'float32' | 'float64'
+    | 'char'
+    | 'bool'
+    | 'string'
+    | tuple
+    | list
+    | option
+    | result
+    | future
+    | stream
+    | id ;
+
+tuple =
+    'tuple' '<' tuple_list '>';
+
+tuple_list = 
+    ty
+    | ty ',' tuple_list? ;
+
+list = 
+    'list' '<' ty '>' ;
+
+option = 
+    'option' '<' ty '>' ;
+
+result = 
+    'result' '<' ty ',' ty '>'
+    | 'result' '<' '_' ',' ty '>'
+    | 'result' '<' ty '>'
+    | 'result' ;
+
+future = 
+    'future' '<' ty '>'
+    | 'future' ;
+
+stream = 
+    'stream' '<' ty ',' ty '>'
+    | 'stream' '<' '_' ',' ty '>'
+    | 'stream' '<' ty '>'
+    | 'stream' ;
+
+// lexer rules
+whitespace ~ 
+    /[\s]+/ ;
+
+single_comment ~ 
+    '//' /[^\n]*[\n]?/ ;
+
+multi_comment ~ 
+    '/*' /.*/ '*/';
+
+comment ~ 
+    single_comment 
+    | multi_comment;
+
+single_doc_comment ~
+    '///' /[^\n]*[\n]?/ ;
+
+multi_doc_comment ~
+    '/** /.*/ '*/';
+
+doc_comment ~
+    single_doc_comment
+    | multi_doc_comment;
+
+operator ~ 
+    '=' | ',' | ':' | ';' | '(' | ')' | '{' | '}' | '<' | '>' | '*' | '->';
+
+keyword ~   'use'
+          | 'type'
+          | 'resource'
+          | 'func'
+          | 'u8' | 'u16' | 'u32' | 'u64'
+          | 's8' | 's16' | 's32' | 's64'
+          | 'float32' | 'float64'
+          | 'char'
+          | 'record'
+          | 'enum'
+          | 'flags'
+          | 'variant'
+          | 'union'
+          | 'bool'
+          | 'string'
+          | 'option'
+          | 'list'
+          | 'result'
+          | 'as'
+          | 'from'
+          | 'static'
+          | 'interface'
+          | 'tuple'
+          | 'future'
+          | 'stream' ;
