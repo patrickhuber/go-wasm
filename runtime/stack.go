@@ -1,6 +1,21 @@
 package runtime
 
-import "github.com/patrickhuber/go-wasm/wasm"
+import (
+	"encoding/binary"
+
+	gstack "github.com/patrickhuber/go-collections/generic/stack"
+	"github.com/patrickhuber/go-wasm/wasm"
+)
+
+type stack struct {
+	inner gstack.Stack[StackItem]
+}
+
+func NewStack() Stack {
+	return &stack{
+		inner: gstack.New[StackItem](),
+	}
+}
 
 type Stack interface {
 	Push(StackItem)
@@ -32,20 +47,9 @@ type F64Stack interface {
 }
 
 type StackItem struct {
-	Value      *Value
+	Value      *wasm.Value
 	Label      *Label
 	Activation *Activation
-}
-
-type Number struct {
-	OpCode wasm.OpCode
-	Value  []byte
-}
-
-type Vec struct {
-}
-
-type Ref struct {
 }
 
 type Label struct{}
@@ -55,6 +59,65 @@ type Activation struct {
 }
 
 type Frame struct {
-	Locals []Value
+	Locals []wasm.Value
 	Module *ModuleInstance
+}
+
+func (s *stack) Push(item StackItem) {
+	s.inner.Push(item)
+}
+
+func (s *stack) Pop() StackItem {
+	return s.inner.Pop()
+}
+
+// PopUint32 implements Stack
+func (s *stack) PopUint32() uint32 {
+	item := s.Pop()
+	return item.Value.Uint32()
+}
+
+// PushUint32 implements Stack
+func (s *stack) PushUint32(value uint32) {
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, value)
+	item := StackItem{
+		Value: &wasm.Value{
+			Number: &wasm.Number{
+				OpCode: wasm.I32Const,
+				Value:  b,
+			},
+		},
+	}
+	s.Push(item)
+}
+
+// PopUint64 implements Stack
+func (s *stack) PopUint64() uint64 {
+	panic("unimplemented")
+}
+
+// PushUint64 implements Stack
+func (s *stack) PushUint64(uint64) {
+	panic("unimplemented")
+}
+
+// PopFloat32 implements Stack
+func (s *stack) PopFloat32() float32 {
+	panic("unimplemented")
+}
+
+// PushFloat32 implements Stack
+func (s *stack) PushFloat32(float32) {
+	panic("unimplemented")
+}
+
+// PopFloat64 implements Stack
+func (s *stack) PopFloat64() float64 {
+	panic("unimplemented")
+}
+
+// PushFloat64 implements Stack
+func (s *stack) PushFloat64(float64) {
+	panic("unimplemented")
 }

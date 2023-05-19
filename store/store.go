@@ -1,4 +1,6 @@
-package runtime
+package store
+
+import "github.com/patrickhuber/go-wasm/wasm"
 
 type Store struct {
 	Functions []FunctionInstance
@@ -19,7 +21,7 @@ type MemoryInstance struct {
 }
 
 type GlobalInstance struct {
-	Value   Value
+	Value   wasm.Value
 	Mutable bool
 }
 type ElementInstance struct{}

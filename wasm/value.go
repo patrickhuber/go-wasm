@@ -1,9 +1,20 @@
-package runtime
+package wasm
 
 import (
 	"encoding/binary"
 	"math"
 )
+
+type Number struct {
+	OpCode OpCode
+	Value  []byte
+}
+
+type Vec struct {
+}
+
+type Ref struct {
+}
 
 // https://webassembly.github.io/spec/core/exec/runtime.html#syntax-val
 type Value struct {

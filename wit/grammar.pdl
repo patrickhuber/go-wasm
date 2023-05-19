@@ -1,5 +1,11 @@
 wit_document = 
-    { interface_item };
+    { document_item };
+
+document_item =
+    interface_item
+    | world ; 
+
+world = 'world' id '{' '}';
 
 interface_item = 
     'interface' id [ strlit ] '{' { interface_items } '}';
