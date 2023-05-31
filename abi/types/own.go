@@ -17,3 +17,7 @@ func (*Own) Kind() kind.Kind {
 func (*Own) Size() uint32 {
 	return 4
 }
+
+func (o *Own) Despecialize() ValType {
+	return o
+}

@@ -15,3 +15,7 @@ func (Char) Size() uint32 {
 func (Char) Alignment() uint32 {
 	return 4
 }
+
+func (c Char) Despecialize() ValType {
+	return c
+}

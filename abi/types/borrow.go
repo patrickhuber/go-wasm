@@ -17,3 +17,7 @@ func (*Borrow) Kind() kind.Kind {
 func (*Borrow) Size() uint32 {
 	return 4
 }
+
+func (b *Borrow) Despecialize() ValType {
+	return b
+}

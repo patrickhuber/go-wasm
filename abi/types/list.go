@@ -17,3 +17,7 @@ func (*List) Size() uint32 {
 func (*List) Alignment() uint32 {
 	return 4
 }
+
+func (l *List) Despecialize() ValType {
+	return l
+}

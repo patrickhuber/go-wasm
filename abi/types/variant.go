@@ -42,6 +42,10 @@ func (v *Variant) Alignment() uint32 {
 	return max(maxCaseAlignment, alignment)
 }
 
+func (v *Variant) Despecialize() ValType {
+	return v
+}
+
 func (v *Variant) DiscriminantType() ValType {
 	n := len(v.Cases)
 	switch n {

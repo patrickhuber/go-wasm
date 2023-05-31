@@ -25,6 +25,10 @@ func (f *Flags) Alignment() uint32 {
 	return 4
 }
 
+func (f *Flags) Despecialize() ValType {
+	return f
+}
+
 func (f *Flags) Size() uint32 {
 	n := len(f.Labels)
 	switch {

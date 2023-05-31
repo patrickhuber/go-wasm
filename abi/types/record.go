@@ -27,3 +27,7 @@ func (r *Record) Alignment() uint32 {
 	}
 	return a
 }
+
+func (r *Record) Despecialize() ValType {
+	return r
+}

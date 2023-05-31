@@ -10,6 +10,7 @@ type ValType interface {
 	Kind() kind.Kind
 	Size() uint32
 	Alignment() uint32
+	Despecialize() ValType
 }
 
 func AlignTo(ptr, alignment uint32) uint32 {

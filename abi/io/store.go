@@ -42,7 +42,7 @@ func Store(c *types.Context, val any, t types.ValType, ptr uint32) {
 		StoreString(c, val.(string), ptr)
 	case kind.List:
 		l := t.(*types.List)
-		storeList(c, val, ptr, l.Type)
+		StoreList(c, val, ptr, l.Type)
 	}
 }
 
@@ -77,15 +77,15 @@ func StoreInt(c *types.Context, val any, ptr uint32, nbytes uint32) {
 }
 
 func StoreString(c *types.Context, str string, ptr uint32) {
-	begin, taggedCodeUnits := storeStringIntoRange(c, str)
+	begin, taggedCodeUnits := StoreStringIntoRange(c, str)
 	StoreInt(c, begin, ptr, 4)
 	StoreInt(c, taggedCodeUnits, ptr+4, 4)
 }
 
-func storeStringIntoRange(c *types.Context, str string) (uint32, uint32) {
+func StoreStringIntoRange(c *types.Context, str string) (uint32, uint32) {
 	return 0, 0
 }
 
-func storeList(c *types.Context, v any, ptr uint32, elementType types.ValType) {
+func StoreList(c *types.Context, v any, ptr uint32, elementType types.ValType) {
 
 }

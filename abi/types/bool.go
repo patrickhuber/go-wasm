@@ -15,3 +15,7 @@ func (Bool) Size() uint32 {
 func (Bool) Alignment() uint32 {
 	return 1
 }
+
+func (b Bool) Despecialize() ValType {
+	return b
+}

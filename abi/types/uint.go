@@ -16,6 +16,10 @@ func (U8) Alignment() uint32 {
 	return 1
 }
 
+func (u U8) Despecialize() ValType {
+	return u
+}
+
 type U16 struct{}
 
 func (U16) Kind() kind.Kind {
@@ -28,6 +32,10 @@ func (U16) Size() uint32 {
 
 func (U16) Alignment() uint32 {
 	return 2
+}
+
+func (u U16) Despecialize() ValType {
+	return u
 }
 
 type U32 struct{}
@@ -44,6 +52,10 @@ func (U32) Alignment() uint32 {
 	return 4
 }
 
+func (u U32) Despecialize() ValType {
+	return u
+}
+
 type U64 struct{}
 
 func (U64) Kind() kind.Kind {
@@ -56,4 +68,8 @@ func (U64) Size() uint32 {
 
 func (U64) Alignment() uint32 {
 	return 8
+}
+
+func (u U64) Despecialize() ValType {
+	return u
 }
