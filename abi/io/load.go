@@ -325,11 +325,3 @@ func LoadFlags(cx *types.Context, ptr uint32, flags *types.Flags) (map[string]bo
 	}
 	return flagMap, nil
 }
-
-func LiftOwn(cx *types.Context, i uint32, t *types.Own) (any, error) {
-	return nil, nil
-}
-
-func LiftBorrow(cx *types.Context, i uint32, t *types.Borrow) (any, error) {
-	return nil, nil
-}
