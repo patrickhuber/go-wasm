@@ -13,16 +13,16 @@ type Handle struct {
 
 type HandleTable struct {
 	Array []*Handle
-	Free  []int
+	Free  []uint32
 }
 
-func (ht *HandleTable) Add(handle *Handle, t ValType) int {
+func (ht *HandleTable) Add(handle *Handle, t ValType) uint32 {
 	free, i, ok := stack.Pop(ht.Free)
 	ht.Free = free
 	if ok {
 		ht.Array[i] = handle
 	} else {
-		ht.Free = stack.Push(ht.Free, len(ht.Free))
+		ht.Free = stack.Push(ht.Free, uint32(len(ht.Free)))
 		ht.Array = append(ht.Array, handle)
 	}
 	switch t.Kind() {
@@ -32,8 +32,8 @@ func (ht *HandleTable) Add(handle *Handle, t ValType) int {
 	return i
 }
 
-func (ht *HandleTable) Get(i int) (*Handle, error) {
-	if err := TrapIf(i >= len(ht.Array)); err != nil {
+func (ht *HandleTable) Get(i uint32) (*Handle, error) {
+	if err := TrapIf(i >= uint32(len(ht.Array))); err != nil {
 		return nil, err
 	}
 	handle := ht.Array[i]
@@ -43,7 +43,7 @@ func (ht *HandleTable) Get(i int) (*Handle, error) {
 	return handle, nil
 }
 
-func (ht *HandleTable) TransferOrDrop(i int, t ValType, drop bool) (*Handle, error) {
+func (ht *HandleTable) TransferOrDrop(i uint32, t ValType, drop bool) (*Handle, error) {
 	// null dereference?
 	h, err := ht.Get(i)
 	if err != nil {
@@ -82,7 +82,7 @@ func (ht *HandleTable) TransferOrDrop(i int, t ValType, drop bool) (*Handle, err
 	}
 
 	ht.Array[i] = nil
-	ht.Free = stack.Push(ht.Free, len(ht.Free))
+	ht.Free = stack.Push(ht.Free, uint32(len(ht.Free)))
 	return h, nil
 }
 
@@ -120,7 +120,7 @@ func resourceType(t ValType) (*ResourceType, error) {
 	return nil, &Trap{}
 }
 
-func (ht *HandleTables) Add(handle *Handle, t ValType) (int, error) {
+func (ht *HandleTables) Add(handle *Handle, t ValType) (uint32, error) {
 	resourceType, err := resourceType(t)
 	if err != nil {
 		return 0, err
@@ -128,11 +128,11 @@ func (ht *HandleTables) Add(handle *Handle, t ValType) (int, error) {
 	return ht.Table(*resourceType).Add(handle, t), nil
 }
 
-func (ht *HandleTables) Get(i int, resourceType *ResourceType) (*Handle, error) {
+func (ht *HandleTables) Get(i uint32, resourceType *ResourceType) (*Handle, error) {
 	return ht.Table(*resourceType).Get(i)
 }
 
-func (ht *HandleTables) Transfer(i int, t ValType) (*Handle, error) {
+func (ht *HandleTables) Transfer(i uint32, t ValType) (*Handle, error) {
 	resourceType, err := resourceType(t)
 	if err != nil {
 		return nil, err
@@ -140,7 +140,7 @@ func (ht *HandleTables) Transfer(i int, t ValType) (*Handle, error) {
 	return ht.Table(*resourceType).TransferOrDrop(i, t, false)
 }
 
-func (ht *HandleTables) Drop(i int, t ValType) error {
+func (ht *HandleTables) Drop(i uint32, t ValType) error {
 	resourceType, err := resourceType(t)
 	if err != nil {
 		return err
