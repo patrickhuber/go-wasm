@@ -1,6 +1,6 @@
 package types
 
-type ReallocFunc func(int, int, int, int) int
+type ReallocFunc func(uint32, uint32, uint32, uint32) uint32
 type PostReturnFunc func()
 
 type CanonicalOptions struct {

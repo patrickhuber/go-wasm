@@ -1,14 +1,17 @@
 package types
 
-type Trap struct{}
+type trap struct{}
 
-func (t *Trap) Error() string {
+func (t *trap) Error() string {
 	return ""
+}
+func Trap() error {
+	return &trap{}
 }
 
 func TrapIf(condition bool) error {
 	if condition {
-		return &Trap{}
+		return &trap{}
 	}
 	return nil
 }

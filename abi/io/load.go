@@ -120,11 +120,13 @@ func LoadInt(c *types.Context, ptr uint32, nbytes uint32, signed bool) (any, err
 		if signed {
 			return int32(v), nil
 		}
+		return v, nil
 	case 8:
 		v := binary.LittleEndian.Uint64(buf)
 		if signed {
 			return int64(v), nil
 		}
+		return v, nil
 	}
 	return nil, fmt.Errorf("invalid type")
 }

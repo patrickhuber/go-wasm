@@ -117,7 +117,7 @@ func resourceType(t ValType) (*ResourceType, error) {
 		}
 		return o.ResourceType, nil
 	}
-	return nil, &Trap{}
+	return nil, Trap()
 }
 
 func (ht *HandleTables) Add(handle *Handle, t ValType) (uint32, error) {
