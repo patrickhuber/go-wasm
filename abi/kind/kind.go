@@ -2,6 +2,7 @@ package kind
 
 type Kind int
 
+//go:generate stringer -type=Kind
 const (
 	Bool Kind = iota
 	U8
