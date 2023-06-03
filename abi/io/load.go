@@ -102,7 +102,7 @@ func LoadUInt32(cx *types.Context, ptr uint32) (uint32, error) {
 }
 
 func LoadInt(c *types.Context, ptr uint32, nbytes uint32, signed bool) (any, error) {
-	buf := c.Options.Memory[ptr : ptr+nbytes]
+	buf := c.Options.Memory.Bytes()[ptr : ptr+nbytes]
 	switch nbytes {
 	case 1:
 		if signed {
@@ -149,6 +149,7 @@ func LoadString(cx *types.Context, ptr uint32) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// is this byte order mark?
 	taggedCodeUnits, err := LoadUInt32(cx, ptr+4)
 	if err != nil {
 		return "", err
@@ -191,12 +192,12 @@ func LoadStringFromRange(cx *types.Context, ptr, taggedCodeUnits uint32) (string
 		return "", err
 	}
 
-	err = types.TrapIf(ptr+byteLength > uint32(len(cx.Options.Memory)))
+	err = types.TrapIf(ptr+byteLength > uint32(cx.Options.Memory.Len()))
 	if err != nil {
 		return "", err
 	}
 
-	buf := cx.Options.Memory[ptr : ptr+byteLength]
+	buf := cx.Options.Memory.Bytes()[ptr : ptr+byteLength]
 	reader := transform.NewReader(bytes.NewReader(buf), decoder.Transformer)
 	decoded, err := ioutil.ReadAll(reader)
 	if err != nil {
@@ -225,7 +226,7 @@ func LoadListFromRange(cx *types.Context, ptr uint32, length uint32, elementType
 	if err != nil {
 		return nil, err
 	}
-	err = types.TrapIf(ptr+length*elementType.Size() > uint32(len(cx.Options.Memory)))
+	err = types.TrapIf(ptr+length*elementType.Size() > uint32(cx.Options.Memory.Len()))
 	if err != nil {
 		return nil, err
 	}

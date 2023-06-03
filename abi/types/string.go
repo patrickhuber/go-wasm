@@ -11,7 +11,7 @@ const (
 	MaxStringByteLength uint32         = (1 << 31) - 1
 )
 
-type String string
+type String struct{}
 
 func (*String) Kind() kind.Kind {
 	return kind.String
@@ -23,4 +23,8 @@ func (*String) Size() uint32 {
 
 func (*String) Alignment() uint32 {
 	return 4
+}
+
+func (s *String) Despecialize() ValType {
+	return s
 }

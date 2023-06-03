@@ -67,7 +67,7 @@ func StoreUInt32(c *types.Context, val uint32, ptr uint32) error {
 }
 
 func StoreInt(c *types.Context, val any, ptr uint32, nbytes uint32, signed bool) error {
-	buf := c.Options.Memory[ptr : ptr+nbytes]
+	buf := c.Options.Memory.Bytes()[ptr : ptr+nbytes]
 	switch nbytes {
 	case 1:
 		var b byte
@@ -108,12 +108,17 @@ func StoreInt(c *types.Context, val any, ptr uint32, nbytes uint32, signed bool)
 	return nil
 }
 
+// StoreString stores the string to linear memory using the context encoding
+// All strings in go are assumed to be utf8 encoded
 func StoreString(c *types.Context, str string, ptr uint32) error {
+
+	// string storage in wasm components stores the string first
 	begin, taggedCodeUnits, err := StoreStringIntoRange(c, str)
 	if err != nil {
 		return err
 	}
 
+	// once the string is stored the pointer and code units are stored next
 	err = StoreUInt32(c, begin, ptr)
 	if err != nil {
 		return err
@@ -122,53 +127,58 @@ func StoreString(c *types.Context, str string, ptr uint32) error {
 }
 
 func StoreStringIntoRange(cx *types.Context, str string) (uint32, uint32, error) {
+
 	var encoder *encoding.Encoder
+	var srcCodeUnits uint32 = 0
 
 	switch cx.Options.StringEncoding {
+	// utf8 -> utf8
 	case types.Utf8:
 		encoder = unicode.UTF8.NewEncoder()
+		srcCodeUnits = uint32(len(str))
+		return StoreStringCopy(cx, str, srcCodeUnits, 1, 1, encoder)
 
+		// utf8 -> utf16
 	case types.Utf16:
 		encoder = unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewEncoder()
+		return 0, 0, types.Trap()
 
+	// utf8 -> utf16 | latin1
 	case types.Latin1Utf16:
 		encoder = unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewEncoder()
 		// 	encoder = charmap.ISO8859_1.NewEncoder()
+		return 0, 0, types.Trap()
+
 	default:
 		return 0, 0, types.Trap()
 	}
-	if encoder == nil {
-		return 0, 0, nil
-	}
-	return 0, 0, nil
 }
 
-func StoreStringCopy(cx *types.Context, src string, srcCodeUnits uint32, dstCodeUnitSize uint32, dstAlignment uint32, dstEncoding encoding.Encoder) error {
+func StoreStringCopy(cx *types.Context, src string, srcCodeUnits uint32, dstCodeUnitSize uint32, dstAlignment uint32, dstEncoding *encoding.Encoder) (uint32, uint32, error) {
 
 	dstByteLength := dstCodeUnitSize * srcCodeUnits
 	err := types.TrapIf(dstByteLength > types.MaxStringByteLength)
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
 
-	ptr := cx.Options.Realloc(0, 0, dstAlignment, dstByteLength)
+	ptr, err := cx.Options.Realloc(0, 0, dstAlignment, dstByteLength)
+	if err != nil {
+		return 0, 0, err
+	}
 	err = types.TrapIf(ptr != types.AlignTo(ptr, dstAlignment))
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
 
-	err = types.TrapIf(ptr+dstByteLength > uint32(len(cx.Options.Memory)))
+	err = types.TrapIf(ptr+dstByteLength > uint32(cx.Options.Memory.Len()))
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
 
-	buf := cx.Options.Memory[ptr : ptr+dstByteLength]
+	buf := cx.Options.Memory.Bytes()[ptr : ptr+dstByteLength]
 	_, _, err = dstEncoding.Transformer.Transform(buf, []byte(src), false)
-	if err != nil {
-		return err
-	}
-	return nil
-
+	return ptr, srcCodeUnits, err
 }
 
 func StoreList(c *types.Context, v any, ptr uint32, elementType types.ValType) error {
