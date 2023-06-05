@@ -6,18 +6,22 @@ type Borrow struct {
 	ResourceType *ResourceType
 }
 
-func (*Borrow) Alignment() uint32 {
+func (Borrow) Alignment() uint32 {
 	return 4
 }
 
-func (*Borrow) Kind() kind.Kind {
+func (Borrow) Kind() kind.Kind {
 	return kind.Borrow
 }
 
-func (*Borrow) Size() uint32 {
+func (Borrow) Size() uint32 {
 	return 4
 }
 
 func (b *Borrow) Despecialize() ValType {
 	return b
+}
+
+func (Borrow) Flatten() []kind.Kind {
+	return []kind.Kind{kind.S32}
 }

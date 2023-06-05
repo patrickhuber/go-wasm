@@ -21,3 +21,7 @@ func (*Own) Size() uint32 {
 func (o *Own) Despecialize() ValType {
 	return o
 }
+
+func (Own) Flatten() []kind.Kind {
+	return []kind.Kind{kind.S32}
+}

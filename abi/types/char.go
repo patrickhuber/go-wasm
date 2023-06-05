@@ -19,3 +19,7 @@ func (Char) Alignment() uint32 {
 func (c Char) Despecialize() ValType {
 	return c
 }
+
+func (Char) Flatten() []kind.Kind {
+	return []kind.Kind{kind.S32}
+}

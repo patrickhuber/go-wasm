@@ -42,6 +42,10 @@ func (f *Flags) Size() uint32 {
 	return uint32(4) * numI32Flags(f.Labels)
 }
 
+func (f *Flags) Flatten() []kind.Kind {
+	return f.Despecialize().Flatten()
+}
+
 func numI32Flags(labels []string) uint32 {
 	flen := float64(len(labels))
 	f32 := float64(32)

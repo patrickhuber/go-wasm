@@ -75,6 +75,7 @@ func TestCanRoundTripString(t *testing.T) {
 
 	}
 }
+
 func zero[T byte](slice []T) {
 	for i := 0; i < len(slice); i++ {
 		slice[i] = 0

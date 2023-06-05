@@ -66,6 +66,37 @@ func (v *Variant) DiscriminantType() ValType {
 	return nil
 }
 
+func (v *Variant) Flatten() []kind.Kind {
+	var flat []kind.Kind
+	for _, c := range v.Cases {
+		if c.Type == nil {
+			continue
+		}
+		for i, ft := range c.Type.Flatten() {
+			if i < len(flat) {
+				flat[i] = join(flat[i], ft)
+			} else {
+				flat = append(flat, ft)
+			}
+		}
+	}
+	return append(flat, v.DiscriminantType().Flatten()...)
+}
+
+func join(a kind.Kind, b kind.Kind) kind.Kind {
+	if a == b {
+		return a
+	}
+	switch {
+	case a == kind.S32 && b == kind.Float32:
+		return kind.S32
+	case a == kind.Float32 && b == kind.S32:
+		return kind.S32
+	default:
+		return kind.S64
+	}
+}
+
 func (v *Variant) MaxCaseAlignment() uint32 {
 	var a uint32 = 1
 	for _, c := range v.Cases {

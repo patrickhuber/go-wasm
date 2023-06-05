@@ -35,3 +35,7 @@ func (t *Tuple) Despecialize() ValType {
 		Fields: fields,
 	}
 }
+
+func (t *Tuple) Flatten() []kind.Kind {
+	return t.Despecialize().Flatten()
+}

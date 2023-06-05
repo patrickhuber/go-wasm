@@ -1,6 +1,8 @@
 package values
 
 import (
+	"fmt"
+
 	"github.com/patrickhuber/go-wasm/abi/kind"
 	"github.com/patrickhuber/go-wasm/abi/types"
 )
@@ -12,6 +14,15 @@ type Value interface {
 
 type ValueIterator interface {
 	Next(k kind.Kind) (any, error)
+	Index() int
+	Length() int
+}
+
+func NewIterator(values ...Value) ValueIterator {
+	return &valueIterator{
+		index:  0,
+		values: values,
+	}
 }
 
 type valueIterator struct {
@@ -20,10 +31,22 @@ type valueIterator struct {
 }
 
 func (vi *valueIterator) Next(k kind.Kind) (any, error) {
+	if vi.Length() == 0 {
+		return nil, fmt.Errorf("eof")
+	}
+
 	v := vi.values[vi.index]
 	vi.index += 1
 	if v.Kind() != k {
 		return nil, types.Trap()
 	}
 	return v.Value(), nil
+}
+
+func (vi *valueIterator) Index() int {
+	return vi.index
+}
+
+func (vi *valueIterator) Length() int {
+	return len(vi.values)
 }

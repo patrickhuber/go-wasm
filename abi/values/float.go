@@ -2,26 +2,22 @@ package values
 
 import "github.com/patrickhuber/go-wasm/abi/kind"
 
-type Float32Value struct {
-	value float32
-}
+type Float32 float32
 
-func (i *Float32Value) Kind() kind.Kind {
+func (Float32) Kind() kind.Kind {
 	return kind.Float64
 }
 
-func (i *Float32Value) Value() any {
-	return i.value
+func (i Float32) Value() any {
+	return float32(i)
 }
 
-type Float64Value struct {
-	value float32
-}
+type Float64 float64
 
-func (i *Float64Value) Kind() kind.Kind {
+func (Float64) Kind() kind.Kind {
 	return kind.Float64
 }
 
-func (i *Float64Value) Value() any {
-	return i.value
+func (i Float64) Value() any {
+	return float64(i)
 }

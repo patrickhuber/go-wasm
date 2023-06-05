@@ -33,3 +33,7 @@ func (e *Enum) Despecialize() ValType {
 		Cases: cases,
 	}
 }
+
+func (e *Enum) Flatten() []kind.Kind {
+	return e.Despecialize().Flatten()
+}

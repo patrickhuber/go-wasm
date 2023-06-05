@@ -27,3 +27,7 @@ func (o *Option) Despecialize() ValType {
 		Cases: cases,
 	}
 }
+
+func (o *Option) Flatten() []kind.Kind {
+	return o.Despecialize().Flatten()
+}

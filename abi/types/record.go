@@ -31,3 +31,11 @@ func (r *Record) Alignment() uint32 {
 func (r *Record) Despecialize() ValType {
 	return r
 }
+
+func (r *Record) Flatten() []kind.Kind {
+	var flat []kind.Kind
+	for _, f := range r.Fields {
+		flat = append(flat, f.Type.Flatten()...)
+	}
+	return flat
+}
