@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 
 	"golang.org/x/text/transform"
@@ -87,10 +87,7 @@ func LoadBool(cx *types.Context, ptr uint32) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if i == 0 {
-		return false, nil
-	}
-	return true, nil
+	return i != 0, nil
 }
 
 func LoadUInt32(cx *types.Context, ptr uint32) (uint32, error) {
@@ -199,7 +196,7 @@ func LoadStringFromRange(cx *types.Context, ptr, taggedCodeUnits uint32) (string
 
 	buf := cx.Options.Memory.Bytes()[ptr : ptr+byteLength]
 	reader := transform.NewReader(bytes.NewReader(buf), decoder.Transformer)
-	decoded, err := ioutil.ReadAll(reader)
+	decoded, err := io.ReadAll(reader)
 	if err != nil {
 		return "", err
 	}
