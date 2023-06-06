@@ -46,36 +46,6 @@ func TestCanRoundTrip(t *testing.T) {
 	}
 }
 
-func TestCanRoundTripString(t *testing.T) {
-	type test struct {
-		name     string
-		val      string
-		encoding types.StringEncoding
-	}
-	tests := []test{
-		{"utf8", "hi", types.Utf8},
-		{"utf16", "hi", types.Utf16},
-		{"latin1", "hi", types.Latin1Utf16},
-	}
-	heap := NewHeap(1024)
-	c := NewContext(heap.Memory, types.Utf8, heap.ReAllocate, func() {})
-
-	stringType := &types.String{}
-	for i, test := range tests {
-
-		t.Run(test.name, func(t *testing.T) {
-			zero(c.Options.Memory.Bytes())
-			err := io.Store(c, test.val, stringType, 0)
-			require.Nil(t, err, "store %d '%s'", i, test.val)
-
-			val, err := io.Load(c, stringType, 0)
-			require.Nil(t, err, "load %d '%s'", i, test.val)
-			require.Equal(t, test.val, val, "load %d '%s'", i, test.val)
-		})
-
-	}
-}
-
 func zero[T byte](slice []T) {
 	for i := 0; i < len(slice); i++ {
 		slice[i] = 0

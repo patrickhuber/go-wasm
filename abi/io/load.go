@@ -1,13 +1,9 @@
 package io
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io"
 	"math"
-
-	"golang.org/x/text/transform"
 
 	"github.com/patrickhuber/go-wasm/abi/kind"
 	"github.com/patrickhuber/go-wasm/abi/types"
@@ -195,12 +191,10 @@ func LoadStringFromRange(cx *types.Context, ptr, taggedCodeUnits uint32) (string
 	}
 
 	buf := cx.Options.Memory.Bytes()[ptr : ptr+byteLength]
-	reader := transform.NewReader(bytes.NewReader(buf), decoder.Transformer)
-	decoded, err := io.ReadAll(reader)
+	decoded, err := decoder.Bytes(buf)
 	if err != nil {
 		return "", err
 	}
-
 	return string(decoded), nil
 }
 

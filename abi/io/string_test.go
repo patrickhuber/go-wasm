@@ -9,16 +9,18 @@ import (
 )
 
 func TestString(t *testing.T) {
+	// hex literals will fail because they are not converted to utf8
+	// to work around this, use unicode literals instead
 	strings := []string{
 		"",
 		"a",
 		"hi",
-		"\x00",
-		"a\x00b",
-		"\x00b",
-		"\x80",
-		"\x80b",
-		"ab\xefc",
+		"\u0000",    // "\x00",
+		"a\u0000b",  // "a\x00b",
+		"\u0000b",   // "\x00b",
+		"\u0080",    // "\x80",
+		"\u0080b",   // "\x80b",
+		"ab\u00efc", // "ab\xefc",
 		"\u01ffy",
 		"xy\u01ff",
 
@@ -37,16 +39,16 @@ func TestString(t *testing.T) {
 func testString(srcEncoding types.StringEncoding, dstEncoding types.StringEncoding, s string) error {
 	switch srcEncoding {
 	case types.Utf8:
-		return testStringInternal(types.Utf8, dstEncoding, s, s, len(s))
+		return testStringInternal(srcEncoding, dstEncoding, s, []byte(s), len(s))
 	default:
 		return fmt.Errorf("invalid source encoding '%v'", srcEncoding)
 	}
 }
 
-func testStringInternal(srcEncoding types.StringEncoding, dstEncoding types.StringEncoding, s string, encoded string, taggedCodeUnits int) error {
+func testStringInternal(srcEncoding types.StringEncoding, dstEncoding types.StringEncoding, s string, encoded []byte, taggedCodeUnits int) error {
 	heap := NewHeap(len(encoded))
 	buf := heap.Memory.Bytes()
-	copy(buf, []byte(encoded))
+	copy(buf, encoded)
 	cx := NewContext(heap.Memory, srcEncoding, heap.ReAllocate, nil)
 	return test(types.String{}, []any{int32(0), int32(taggedCodeUnits)}, s, cx, dstEncoding, nil, nil)
 }

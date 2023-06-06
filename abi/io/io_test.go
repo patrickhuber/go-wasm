@@ -17,17 +17,15 @@ func test(t types.ValType, valsToLift []any, v any,
 	if err != nil {
 		return err
 	}
+
 	vi := values.NewIterator(vs...)
-	if v == nil {
-		got, err := io.LiftFlat(cx, vi, t)
-		if err != nil {
-			return err
-		}
-		return fmt.Errorf("expected trap but got %v", got)
-	}
+
 	got, err := io.LiftFlat(cx, vi, t)
 	if err != nil {
 		return err
+	}
+	if v == nil {
+		return fmt.Errorf("expected trap but got %v", got)
 	}
 
 	err = types.TrapIf(vi.Index() != vi.Length())
@@ -38,12 +36,8 @@ func test(t types.ValType, valsToLift []any, v any,
 		return fmt.Errorf("initial lift_flat() expected %v but got %v", v, got)
 	}
 
-	if lowerT == nil {
-		lowerT = t
-	}
-	if lowerV == nil {
-		lowerV = v
-	}
+	lowerT = coalesce(lowerT, t)
+	lowerV = coalesce(lowerV, v)
 
 	heap := NewHeap(5 * cx.Options.Memory.Len())
 	if dstEncoding == types.None {
@@ -113,4 +107,17 @@ func equalModuloStringEncoding(s any, v any) bool {
 	// TODO: list check
 	// TODO: map check
 	return s == v
+}
+
+func coalesce[T comparable](v T, other ...T) T {
+	var zero T
+	if v != zero {
+		return v
+	}
+	for _, o := range other {
+		if o != zero {
+			return o
+		}
+	}
+	return zero
 }
