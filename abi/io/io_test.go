@@ -44,7 +44,7 @@ func test(t types.ValType, valsToLift []any, v any,
 		dstEncoding = cx.Options.StringEncoding
 	}
 
-	cx = NewContext(heap.Memory, types.StringEncoding(dstEncoding), heap.ReAllocate, cx.Options.PostReturn)
+	cx = NewContext(heap.Memory, dstEncoding, heap.ReAllocate, cx.Options.PostReturn)
 
 	loweredValues, err := io.LowerFlat(cx, v, lowerT)
 	if err != nil {

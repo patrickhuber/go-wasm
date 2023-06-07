@@ -10,9 +10,10 @@ import (
 
 func TestRoundTrip(t *testing.T) {
 	codecs := []encoding.Codec{
-		encoding.UTF8(),
-		encoding.UTF16(),
+		encoding.NewUTF8(),
+		encoding.NewUTF16(),
 	}
+
 	// hex literals will fail because they are not converted to utf8
 	// to work around this, use unicode literals instead
 	tests := []string{
@@ -33,7 +34,7 @@ func TestRoundTrip(t *testing.T) {
 
 	for i, test := range tests {
 		for _, codec := range codecs {
-			name := fmt.Sprintf("iteration %d codec %s", i, codec.Name())
+			name := fmt.Sprintf("iteration %d codec %s", i, codec.Encoding())
 			t.Run(name, func(t *testing.T) {
 				buf, err := codec.Encode(test)
 				require.Nil(t, err)

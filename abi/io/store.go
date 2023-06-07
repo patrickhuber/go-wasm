@@ -6,8 +6,7 @@ import (
 
 	"github.com/patrickhuber/go-wasm/abi/kind"
 	"github.com/patrickhuber/go-wasm/abi/types"
-	"golang.org/x/text/encoding"
-	"golang.org/x/text/encoding/unicode"
+	"github.com/patrickhuber/go-wasm/encoding"
 )
 
 func Store(c *types.Context, val any, t types.ValType, ptr uint32) error {
@@ -128,24 +127,24 @@ func StoreString(c *types.Context, str string, ptr uint32) error {
 
 func StoreStringIntoRange(cx *types.Context, str string) (uint32, uint32, error) {
 
-	var encoder *encoding.Encoder
+	var encoder encoding.Encoder
 	var srcCodeUnits uint32 = 0
 
 	switch cx.Options.StringEncoding {
 	// utf8 -> utf8
 	case types.Utf8:
-		encoder = unicode.UTF8.NewEncoder()
+		encoder = encoding.NewUTF8()
 		srcCodeUnits = uint32(len(str))
 		return StoreStringCopy(cx, str, srcCodeUnits, 1, 1, encoder)
 
-		// utf8 -> utf16
+	// utf8 -> utf16
 	case types.Utf16:
-		encoder = unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewEncoder()
-		return 0, 0, types.Trap()
+		srcCodeUnits = uint32(len(str))
+		return StoreUtf8ToUtf16(cx, str, srcCodeUnits)
 
 	// utf8 -> utf16 | latin1
 	case types.Latin1Utf16:
-		encoder = unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewEncoder()
+		encoder = encoding.NewUTF16()
 		// 	encoder = charmap.ISO8859_1.NewEncoder()
 		return 0, 0, types.Trap()
 
@@ -154,7 +153,7 @@ func StoreStringIntoRange(cx *types.Context, str string) (uint32, uint32, error)
 	}
 }
 
-func StoreStringCopy(cx *types.Context, src string, srcCodeUnits uint32, dstCodeUnitSize uint32, dstAlignment uint32, dstEncoding *encoding.Encoder) (uint32, uint32, error) {
+func StoreStringCopy(cx *types.Context, src string, srcCodeUnits uint32, dstCodeUnitSize uint32, dstAlignment uint32, dstEncoding encoding.Encoder) (uint32, uint32, error) {
 
 	dstByteLength := dstCodeUnitSize * srcCodeUnits
 	err := types.TrapIf(dstByteLength > types.MaxStringByteLength)
@@ -176,9 +175,74 @@ func StoreStringCopy(cx *types.Context, src string, srcCodeUnits uint32, dstCode
 		return 0, 0, err
 	}
 
+	encoded, err := dstEncoding.Encode(src)
+	if err != nil {
+		return 0, 0, err
+	}
+
 	buf := cx.Options.Memory.Bytes()[ptr : ptr+dstByteLength]
-	_, _, err = dstEncoding.Transformer.Transform(buf, []byte(src), false)
+	copy(buf, encoded)
+
 	return ptr, srcCodeUnits, err
+}
+
+func StoreUtf8ToUtf16(cx *types.Context, src string, srcCodeUnits uint32) (uint32, uint32, error) {
+
+	worstCaseSize := 2 * srcCodeUnits
+
+	err := types.TrapIf(worstCaseSize > types.MaxStringByteLength)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	ptr, err := cx.Options.Realloc(0, 0, 2, worstCaseSize)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	err = types.TrapIf(ptr != types.AlignTo(ptr, 2))
+	if err != nil {
+		return 0, 0, err
+	}
+
+	err = types.TrapIf(ptr+worstCaseSize > uint32(cx.Options.Memory.Len()))
+	if err != nil {
+		return 0, 0, err
+	}
+
+	encoded, err := encoding.NewUTF16().Encode(src)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	hiPtr := ptr + uint32(len(encoded))
+	buf := cx.Options.Memory.Bytes()[ptr:hiPtr]
+	copy(buf, encoded)
+
+	if len(encoded) < int(worstCaseSize) {
+
+		ptr, err = cx.Options.Realloc(ptr, worstCaseSize, 2, uint32(len(encoded)))
+		if err != nil {
+			return 0, 0, err
+		}
+
+		err = types.TrapIf(ptr != types.AlignTo(ptr, 2))
+		if err != nil {
+			return 0, 0, err
+		}
+
+		err = types.TrapIf(hiPtr > uint32(cx.Options.Memory.Len()))
+		if err != nil {
+			return 0, 0, err
+		}
+	}
+
+	codeUnits := uint32(len(encoded) / 2)
+	return ptr, codeUnits, nil
+}
+
+func StoreUtf8ToLatin1OrUtf16(cx *types.Context, src string, srcCodeUnits uint32) (uint32, uint32, error) {
+	return 0, 0, nil
 }
 
 func StoreList(c *types.Context, v any, ptr uint32, elementType types.ValType) error {

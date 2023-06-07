@@ -2,7 +2,11 @@ package encoding
 
 import "golang.org/x/text/encoding/unicode"
 
-func UTF8() Codec {
+const (
+	UTF8 Encoding = "utf-8"
+)
+
+func NewUTF8() Codec {
 	enc := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
 	return &codec{
 		enc:  enc,

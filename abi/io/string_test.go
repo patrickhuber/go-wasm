@@ -9,6 +9,12 @@ import (
 )
 
 func TestString(t *testing.T) {
+	encodings := []types.StringEncoding{
+		types.Utf8,
+		types.Utf16,
+		types.Latin1Utf16,
+	}
+
 	// hex literals will fail because they are not converted to utf8
 	// to work around this, use unicode literals instead
 	strings := []string{
@@ -27,13 +33,17 @@ func TestString(t *testing.T) {
 		"abcdef\uf123",
 	}
 
+	src := types.Utf8
 	for i, test := range strings {
-		name := fmt.Sprintf("iteration: %d", i)
-		t.Run(name, func(t *testing.T) {
-			err := testString(types.Utf8, types.Utf8, test)
-			require.Nil(t, err)
-		})
+		for _, dst := range encodings {
+			name := fmt.Sprintf("from: %s to: %s string: %d", src, dst, i)
+			t.Run(name, func(t *testing.T) {
+				err := testString(src, dst, test)
+				require.Nil(t, err)
+			})
+		}
 	}
+
 }
 
 func testString(srcEncoding types.StringEncoding, dstEncoding types.StringEncoding, s string) error {

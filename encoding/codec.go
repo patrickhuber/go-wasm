@@ -11,7 +11,7 @@ import (
 type Codec interface {
 	Encoder
 	Decoder
-	Name() string
+	Encoding() Encoding
 }
 
 type Encoder interface {
@@ -22,8 +22,10 @@ type Decoder interface {
 	Decode(src []byte) (string, error)
 }
 
+type Encoding string
+
 type codec struct {
-	name string
+	name Encoding
 	enc  encoding.Encoding
 }
 
@@ -50,6 +52,6 @@ func (c *codec) Decode(src []byte) (string, error) {
 	return writer.String(), nil
 }
 
-func (c *codec) Name() string {
+func (c *codec) Encoding() Encoding {
 	return c.name
 }
