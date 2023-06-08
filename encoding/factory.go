@@ -2,7 +2,6 @@ package encoding
 
 import (
 	"fmt"
-	"os"
 
 	"golang.org/x/text/encoding/unicode"
 )
@@ -21,6 +20,7 @@ func DefaultFactory() Factory {
 		NewUTF16(),
 		NewUTF8(),
 		NewLatin1(),
+		NewLatin1Utf16(),
 		NewUTF16WithEndianess(unicode.BigEndian),
 		NewUTF16WithEndianess(unicode.LittleEndian),
 	)
@@ -36,7 +36,7 @@ func NewFactory(codecs ...Codec) Factory {
 	}
 }
 
-var ErrNotExist = os.ErrNotExist
+var ErrNotExist = fmt.Errorf("does not exist")
 
 func (f *factory) Get(enc Encoding) (Codec, error) {
 	codec, ok := f.Lookup(enc)

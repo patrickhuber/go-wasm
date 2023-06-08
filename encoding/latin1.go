@@ -15,3 +15,12 @@ func NewLatin1() Codec {
 		runeSize:  1,
 	}
 }
+
+func NewLatin1Utf16() Codec {
+	return &codec{
+		enc:       charmap.ISO8859_1,
+		alignment: 2,
+		name:      Latin1Utf16,
+		runeSize:  1,
+	}
+}

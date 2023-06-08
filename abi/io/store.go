@@ -7,6 +7,7 @@ import (
 	"github.com/patrickhuber/go-wasm/abi/kind"
 	"github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/encoding"
+	"golang.org/x/text/encoding/charmap"
 )
 
 func Store(c *types.Context, val any, t types.ValType, ptr uint32) error {
@@ -125,11 +126,41 @@ func StoreString(c *types.Context, str string, ptr uint32) error {
 }
 
 func StoreStringIntoRange(cx *types.Context, str string) (uint32, uint32, error) {
+
 	codec, err := encoding.DefaultFactory().Get(cx.Options.StringEncoding)
 	if err != nil {
 		return 0, 0, err
 	}
+
+	if cx.Options.StringEncoding != encoding.Latin1Utf16 {
+		return StoreStringDynamic(cx, str, codec)
+	}
+
+	// set the default encoding
+	enc := encoding.Latin1
+	if !isLatin1(str) {
+		enc = encoding.UTF16LE
+	}
+
+	codec, err = encoding.DefaultFactory().Get(enc)
+	if err != nil {
+		return 0, 0, err
+	}
+
 	return StoreStringDynamic(cx, str, codec)
+}
+
+func isLatin1(str string) bool {
+	latin1 := charmap.ISO8859_1
+
+	// scan the string looking for invalid latin1 characters
+	for _, r := range str {
+		_, ok := latin1.EncodeRune(r)
+		if !ok {
+			return false
+		}
+	}
+	return true
 }
 
 // StoreStringDynamic assumes the incoming string is in utf8 and stores the string to the given codec's encoding at the end of the context memory
@@ -154,6 +185,7 @@ func StoreStringDynamic(
 	buf := cx.Options.Memory.Bytes()[ptr : ptr+lenEncoded]
 	copy(buf, encoded)
 
+	// return the pointer and the adjusted length (in runes)
 	return ptr, lenEncoded / uint32(codec.RuneSize()), nil
 }
 
