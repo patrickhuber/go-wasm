@@ -1,6 +1,8 @@
 package io
 
 import (
+	"fmt"
+
 	"github.com/patrickhuber/go-wasm/abi/kind"
 	"github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/abi/values"
@@ -25,7 +27,9 @@ func LiftBorrow(cx *types.Context, i uint32, t *types.Borrow) (*types.Handle, er
 }
 
 func LiftFlat(cx *types.Context, vi values.ValueIterator, t types.ValType) (any, error) {
-	switch t.Despecialize().Kind() {
+	t = t.Despecialize()
+	k := t.Kind()
+	switch k {
 	case kind.Bool:
 		return LiftFlatBool(vi)
 	case kind.U8:
@@ -104,7 +108,7 @@ func LiftFlat(cx *types.Context, vi values.ValueIterator, t types.ValType) (any,
 		}
 		return LiftBorrow(cx, i, b)
 	}
-	return nil, types.Trap()
+	return nil, fmt.Errorf("unable to lift type %s", k)
 }
 
 func LiftFlatBool(vi values.ValueIterator) (bool, error) {

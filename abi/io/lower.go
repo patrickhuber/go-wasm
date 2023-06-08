@@ -1,6 +1,8 @@
 package io
 
 import (
+	"fmt"
+
 	"github.com/patrickhuber/go-wasm/abi/kind"
 	"github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/abi/values"
@@ -8,7 +10,8 @@ import (
 
 func LowerFlat(cx *types.Context, v any, t types.ValType) ([]values.Value, error) {
 	t = t.Despecialize()
-	switch t.Kind() {
+	k := t.Kind()
+	switch k {
 	case kind.Bool:
 		return LowerBool(v)
 	case kind.S8:
@@ -36,7 +39,7 @@ func LowerFlat(cx *types.Context, v any, t types.ValType) ([]values.Value, error
 	case kind.String:
 		return LowerString(cx, v)
 	}
-	return nil, nil
+	return nil, fmt.Errorf("unable to lower type %s", k.String())
 }
 
 func LowerBool(v any) ([]values.Value, error) {

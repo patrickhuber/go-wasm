@@ -1,19 +1,19 @@
 package io
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"math"
 
 	"github.com/patrickhuber/go-wasm/abi/kind"
 	"github.com/patrickhuber/go-wasm/abi/types"
-	"golang.org/x/text/encoding"
-	"golang.org/x/text/encoding/charmap"
-	"golang.org/x/text/encoding/unicode"
+	"github.com/patrickhuber/go-wasm/encoding"
 )
 
 func Load(cx *types.Context, t types.ValType, ptr uint32) (any, error) {
-	switch t.Kind() {
+	k := t.Kind()
+	switch k {
 	case kind.Bool:
 		return LoadBool(cx, ptr)
 	case kind.U8:
@@ -67,7 +67,7 @@ func Load(cx *types.Context, t types.ValType, ptr uint32) (any, error) {
 		b := t.(*types.Borrow)
 		return LiftBorrow(cx, i, b)
 	}
-	return nil, fmt.Errorf("unrecognized type")
+	return nil, fmt.Errorf("unrecognized type %s", k.String())
 }
 
 func LoadChar(cx *types.Context, ptr uint32, nbytes uint32) (any, error) {
@@ -150,37 +150,26 @@ func LoadString(cx *types.Context, ptr uint32) (string, error) {
 	return LoadStringFromRange(cx, begin, taggedCodeUnits)
 }
 
-const UFT16Tag = 1 << 31
-
 func LoadStringFromRange(cx *types.Context, ptr, taggedCodeUnits uint32) (string, error) {
-	var alignment uint32 = 0
-	var byteLength uint32 = 0
 
-	var decoder *encoding.Decoder
-
-	switch cx.Options.StringEncoding {
-	case types.Utf8:
-		alignment = 1
-		byteLength = taggedCodeUnits
-		decoder = unicode.UTF8.NewDecoder()
-
-	case types.Utf16:
-		alignment = 2
-		byteLength = 2 * taggedCodeUnits
-		decoder = unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewDecoder()
-
-	case types.Latin1Utf16:
-		alignment = 2
-		if taggedCodeUnits&UFT16Tag != 0 {
-			byteLength = 2 * (taggedCodeUnits ^ UFT16Tag)
-			decoder = unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewDecoder()
+	srcEncoding := cx.Options.StringEncoding
+	tcu := UInt32ToTaggedCodeUnits(taggedCodeUnits)
+	if srcEncoding == encoding.Latin1Utf16 {
+		if tcu.UTF16 {
+			srcEncoding = encoding.UTF16LE
 		} else {
-			byteLength = taggedCodeUnits
-			decoder = charmap.ISO8859_1.NewDecoder()
+			srcEncoding = encoding.Latin1
 		}
 	}
 
-	err := types.TrapIf(ptr != types.AlignTo(ptr, alignment))
+	codec, err := encoding.DefaultFactory().Get(srcEncoding)
+	if err != nil {
+		return "", err
+	}
+
+	byteLength := tcu.CodeUnits * uint32(codec.RuneSize())
+
+	err = types.TrapIf(ptr != types.AlignTo(ptr, uint32(codec.Alignment())))
 	if err != nil {
 		return "", err
 	}
@@ -191,11 +180,7 @@ func LoadStringFromRange(cx *types.Context, ptr, taggedCodeUnits uint32) (string
 	}
 
 	buf := cx.Options.Memory.Bytes()[ptr : ptr+byteLength]
-	decoded, err := decoder.Bytes(buf)
-	if err != nil {
-		return "", err
-	}
-	return string(decoded), nil
+	return encoding.DecodeString(codec, bytes.NewReader(buf))
 }
 
 func LoadList(cx *types.Context, ptr uint32, elementType types.ValType) ([]any, error) {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/patrickhuber/go-wasm/abi/io"
 	"github.com/patrickhuber/go-wasm/abi/types"
+	"github.com/patrickhuber/go-wasm/encoding"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,7 +31,7 @@ func TestCanRoundTrip(t *testing.T) {
 	}
 
 	heap := NewHeap(8)
-	c := NewContext(heap.Memory, types.Utf8, heap.ReAllocate, func() {})
+	c := NewContext(heap.Memory, encoding.UTF8, heap.ReAllocate, func() {})
 	for i, test := range tests {
 
 		t.Run(test.t.Kind().String(), func(t *testing.T) {
@@ -86,17 +87,17 @@ func (h *Heap) ReAllocate(originalPtr, originalSize, alignment, newSize uint32) 
 	return ret, nil
 }
 
-func NewContext(memory bytes.Buffer, encoding types.StringEncoding, realloc types.ReallocFunc, postReturn types.PostReturnFunc) *types.Context {
-	options := NewOptions(memory, encoding, realloc, postReturn)
+func NewContext(memory bytes.Buffer, enc encoding.Encoding, realloc types.ReallocFunc, postReturn types.PostReturnFunc) *types.Context {
+	options := NewOptions(memory, enc, realloc, postReturn)
 	return &types.Context{
 		Options: options,
 	}
 }
 
-func NewOptions(memory bytes.Buffer, encoding types.StringEncoding, realloc types.ReallocFunc, postReturn types.PostReturnFunc) *types.CanonicalOptions {
+func NewOptions(memory bytes.Buffer, enc encoding.Encoding, realloc types.ReallocFunc, postReturn types.PostReturnFunc) *types.CanonicalOptions {
 	return &types.CanonicalOptions{
 		Memory:         memory,
-		StringEncoding: encoding,
+		StringEncoding: enc,
 		Realloc:        realloc,
 		PostReturn:     postReturn,
 	}

@@ -1,6 +1,7 @@
 package encoding_test
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 
@@ -9,9 +10,12 @@ import (
 )
 
 func TestRoundTrip(t *testing.T) {
-	codecs := []encoding.Codec{
-		encoding.NewUTF8(),
-		encoding.NewUTF16(),
+	encodings := []encoding.Encoding{
+		encoding.UTF8,
+		encoding.UTF16,
+		encoding.UTF16BE,
+		encoding.UTF16LE,
+		encoding.Latin1,
 	}
 
 	// hex literals will fail because they are not converted to utf8
@@ -28,18 +32,33 @@ func TestRoundTrip(t *testing.T) {
 		"ab\u00efc", // "ab\xefc",
 		"\u01ffy",
 		"xy\u01ff",
-
+		"a\ud7ffb",
+		"a\u02ff\u03ff\u04ffbc",
+		"\uf123",
+		"\uf123\uf123abc",
 		"abcdef\uf123",
 	}
 
+	factory := encoding.DefaultFactory()
+	fallback, err := factory.Get(encoding.UTF16LE)
+	require.Nil(t, err)
+
 	for i, test := range tests {
-		for _, codec := range codecs {
+		for _, enc := range encodings {
+			codec, err := factory.Get(enc)
+			require.Nil(t, err)
 			name := fmt.Sprintf("iteration %d codec %s", i, codec.Encoding())
 			t.Run(name, func(t *testing.T) {
-				buf, err := codec.Encode(test)
+
+				buf, err := encoding.EncodeString(codec, test)
+				// retry for latin1
+				if err != nil && codec.Encoding() == encoding.Latin1 {
+					codec = fallback
+					buf, err = encoding.EncodeString(codec, test)
+				}
 				require.Nil(t, err)
 
-				str, err := codec.Decode(buf)
+				str, err := encoding.DecodeString(codec, bytes.NewReader(buf))
 				require.Nil(t, err)
 
 				require.Equal(t, test, str)

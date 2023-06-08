@@ -52,13 +52,12 @@ func StoreFloat(c *types.Context, val any, ptr uint32, nbytes uint32) error {
 	if nbytes == 4 {
 		f := val.(float32)
 		i := math.Float32bits(f)
-		StoreInt(c, i, ptr, nbytes, false)
+		return StoreInt(c, i, ptr, nbytes, false)
 	} else {
 		f := val.(float64)
 		i := math.Float64bits(f)
-		StoreInt(c, i, ptr, nbytes, false)
+		return StoreInt(c, i, ptr, nbytes, false)
 	}
-	return nil
 }
 
 func StoreUInt32(c *types.Context, val uint32, ptr uint32) error {
@@ -126,31 +125,36 @@ func StoreString(c *types.Context, str string, ptr uint32) error {
 }
 
 func StoreStringIntoRange(cx *types.Context, str string) (uint32, uint32, error) {
-
-	var encoder encoding.Encoder
-	var srcCodeUnits uint32 = 0
-
-	switch cx.Options.StringEncoding {
-	// utf8 -> utf8
-	case types.Utf8:
-		encoder = encoding.NewUTF8()
-		srcCodeUnits = uint32(len(str))
-		return StoreStringCopy(cx, str, srcCodeUnits, 1, 1, encoder)
-
-	// utf8 -> utf16
-	case types.Utf16:
-		srcCodeUnits = uint32(len(str))
-		return StoreUtf8ToUtf16(cx, str, srcCodeUnits)
-
-	// utf8 -> utf16 | latin1
-	case types.Latin1Utf16:
-		encoder = encoding.NewUTF16()
-		// 	encoder = charmap.ISO8859_1.NewEncoder()
-		return 0, 0, types.Trap()
-
-	default:
-		return 0, 0, types.Trap()
+	codec, err := encoding.DefaultFactory().Get(cx.Options.StringEncoding)
+	if err != nil {
+		return 0, 0, err
 	}
+	return StoreStringDynamic(cx, str, codec)
+}
+
+// StoreStringDynamic assumes the incoming string is in utf8 and stores the string to the given codec's encoding at the end of the context memory
+func StoreStringDynamic(
+	cx *types.Context,
+	str string,
+	codec encoding.Codec) (uint32, uint32, error) {
+
+	encoded, err := encoding.EncodeString(codec, str)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	dstAlignment := uint32(codec.Alignment())
+	lenEncoded := uint32(len(encoded))
+
+	ptr, err := cx.Options.Realloc(0, 0, dstAlignment, lenEncoded)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	buf := cx.Options.Memory.Bytes()[ptr : ptr+lenEncoded]
+	copy(buf, encoded)
+
+	return ptr, lenEncoded / uint32(codec.RuneSize()), nil
 }
 
 func StoreStringCopy(cx *types.Context, src string, srcCodeUnits uint32, dstCodeUnitSize uint32, dstAlignment uint32, dstEncoding encoding.Encoder) (uint32, uint32, error) {
@@ -175,7 +179,7 @@ func StoreStringCopy(cx *types.Context, src string, srcCodeUnits uint32, dstCode
 		return 0, 0, err
 	}
 
-	encoded, err := dstEncoding.Encode(src)
+	encoded, err := encoding.EncodeString(dstEncoding, src)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -210,7 +214,7 @@ func StoreUtf8ToUtf16(cx *types.Context, src string, srcCodeUnits uint32) (uint3
 		return 0, 0, err
 	}
 
-	encoded, err := encoding.NewUTF16().Encode(src)
+	encoded, err := encoding.EncodeString(encoding.NewUTF16(), src)
 	if err != nil {
 		return 0, 0, err
 	}

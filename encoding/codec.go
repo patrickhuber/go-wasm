@@ -1,9 +1,7 @@
 package encoding
 
 import (
-	"bytes"
 	"io"
-	"strings"
 
 	"golang.org/x/text/encoding"
 )
@@ -12,46 +10,53 @@ type Codec interface {
 	Encoder
 	Decoder
 	Encoding() Encoding
+	Alignment() int
+	RuneSize() int
 }
 
 type Encoder interface {
-	Encode(src string) ([]byte, error)
+	Encode(dst io.Writer, src io.Reader) error
 }
 
 type Decoder interface {
-	Decode(src []byte) (string, error)
+	Decode(dst io.Writer, src io.Reader) error
 }
 
 type Encoding string
 
+const (
+	None Encoding = ""
+)
+
 type codec struct {
-	name Encoding
-	enc  encoding.Encoding
+	name      Encoding
+	enc       encoding.Encoding
+	alignment int
+	runeSize  int
 }
 
-func (c *codec) Encode(src string) ([]byte, error) {
+func (c *codec) Encode(dst io.Writer, src io.Reader) error {
 	encoder := c.enc.NewEncoder()
-	reader := strings.NewReader(src)
-	buf := &bytes.Buffer{}
-	writer := encoder.Writer(buf)
-	_, err := io.Copy(writer, reader)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	writer := encoder.Writer(dst)
+	_, err := io.Copy(writer, src)
+	return err
 }
 
-func (c *codec) Decode(src []byte) (string, error) {
+func (c *codec) Decode(dst io.Writer, src io.Reader) error {
 	decoder := c.enc.NewDecoder()
-	reader := decoder.Reader(bytes.NewReader(src))
-	writer := &strings.Builder{}
-	_, err := io.Copy(writer, reader)
-	if err != nil {
-		return "", err
-	}
-	return writer.String(), nil
+	reader := decoder.Reader(src)
+	_, err := io.Copy(dst, reader)
+	return err
 }
 
 func (c *codec) Encoding() Encoding {
 	return c.name
+}
+
+func (c *codec) Alignment() int {
+	return c.alignment
+}
+
+func (c *codec) RuneSize() int {
+	return c.runeSize
 }

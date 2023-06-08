@@ -7,11 +7,12 @@ import (
 	"github.com/patrickhuber/go-wasm/abi/kind"
 	"github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/abi/values"
+	"github.com/patrickhuber/go-wasm/encoding"
 )
 
 func test(t types.ValType, valsToLift []any, v any,
 	cx *types.Context,
-	dstEncoding types.StringEncoding, lowerT types.ValType, lowerV any) error {
+	dstEncoding encoding.Encoding, lowerT types.ValType, lowerV any) error {
 
 	vs, err := zip(t.Flatten(), valsToLift)
 	if err != nil {
@@ -22,7 +23,7 @@ func test(t types.ValType, valsToLift []any, v any,
 
 	got, err := io.LiftFlat(cx, vi, t)
 	if err != nil {
-		return err
+		return fmt.Errorf("test : %w", err)
 	}
 	if v == nil {
 		return fmt.Errorf("expected trap but got %v", got)
@@ -40,7 +41,7 @@ func test(t types.ValType, valsToLift []any, v any,
 	lowerV = coalesce(lowerV, v)
 
 	heap := NewHeap(5 * cx.Options.Memory.Len())
-	if dstEncoding == types.None {
+	if dstEncoding == encoding.None {
 		dstEncoding = cx.Options.StringEncoding
 	}
 
