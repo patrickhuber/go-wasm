@@ -147,7 +147,17 @@ func StoreStringIntoRange(cx *types.Context, str string) (uint32, uint32, error)
 		return 0, 0, err
 	}
 
-	return StoreStringDynamic(cx, str, codec)
+	ptr, size, err := StoreStringDynamic(cx, str, codec)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	tcu := TaggedCodeUnits{
+		CodeUnits: size,
+		UTF16:     enc == encoding.UTF16LE,
+	}
+
+	return ptr, tcu.ToUInt32(), nil
 }
 
 func isLatin1(str string) bool {

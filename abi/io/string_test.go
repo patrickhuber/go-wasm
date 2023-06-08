@@ -2,6 +2,7 @@ package io_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/patrickhuber/go-wasm/abi/io"
@@ -19,7 +20,7 @@ func TestString(t *testing.T) {
 
 	// hex literals will fail because they are not converted to utf8
 	// to work around this, use unicode literals instead
-	strings := []string{
+	tests := []string{
 		"",
 		"a",
 		"hi",
@@ -38,10 +39,11 @@ func TestString(t *testing.T) {
 		"abcdef\uf123",
 	}
 
-	for i, test := range strings {
+	for i, test := range tests {
 		for _, src := range encodings {
 			for _, dst := range encodings {
-				name := fmt.Sprintf("from: %s to: %s string: %d", src, dst, i)
+				name := fmt.Sprintf("%s_to_%s_%d", src, dst, i)
+				name = strings.Replace(name, "+", "_", -1)
 				t.Run(name, func(t *testing.T) {
 					err := testString(src, dst, test)
 					require.Nil(t, err)
@@ -58,8 +60,8 @@ func testString(srcEncoding encoding.Encoding, dstEncoding encoding.Encoding, s 
 		srcEncoding = encoding.Latin1
 		fallback = encoding.UTF16
 	}
-
-	sourceCodec, err := encoding.DefaultFactory().Get(srcEncoding)
+	factory := encoding.DefaultFactory()
+	sourceCodec, err := factory.Get(srcEncoding)
 	if err != nil {
 		return err
 	}
@@ -75,7 +77,7 @@ func testString(srcEncoding encoding.Encoding, dstEncoding encoding.Encoding, s 
 
 	srcEncoding = fallback
 
-	sourceCodec, err = encoding.DefaultFactory().Get(srcEncoding)
+	sourceCodec, err = factory.Get(srcEncoding)
 	if err != nil {
 		return err
 	}
@@ -90,7 +92,7 @@ func testString(srcEncoding encoding.Encoding, dstEncoding encoding.Encoding, s 
 		UTF16:     true,
 	}
 
-	codeUnits := int(io.TaggedCodeUnitsToUint32(tcu))
+	codeUnits := int(tcu.ToUInt32())
 	return testStringInternal(srcEncoding, dstEncoding, s, encoded, codeUnits)
 }
 
