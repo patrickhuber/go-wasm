@@ -11,7 +11,7 @@ type ReallocFunc func(originalPtr, originalSize, alignment, newSize uint32) (ptr
 type PostReturnFunc func()
 
 type CanonicalOptions struct {
-	Memory         bytes.Buffer
+	Memory         *bytes.Buffer
 	StringEncoding encoding.Encoding
 	Realloc        ReallocFunc
 	PostReturn     PostReturnFunc

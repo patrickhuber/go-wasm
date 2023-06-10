@@ -54,13 +54,13 @@ func zero[T byte](slice []T) {
 }
 
 type Heap struct {
-	Memory    bytes.Buffer
+	Memory    *bytes.Buffer
 	LastAlloc int
 }
 
 func NewHeap(size int) *Heap {
 	return &Heap{
-		Memory:    *bytes.NewBuffer(make([]byte, size)),
+		Memory:    bytes.NewBuffer(make([]byte, size)),
 		LastAlloc: 0,
 	}
 }
@@ -87,14 +87,14 @@ func (h *Heap) ReAllocate(originalPtr, originalSize, alignment, newSize uint32) 
 	return ret, nil
 }
 
-func NewContext(memory bytes.Buffer, enc encoding.Encoding, realloc types.ReallocFunc, postReturn types.PostReturnFunc) *types.Context {
+func NewContext(memory *bytes.Buffer, enc encoding.Encoding, realloc types.ReallocFunc, postReturn types.PostReturnFunc) *types.Context {
 	options := NewOptions(memory, enc, realloc, postReturn)
 	return &types.Context{
 		Options: options,
 	}
 }
 
-func NewOptions(memory bytes.Buffer, enc encoding.Encoding, realloc types.ReallocFunc, postReturn types.PostReturnFunc) *types.CanonicalOptions {
+func NewOptions(memory *bytes.Buffer, enc encoding.Encoding, realloc types.ReallocFunc, postReturn types.PostReturnFunc) *types.CanonicalOptions {
 	return &types.CanonicalOptions{
 		Memory:         memory,
 		StringEncoding: enc,

@@ -1,14 +1,58 @@
 package io_test
 
 import (
+	"bytes"
 	"fmt"
+	"reflect"
+	"testing"
 
 	"github.com/patrickhuber/go-wasm/abi/io"
 	"github.com/patrickhuber/go-wasm/abi/kind"
 	"github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/abi/values"
 	"github.com/patrickhuber/go-wasm/encoding"
+	"github.com/stretchr/testify/require"
 )
+
+func Test(t *testing.T) {
+	type testCase struct {
+		name        string
+		t           types.ValType
+		valsToLift  []any
+		v           any
+		dstEncoding encoding.Encoding
+		lowerT      types.ValType
+		lowerV      any
+	}
+	tests := []testCase{
+		{"record", &types.Record{}, []any{}, map[string]any{}, encoding.None, nil, nil},
+		{"record_fields", &types.Record{
+			Fields: []types.Field{
+				{Label: "x", Type: &types.U8{}},
+				{Label: "y", Type: &types.U16{}},
+				{Label: "z", Type: &types.U32{}},
+			},
+		}, []any{int32(1), int32(2), int32(3)}, map[string]any{"x": uint8(1), "y": uint16(2), "z": uint32(3)}, encoding.None, nil, nil},
+		{"tuple", &types.Tuple{
+			Types: []types.ValType{
+				&types.Tuple{
+					Types: []types.ValType{
+						&types.U8{},
+						&types.U8{},
+					},
+				},
+				&types.U8{},
+			},
+		}, []any{int32(1), int32(2), int32(3)}, map[string]any{"0": map[string]any{"0": uint8(1), "1": uint8(2)}, "1": uint8(3)}, encoding.UTF8, nil, nil},
+	}
+	for _, oneTest := range tests {
+		t.Run(oneTest.name, func(t *testing.T) {
+			cxt := NewContext(&bytes.Buffer{}, encoding.UTF8, nil, nil)
+			err := test(oneTest.t, oneTest.valsToLift, oneTest.v, cxt, oneTest.dstEncoding, oneTest.lowerT, oneTest.lowerV)
+			require.Nil(t, err)
+		})
+	}
+}
 
 func test(t types.ValType, valsToLift []any, v any,
 	cx *types.Context,
@@ -33,7 +77,7 @@ func test(t types.ValType, valsToLift []any, v any,
 	if err != nil {
 		return err
 	}
-	if got != v {
+	if !reflect.DeepEqual(got, v) {
 		return fmt.Errorf("initial lift_flat() expected %v but got %v", v, got)
 	}
 
@@ -105,9 +149,8 @@ func equalModuloStringEncoding(s any, v any) bool {
 	if v == nil {
 		return false
 	}
-	// TODO: list check
-	// TODO: map check
-	return s == v
+
+	return reflect.DeepEqual(s, v)
 }
 
 func coalesce[T comparable](v T, other ...T) T {

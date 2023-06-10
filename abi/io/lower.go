@@ -38,6 +38,9 @@ func LowerFlat(cx *types.Context, v any, t types.ValType) ([]values.Value, error
 		return LowerChar(v)
 	case kind.String:
 		return LowerString(cx, v)
+	case kind.Record:
+		r := t.(*types.Record)
+		return LowerRecord(cx, v, r)
 	}
 	return nil, fmt.Errorf("unable to lower type %s", k.String())
 }
@@ -143,6 +146,22 @@ func LowerString(cx *types.Context, v any) ([]values.Value, error) {
 		return nil, err
 	}
 	return append(iptr, ilen...), nil
+}
+
+func LowerRecord(cx *types.Context, v any, r *types.Record) ([]values.Value, error) {
+	var flat []values.Value
+	vMap, ok := v.(map[string]any)
+	if !ok {
+		return nil, NewCastError(v, "map[string]any")
+	}
+	for _, field := range r.Fields {
+		lowerFields, err := LowerFlat(cx, vMap[field.Label], field.Type)
+		if err != nil {
+			return nil, err
+		}
+		flat = append(flat, lowerFields...)
+	}
+	return flat, nil
 }
 
 func slice(values ...values.Value) []values.Value {
