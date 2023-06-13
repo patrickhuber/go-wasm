@@ -294,3 +294,23 @@ func StoreUtf8ToLatin1OrUtf16(cx *types.Context, src string, srcCodeUnits uint32
 func StoreList(c *types.Context, v any, ptr uint32, elementType types.ValType) error {
 	return nil
 }
+
+func PackFlagsIntoInt(v map[string]any, labels []string) (int, error) {
+	packed := 0
+	shift := 0
+	for _, label := range labels {
+		val := v[label]
+		b, ok := val.(bool)
+		if !ok {
+			return 0, NewCastError(val, "bool")
+		}
+		i := 0
+		if b {
+			i = 1
+		}
+		packed |= i << shift
+		shift += 1
+	}
+
+	return packed, nil
+}

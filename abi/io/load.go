@@ -304,3 +304,12 @@ func LoadFlags(cx *types.Context, ptr uint32, flags *types.Flags) (map[string]bo
 	}
 	return flagMap, nil
 }
+
+func UnpackFlagsFromInt(i int, labels []string) map[string]any {
+	unpacked := map[string]any{}
+	for _, label := range labels {
+		unpacked[label] = (i&1 == 1)
+		i >>= 1
+	}
+	return unpacked
+}

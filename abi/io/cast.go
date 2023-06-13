@@ -1,6 +1,8 @@
 package io
 
-import "fmt"
+import (
+	"fmt"
+)
 
 var ErrCast error = fmt.Errorf("error casting")
 

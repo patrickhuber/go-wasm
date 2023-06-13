@@ -75,7 +75,7 @@ func LiftFlat(cx *types.Context, vi values.ValueIterator, t types.ValType) (any,
 		if !ok {
 			return nil, types.Trap()
 		}
-		return LiftFlatFlags(vi, f.Labels)
+		return LiftFlatFlags(vi, f)
 	case kind.Own:
 		v, err := vi.Next(kind.S32)
 		if err != nil {
@@ -265,6 +265,21 @@ func LiftFlatVariant(cx *types.Context, vi values.ValueIterator, cases []types.C
 	panic("unimplemented")
 }
 
-func LiftFlatFlags(vi values.ValueIterator, labels []string) (any, error) {
-	panic("unimplemented")
+func LiftFlatFlags(vi values.ValueIterator, f *types.Flags) (any, error) {
+	flat := 0
+	shift := 0
+	numFlags := f.NumI32Flags()
+	for i := 0; i < int(numFlags); i++ {
+		next, err := vi.Next(kind.S32)
+		if err != nil {
+			return nil, err
+		}
+		i32Next, ok := next.(int32)
+		if !ok {
+			return nil, NewCastError(next, "int32")
+		}
+		flat |= (int(i32Next) << shift)
+		shift += 32
+	}
+	return UnpackFlagsFromInt(flat, f.Labels), nil
 }

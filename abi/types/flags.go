@@ -39,15 +39,20 @@ func (f *Flags) Size() uint32 {
 	case n <= 16:
 		return 2
 	}
-	return uint32(4) * numI32Flags(f.Labels)
+	return uint32(4) * f.NumI32Flags()
 }
 
 func (f *Flags) Flatten() []kind.Kind {
-	return f.Despecialize().Flatten()
+	flat := []kind.Kind{}
+	n := f.NumI32Flags()
+	for i := uint32(0); i < n; i++ {
+		flat = append(flat, kind.S32)
+	}
+	return flat
 }
 
-func numI32Flags(labels []string) uint32 {
-	flen := float64(len(labels))
+func (f *Flags) NumI32Flags() uint32 {
+	flen := float64(len(f.Labels))
 	f32 := float64(32)
 	fdiv := flen / f32
 	return uint32(math.Ceil(fdiv))

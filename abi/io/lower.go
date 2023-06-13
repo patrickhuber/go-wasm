@@ -41,6 +41,9 @@ func LowerFlat(cx *types.Context, v any, t types.ValType) ([]values.Value, error
 	case kind.Record:
 		r := t.(*types.Record)
 		return LowerRecord(cx, v, r)
+	case kind.Flags:
+		f := t.(*types.Flags)
+		return LowerFlatFlags(cx, v, f)
 	}
 	return nil, fmt.Errorf("unable to lower type %s", k.String())
 }
@@ -160,6 +163,28 @@ func LowerRecord(cx *types.Context, v any, r *types.Record) ([]values.Value, err
 			return nil, err
 		}
 		flat = append(flat, lowerFields...)
+	}
+	return flat, nil
+}
+
+func LowerFlatFlags(cx *types.Context, v any, f *types.Flags) ([]values.Value, error) {
+	vMap, ok := v.(map[string]any)
+	if !ok {
+		return nil, NewCastError(v, "map[string]any")
+	}
+	packed, err := PackFlagsIntoInt(vMap, f.Labels)
+	if err != nil {
+		return nil, err
+	}
+	var flat []values.Value
+	numFlags := f.NumI32Flags()
+	for i := 0; i < int(numFlags); i++ {
+		s32 := values.S32(packed & 0xffffffff)
+		flat = append(flat, s32)
+		packed >>= 32
+	}
+	if packed != 0 {
+		return nil, fmt.Errorf("invalid flag value")
 	}
 	return flat, nil
 }

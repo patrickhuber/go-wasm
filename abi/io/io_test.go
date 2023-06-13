@@ -44,6 +44,11 @@ func Test(t *testing.T) {
 				&types.U8{},
 			},
 		}, []any{int32(1), int32(2), int32(3)}, map[string]any{"0": map[string]any{"0": uint8(1), "1": uint8(2)}, "1": uint8(3)}, encoding.UTF8, nil, nil},
+		{"flags", &types.Flags{}, []any{}, map[string]any{}, encoding.UTF8, nil, nil},
+		{"flags", &types.Flags{Labels: []string{"a", "b"}}, []any{int32(0)}, map[string]any{"a": false, "b": false}, encoding.UTF8, nil, nil},
+		{"flags", &types.Flags{Labels: []string{"a", "b"}}, []any{int32(2)}, map[string]any{"a": false, "b": true}, encoding.UTF8, nil, nil},
+		{"flags", &types.Flags{Labels: []string{"a", "b"}}, []any{int32(3)}, map[string]any{"a": true, "b": true}, encoding.UTF8, nil, nil},
+		{"flags", &types.Flags{Labels: []string{"a", "b"}}, []any{int32(4)}, map[string]any{"a": false, "b": false}, encoding.UTF8, nil, nil},
 	}
 	for _, oneTest := range tests {
 		t.Run(oneTest.name, func(t *testing.T) {
