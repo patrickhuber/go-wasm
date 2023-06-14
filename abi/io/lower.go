@@ -49,7 +49,7 @@ func LowerFlat(cx *types.Context, v any, t types.ValType) ([]values.Value, error
 }
 
 func LowerBool(v any) ([]values.Value, error) {
-	var i values.S32
+	var i values.U32
 	b, ok := v.(bool)
 	if !ok {
 		return nil, NewCastError(v, "bool")
@@ -64,31 +64,31 @@ func LowerBool(v any) ([]values.Value, error) {
 
 func LowerU8(v any) ([]values.Value, error) {
 	u8 := v.(uint8)
-	i := values.S32(u8)
+	i := values.U32(u8)
 	return slice(i), nil
 }
 
 func LowerU16(v any) ([]values.Value, error) {
 	u16 := v.(uint16)
-	i := values.S32(u16)
+	i := values.U32(u16)
 	return slice(i), nil
 }
 
 func LowerU32(v any) ([]values.Value, error) {
 	u32 := v.(uint32)
-	i := values.S32(u32)
+	i := values.U32(u32)
 	return slice(i), nil
 }
 
 func LowerU64(v any) ([]values.Value, error) {
 	u64 := v.(uint64)
-	i := values.S64(u64)
+	i := values.U64(u64)
 	return slice(i), nil
 }
 
 func LowerS8(v any) ([]values.Value, error) {
 	s8 := v.(int8)
-	i := values.S32(s8)
+	i := values.U32(s8)
 	return slice(i), nil
 }
 
@@ -97,40 +97,49 @@ func LowerS16(v any) ([]values.Value, error) {
 	if !ok {
 		return nil, NewCastError(v, "int16")
 	}
-	i := values.S32(s16)
+	i := values.U32(s16)
 	return slice(i), nil
 }
 
 func LowerS32(v any) ([]values.Value, error) {
-	s32, ok := v.(int32)
+	u32, ok := v.(uint32)
 	if !ok {
 		return nil, NewCastError(v, "int32")
 	}
-	i := values.S32(s32)
+	i := values.U32(u32)
 	return slice(i), nil
 }
 
 func LowerS64(v any) ([]values.Value, error) {
-	s64 := v.(int64)
-	i := values.S64(s64)
+	u64, ok := v.(uint64)
+	if !ok {
+		return nil, NewCastError(v, "int64")
+	}
+	i := values.U64(u64)
 	return slice(i), nil
 }
 
 func LowerFloat32(v any) ([]values.Value, error) {
-	f32 := v.(float32)
+	f32, ok := v.(float32)
+	if !ok {
+		return nil, NewCastError(v, "float32")
+	}
 	f := values.Float32(f32)
 	return slice(f), nil
 }
 
 func LowerFloat64(v any) ([]values.Value, error) {
-	f64 := v.(float64)
+	f64, ok := v.(float64)
+	if !ok {
+		return nil, NewCastError(v, "float64")
+	}
 	f := values.Float64(f64)
 	return slice(f), nil
 }
 
 func LowerChar(v any) ([]values.Value, error) {
 	r := v.(rune)
-	i := values.S32(r)
+	i := values.U32(r)
 	return slice(i), nil
 }
 
@@ -179,8 +188,8 @@ func LowerFlatFlags(cx *types.Context, v any, f *types.Flags) ([]values.Value, e
 	var flat []values.Value
 	numFlags := f.NumI32Flags()
 	for i := 0; i < int(numFlags); i++ {
-		s32 := values.S32(packed & 0xffffffff)
-		flat = append(flat, s32)
+		u32 := values.U32(packed & 0xffffffff)
+		flat = append(flat, u32)
 		packed >>= 32
 	}
 	if packed != 0 {

@@ -116,53 +116,65 @@ func LiftFlatBool(vi values.ValueIterator) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	i32 := b.(int32)
-	if i32 == 0 {
-		return false, nil
+	u32, ok := b.(uint32)
+	if !ok {
+		return false, NewCastError(b, "uint32")
 	}
-	return true, nil
+	return u32 == 1, nil
 }
 
 func LiftFlatU8(vi values.ValueIterator) (uint8, error) {
 	// s8 is packed as a s32
-	i, err := vi.Next(kind.S32)
+	i, err := vi.Next(kind.U32)
 	if err != nil {
 		return 0, err
 	}
-	s32 := i.(int32)
-	return uint8(s32), nil
+	u32, ok := i.(uint32)
+	if !ok {
+		return 0, NewCastError(i, "uint32")
+	}
+	return uint8(u32), nil
 }
 
 func LiftFlatU16(vi values.ValueIterator) (uint16, error) {
-	i, err := vi.Next(kind.S32)
+	i, err := vi.Next(kind.U32)
 	if err != nil {
 		return 0, err
 	}
-	s32 := i.(int32)
-	return uint16(s32), nil
+	u32, ok := i.(uint32)
+	if !ok {
+		return 0, NewCastError(i, "uint32")
+	}
+	return uint16(u32), nil
 }
 
 func LiftFlatU32(vi values.ValueIterator) (uint32, error) {
-	i, err := vi.Next(kind.S32)
+	i, err := vi.Next(kind.U32)
 	if err != nil {
 		return 0, err
 	}
-	s32 := i.(int32)
-	return uint32(s32), nil
+	u32, ok := i.(uint32)
+	if !ok {
+		return 0, NewCastError(i, "uint32")
+	}
+	return u32, nil
 }
 
 func LiftFlatU64(vi values.ValueIterator) (uint64, error) {
-	i, err := vi.Next(kind.S64)
+	i, err := vi.Next(kind.U64)
 	if err != nil {
 		return 0, err
 	}
-	s64 := i.(int64)
-	return uint64(s64), nil
+	u64, ok := i.(uint64)
+	if !ok {
+		return 0, NewCastError(i, "uint64")
+	}
+	return u64, nil
 }
 
 func LiftFlatS8(vi values.ValueIterator) (int8, error) {
 	// s8 is packed as a s32
-	i, err := vi.Next(kind.S32)
+	i, err := vi.Next(kind.U32)
 	if err != nil {
 		return 0, err
 	}
@@ -171,7 +183,7 @@ func LiftFlatS8(vi values.ValueIterator) (int8, error) {
 }
 
 func LiftFlatS16(vi values.ValueIterator) (int16, error) {
-	i, err := vi.Next(kind.S32)
+	i, err := vi.Next(kind.U32)
 	if err != nil {
 		return 0, err
 	}
@@ -180,7 +192,7 @@ func LiftFlatS16(vi values.ValueIterator) (int16, error) {
 }
 
 func LiftFlatS32(vi values.ValueIterator) (int32, error) {
-	i, err := vi.Next(kind.S32)
+	i, err := vi.Next(kind.U32)
 	if err != nil {
 		return 0, err
 	}
@@ -189,7 +201,7 @@ func LiftFlatS32(vi values.ValueIterator) (int32, error) {
 }
 
 func LiftFlatS64(vi values.ValueIterator) (int64, error) {
-	i, err := vi.Next(kind.S64)
+	i, err := vi.Next(kind.U64)
 	if err != nil {
 		return 0, err
 	}
@@ -270,15 +282,15 @@ func LiftFlatFlags(vi values.ValueIterator, f *types.Flags) (any, error) {
 	shift := 0
 	numFlags := f.NumI32Flags()
 	for i := 0; i < int(numFlags); i++ {
-		next, err := vi.Next(kind.S32)
+		next, err := vi.Next(kind.U32)
 		if err != nil {
 			return nil, err
 		}
-		i32Next, ok := next.(int32)
+		u32Next, ok := next.(uint32)
 		if !ok {
 			return nil, NewCastError(next, "int32")
 		}
-		flat |= (int(i32Next) << shift)
+		flat |= (int(u32Next) << shift)
 		shift += 32
 	}
 	return UnpackFlagsFromInt(flat, f.Labels), nil

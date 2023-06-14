@@ -2,22 +2,22 @@ package values
 
 import "github.com/patrickhuber/go-wasm/abi/kind"
 
-type S32 int32
+type U32 uint32
 
-func (S32) Kind() kind.Kind {
-	return kind.S32
+func (U32) Kind() kind.Kind {
+	return kind.U32
 }
 
-func (i S32) Value() any {
-	return int32(i)
+func (i U32) Value() any {
+	return uint32(i)
 }
 
-type S64 int64
+type U64 int64
 
-func (S64) Kind() kind.Kind {
-	return kind.S64
+func (U64) Kind() kind.Kind {
+	return kind.U64
 }
 
-func (i S64) Value() any {
-	return int64(i)
+func (i U64) Value() any {
+	return uint64(i)
 }

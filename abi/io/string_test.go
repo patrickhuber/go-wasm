@@ -101,5 +101,5 @@ func testStringInternal(srcEncoding encoding.Encoding, dstEncoding encoding.Enco
 	buf := heap.Memory.Bytes()
 	copy(buf, encoded)
 	cx := NewContext(heap.Memory, srcEncoding, heap.ReAllocate, nil)
-	return test(types.String{}, []any{int32(0), int32(taggedCodeUnits)}, s, cx, dstEncoding, nil, nil)
+	return test(types.String{}, []any{uint32(0), uint32(taggedCodeUnits)}, s, cx, dstEncoding, nil, nil)
 }
