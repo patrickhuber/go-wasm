@@ -14,11 +14,11 @@ func (*Union) Kind() kind.Kind {
 	return kind.Union
 }
 
-func (u *Union) Size() uint32 {
+func (u *Union) Size() (uint32, error) {
 	return u.Despecialize().Size()
 }
 
-func (u *Union) Alignment() uint32 {
+func (u *Union) Alignment() (uint32, error) {
 	return u.Despecialize().Alignment()
 }
 

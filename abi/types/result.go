@@ -5,11 +5,11 @@ type Result struct {
 	Error ValType
 }
 
-func (r *Result) Size() uint32 {
+func (r *Result) Size() (uint32, error) {
 	return r.Despecialize().Size()
 }
 
-func (r *Result) Alignment() uint32 {
+func (r *Result) Alignment() (uint32, error) {
 	return r.Despecialize().Alignment()
 }
 

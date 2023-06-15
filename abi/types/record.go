@@ -15,27 +15,35 @@ func (*Record) Kind() kind.Kind {
 	return kind.Record
 }
 
-func (r *Record) Size() uint32 {
+func (r *Record) Size() (uint32, error) {
 	var s uint32 = 0
-	return s
+	return s, nil
 }
 
-func (r *Record) Alignment() uint32 {
+func (r *Record) Alignment() (uint32, error) {
 	var a uint32 = 1
 	for _, f := range r.Fields {
-		a = max(a, f.Type.Alignment())
+		alignment, err := f.Type.Alignment()
+		if err != nil {
+			return 0, err
+		}
+		a = max(a, alignment)
 	}
-	return a
+	return a, nil
 }
 
 func (r *Record) Despecialize() ValType {
 	return r
 }
 
-func (r *Record) Flatten() []kind.Kind {
+func (r *Record) Flatten() ([]kind.Kind, error) {
 	var flat []kind.Kind
 	for _, f := range r.Fields {
-		flat = append(flat, f.Type.Flatten()...)
+		flattened, err := f.Type.Flatten()
+		if err != nil {
+			return nil, err
+		}
+		flat = append(flat, flattened...)
 	}
-	return flat
+	return flat, nil
 }

@@ -23,7 +23,11 @@ func Load(cx *types.Context, t types.ValType, ptr uint32) (any, error) {
 	case kind.U32:
 		fallthrough
 	case kind.U64:
-		return LoadInt(cx, ptr, t.Size(), false)
+		size, err := t.Size()
+		if err != nil {
+			return nil, err
+		}
+		return LoadInt(cx, ptr, size, false)
 	case kind.S8:
 		fallthrough
 	case kind.S16:
@@ -31,13 +35,25 @@ func Load(cx *types.Context, t types.ValType, ptr uint32) (any, error) {
 	case kind.S32:
 		fallthrough
 	case kind.S64:
-		return LoadInt(cx, ptr, t.Size(), true)
+		size, err := t.Size()
+		if err != nil {
+			return nil, err
+		}
+		return LoadInt(cx, ptr, size, true)
 	case kind.Float32:
 		fallthrough
 	case kind.Float64:
-		return LoadFloat(cx, ptr, t.Size())
+		size, err := t.Size()
+		if err != nil {
+			return nil, err
+		}
+		return LoadFloat(cx, ptr, size)
 	case kind.Char:
-		return LoadChar(cx, ptr, t.Size())
+		size, err := t.Size()
+		if err != nil {
+			return nil, err
+		}
+		return LoadChar(cx, ptr, size)
 	case kind.String:
 		return LoadString(cx, ptr)
 	case kind.List:
@@ -198,18 +214,26 @@ func LoadList(cx *types.Context, ptr uint32, elementType types.ValType) ([]any, 
 }
 
 func LoadListFromRange(cx *types.Context, ptr uint32, length uint32, elementType types.ValType) ([]any, error) {
-	err := types.TrapIf(ptr != types.AlignTo(ptr, elementType.Alignment()))
+	alignment, err := elementType.Alignment()
 	if err != nil {
 		return nil, err
 	}
-	err = types.TrapIf(ptr+length*elementType.Size() > uint32(cx.Options.Memory.Len()))
+	err = types.TrapIf(ptr != types.AlignTo(ptr, alignment))
+	if err != nil {
+		return nil, err
+	}
+	size, err := elementType.Size()
+	if err != nil {
+		return nil, err
+	}
+	err = types.TrapIf(ptr+length*size > uint32(cx.Options.Memory.Len()))
 	if err != nil {
 		return nil, err
 	}
 	var list []any
 	var i uint32 = 0
 	for ; i < length; i++ {
-		element, err := Load(cx, elementType, ptr+i*elementType.Size())
+		element, err := Load(cx, elementType, ptr+i*size)
 		if err != nil {
 			return nil, err
 		}
@@ -221,21 +245,35 @@ func LoadListFromRange(cx *types.Context, ptr uint32, length uint32, elementType
 func LoadRecord(cx *types.Context, ptr uint32, fields []types.Field) (map[string]any, error) {
 	record := map[string]any{}
 	for _, field := range fields {
-		ptr = types.AlignTo(ptr, field.Type.Alignment())
+		alignment, err := field.Type.Alignment()
+		if err != nil {
+			return nil, err
+		}
+		ptr = types.AlignTo(ptr, alignment)
 		val, err := Load(cx, field.Type, ptr)
 		if err != nil {
 			return nil, err
 		}
 		record[field.Label] = val
-		ptr += field.Type.Size()
+		size, err := field.Type.Size()
+		if err != nil {
+			return nil, err
+		}
+		ptr += size
 	}
 	return record, nil
 }
 
 // LoadVariant loads the variant from the context at the ptr
 func LoadVariant(cx *types.Context, ptr uint32, v *types.Variant) (map[string]any, error) {
-	dt := v.DiscriminantType()
-	discSize := dt.Size()
+	dt, err := v.DiscriminantType()
+	if err != nil {
+		return nil, err
+	}
+	discSize, err := dt.Size()
+	if err != nil {
+		return nil, err
+	}
 	caseIndex, err := LoadInt(cx, ptr, discSize, false)
 	var u32CaseIndex uint32 = 0
 	switch dt.Kind() {
@@ -258,7 +296,11 @@ func LoadVariant(cx *types.Context, ptr uint32, v *types.Variant) (map[string]an
 		return nil, err
 	}
 	c := v.Cases[u32CaseIndex]
-	ptr = types.AlignTo(ptr, v.MaxCaseAlignment())
+	maxCaseAlignment, err := v.MaxCaseAlignment()
+	if err != nil {
+		return nil, err
+	}
+	ptr = types.AlignTo(ptr, maxCaseAlignment)
 
 	caseLabel := v.CaseLabelWithRefinements(c)
 	var value any
@@ -276,8 +318,16 @@ func LoadVariant(cx *types.Context, ptr uint32, v *types.Variant) (map[string]an
 }
 
 func LoadFlags(cx *types.Context, ptr uint32, flags *types.Flags) (map[string]bool, error) {
-	size := flags.Size()
+	size, err := flags.Size()
+	if err != nil {
+		return nil, err
+	}
+
 	i, err := LoadInt(cx, ptr, size, false)
+	if err != nil {
+		return nil, err
+	}
+
 	var ui uint64 = 0
 	switch size {
 	case 1:
@@ -288,9 +338,6 @@ func LoadFlags(cx *types.Context, ptr uint32, flags *types.Flags) (map[string]bo
 		ui = uint64(i.(uint32))
 	case 8:
 		ui = i.(uint64)
-	}
-	if err != nil {
-		return nil, err
 	}
 	flagMap := map[string]bool{}
 	for _, label := range flags.Labels {

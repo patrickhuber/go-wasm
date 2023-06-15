@@ -17,7 +17,11 @@ func Store(c *types.Context, val any, t types.ValType, ptr uint32) error {
 		if val.(bool) {
 			v = 1
 		}
-		return StoreInt(c, v, ptr, t.Size(), false)
+		size, err := t.Size()
+		if err != nil {
+			return err
+		}
+		return StoreInt(c, v, ptr, size, false)
 	case kind.U8:
 		fallthrough
 	case kind.U16:
@@ -25,7 +29,11 @@ func Store(c *types.Context, val any, t types.ValType, ptr uint32) error {
 	case kind.U32:
 		fallthrough
 	case kind.U64:
-		return StoreInt(c, val, ptr, t.Size(), false)
+		size, err := t.Size()
+		if err != nil {
+			return err
+		}
+		return StoreInt(c, val, ptr, size, false)
 	case kind.S8:
 		fallthrough
 	case kind.S16:
@@ -33,13 +41,25 @@ func Store(c *types.Context, val any, t types.ValType, ptr uint32) error {
 	case kind.S32:
 		fallthrough
 	case kind.S64:
-		return StoreInt(c, val, ptr, t.Size(), true)
+		size, err := t.Size()
+		if err != nil {
+			return err
+		}
+		return StoreInt(c, val, ptr, size, true)
 	case kind.Float32:
 		fallthrough
 	case kind.Float64:
-		return StoreFloat(c, val, ptr, t.Size())
+		size, err := t.Size()
+		if err != nil {
+			return err
+		}
+		return StoreFloat(c, val, ptr, size)
 	case kind.Char:
-		return StoreInt(c, uint32(val.(rune)), ptr, t.Size(), false)
+		size, err := t.Size()
+		if err != nil {
+			return err
+		}
+		return StoreInt(c, uint32(val.(rune)), ptr, size, false)
 	case kind.String:
 		return StoreString(c, val.(string), ptr)
 	case kind.List:

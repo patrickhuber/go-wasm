@@ -10,11 +10,11 @@ func (*Option) Kind() kind.Kind {
 	return kind.Option
 }
 
-func (o *Option) Size() uint32 {
+func (o *Option) Size() (uint32, error) {
 	return o.Despecialize().Size()
 }
 
-func (o *Option) Alignment() uint32 {
+func (o *Option) Alignment() (uint32, error) {
 	return o.Despecialize().Alignment()
 }
 
@@ -28,6 +28,6 @@ func (o *Option) Despecialize() ValType {
 	}
 }
 
-func (o *Option) Flatten() []kind.Kind {
+func (o *Option) Flatten() ([]kind.Kind, error) {
 	return o.Despecialize().Flatten()
 }

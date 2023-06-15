@@ -5,7 +5,7 @@ import "github.com/patrickhuber/go-wasm/abi/kind"
 type Float32 float32
 
 func (Float32) Kind() kind.Kind {
-	return kind.Float64
+	return kind.Float32
 }
 
 func (i Float32) Value() any {

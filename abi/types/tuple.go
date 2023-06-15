@@ -14,11 +14,11 @@ func (t *Tuple) Kind() kind.Kind {
 	return kind.Tuple
 }
 
-func (t *Tuple) Size() uint32 {
+func (t *Tuple) Size() (uint32, error) {
 	return t.Despecialize().Size()
 }
 
-func (t *Tuple) Alignment() uint32 {
+func (t *Tuple) Alignment() (uint32, error) {
 	return t.Despecialize().Alignment()
 }
 
@@ -36,6 +36,6 @@ func (t *Tuple) Despecialize() ValType {
 	}
 }
 
-func (t *Tuple) Flatten() []kind.Kind {
+func (t *Tuple) Flatten() ([]kind.Kind, error) {
 	return t.Despecialize().Flatten()
 }

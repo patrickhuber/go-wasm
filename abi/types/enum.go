@@ -10,12 +10,12 @@ func (*Enum) Kind() kind.Kind {
 	return kind.Enum
 }
 
-func (e *Enum) Size() uint32 {
+func (e *Enum) Size() (uint32, error) {
 	vt := e.Despecialize()
 	return vt.Size()
 }
 
-func (e *Enum) Alignment() uint32 {
+func (e *Enum) Alignment() (uint32, error) {
 	vt := e.Despecialize()
 	return vt.Alignment()
 }
@@ -34,6 +34,6 @@ func (e *Enum) Despecialize() ValType {
 	}
 }
 
-func (e *Enum) Flatten() []kind.Kind {
+func (e *Enum) Flatten() ([]kind.Kind, error) {
 	return e.Despecialize().Flatten()
 }

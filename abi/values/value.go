@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/patrickhuber/go-wasm/abi/kind"
-	"github.com/patrickhuber/go-wasm/abi/types"
 )
 
 type Value interface {
@@ -38,7 +37,7 @@ func (vi *valueIterator) Next(k kind.Kind) (any, error) {
 	v := vi.values[vi.index]
 	vi.index += 1
 	if v.Kind() != k {
-		return nil, types.Trap()
+		return nil, fmt.Errorf("error fetching next: have kind.%s, want kind.%s", v.Kind(), k)
 	}
 	return v.Value(), nil
 }

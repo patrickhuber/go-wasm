@@ -8,10 +8,10 @@ import (
 
 type ValType interface {
 	Kind() kind.Kind
-	Size() uint32
-	Alignment() uint32
+	Size() (uint32, error)
+	Alignment() (uint32, error)
 	Despecialize() ValType
-	Flatten() []kind.Kind
+	Flatten() ([]kind.Kind, error)
 }
 
 func AlignTo(ptr, alignment uint32) uint32 {

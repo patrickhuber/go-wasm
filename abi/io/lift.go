@@ -61,19 +61,19 @@ func LiftFlat(cx *types.Context, vi values.ValueIterator, t types.ValType) (any,
 	case kind.Record:
 		r, ok := t.(*types.Record)
 		if !ok {
-			return nil, types.Trap()
+			return nil, types.NewCastError(t, "*types.Record")
 		}
 		return LiftFlatRecord(cx, vi, r.Fields)
 	case kind.Variant:
 		v, ok := t.(*types.Variant)
 		if !ok {
-			return nil, types.Trap()
+			return nil, types.NewCastError(t, "*types.Variant")
 		}
 		return LiftFlatVariant(cx, vi, v)
 	case kind.Flags:
 		f, ok := t.(*types.Flags)
 		if !ok {
-			return nil, types.Trap()
+			return nil, types.NewCastError(t, "*types.Flags")
 		}
 		return LiftFlatFlags(vi, f)
 	case kind.Own:
@@ -178,7 +178,10 @@ func LiftFlatS8(vi values.ValueIterator) (int8, error) {
 	if err != nil {
 		return 0, err
 	}
-	s32 := i.(int32)
+	s32, ok := i.(int32)
+	if !ok {
+		return 0, types.NewCastError(i, "int32")
+	}
 	return int8(s32), nil
 }
 
@@ -187,7 +190,10 @@ func LiftFlatS16(vi values.ValueIterator) (int16, error) {
 	if err != nil {
 		return 0, err
 	}
-	s32 := i.(int32)
+	s32, ok := i.(int32)
+	if !ok {
+		return 0, types.NewCastError(i, "int32")
+	}
 	return int16(s32), nil
 }
 
@@ -196,7 +202,10 @@ func LiftFlatS32(vi values.ValueIterator) (int32, error) {
 	if err != nil {
 		return 0, err
 	}
-	s32 := i.(int32)
+	s32, ok := i.(int32)
+	if !ok {
+		return 0, types.NewCastError(i, "int32")
+	}
 	return s32, nil
 }
 
@@ -205,7 +214,10 @@ func LiftFlatS64(vi values.ValueIterator) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	s64 := i.(int64)
+	s64, ok := i.(int64)
+	if !ok {
+		return 0, types.NewCastError(i, "int64")
+	}
 	return s64, nil
 }
 
@@ -214,7 +226,10 @@ func LiftFlatFloat32(vi values.ValueIterator) (float32, error) {
 	if err != nil {
 		return 0, err
 	}
-	f32 := f.(float32)
+	f32, ok := f.(float32)
+	if !ok {
+		return 0, types.NewCastError(f, "float32")
+	}
 	return f32, nil
 }
 
@@ -223,7 +238,10 @@ func LiftFlatFloat64(vi values.ValueIterator) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	f64 := f.(float64)
+	f64, ok := f.(float64)
+	if !ok {
+		return 0, types.NewCastError(f, "float64")
+	}
 	return f64, nil
 }
 
@@ -274,7 +292,10 @@ func LiftFlatRecord(cx *types.Context, vi values.ValueIterator, fields []types.F
 }
 
 func LiftFlatVariant(cx *types.Context, vi values.ValueIterator, variant *types.Variant) (any, error) {
-	flatTypes := variant.Flatten()
+	flatTypes, err := variant.Flatten()
+	if err != nil {
+		return nil, err
+	}
 	if len(flatTypes) == 0 {
 		return nil, fmt.Errorf("expected at least one type found 0")
 	}

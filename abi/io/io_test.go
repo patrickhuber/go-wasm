@@ -45,6 +45,9 @@ func Test(t *testing.T) {
 		{"flags", flags("a", "b"), []any{uint32(4)}, map[string]any{"a": false, "b": false}, encoding.UTF8, nil, nil},
 		{"flags", flags(Apply(Range(0, 33), strconv.Itoa)...), []any{uint32(math.MaxUint32), uint32(0x1)}, Zip(Apply(Range(0, 33), strconv.Itoa), Repeat[any](true, 33)), encoding.UTF8, nil, nil},
 		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(0), uint32(42)}, map[string]any{"x": uint8(42)}, encoding.UTF8, nil, nil},
+		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(0), uint32(256)}, map[string]any{"x": uint8(0)}, encoding.UTF8, nil, nil},
+		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(1), uint32(0x4048f5c3)}, map[string]any{"y": float32(3.140000104904175)}, encoding.UTF8, nil, nil},
+		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(2), uint32(0xffffffff)}, map[string]any{"z": nil}, encoding.UTF8, nil, nil},
 	}
 
 	for _, oneTest := range tests {
@@ -126,7 +129,11 @@ func test(t types.ValType, valsToLift []any, v any,
 	cx *types.Context,
 	dstEncoding encoding.Encoding, lowerT types.ValType, lowerV any) error {
 
-	vs, err := zip(t.Flatten(), valsToLift)
+	flattened, err := t.Flatten()
+	if err != nil {
+		return err
+	}
+	vs, err := zip(flattened, valsToLift)
 	if err != nil {
 		return err
 	}

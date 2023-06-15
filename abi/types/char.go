@@ -8,18 +8,18 @@ func (Char) Kind() kind.Kind {
 	return kind.Char
 }
 
-func (Char) Size() uint32 {
-	return 4
+func (Char) Size() (uint32, error) {
+	return 4, nil
 }
 
-func (Char) Alignment() uint32 {
-	return 4
+func (Char) Alignment() (uint32, error) {
+	return 4, nil
 }
 
 func (c Char) Despecialize() ValType {
 	return c
 }
 
-func (Char) Flatten() []kind.Kind {
-	return []kind.Kind{kind.U32}
+func (Char) Flatten() ([]kind.Kind, error) {
+	return []kind.Kind{kind.U32}, nil
 }

@@ -2,6 +2,7 @@ package values
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/patrickhuber/go-wasm/abi/kind"
 	"github.com/patrickhuber/go-wasm/abi/types"
@@ -56,7 +57,7 @@ func (vi *coerceValueIterator) Next(want kind.Kind) (any, error) {
 		if !ok {
 			return nil, types.NewCastError(x, "uint32")
 		}
-		return float32(u32), nil
+		return math.Float32frombits(u32), nil
 	case have == kind.U64 && want == kind.U32:
 		u64, ok := x.(uint64)
 		if !ok {
@@ -68,13 +69,13 @@ func (vi *coerceValueIterator) Next(want kind.Kind) (any, error) {
 		if !ok {
 			return nil, types.NewCastError(x, "uint64")
 		}
-		return float32(uint32(u64)), nil
+		return math.Float32frombits(uint32(u64)), nil
 	case have == kind.U64 && want == kind.Float64:
 		u64, ok := x.(uint64)
 		if !ok {
 			return nil, types.NewCastError(x, "uint64")
 		}
-		return float64(u64), nil
+		return math.Float64frombits(u64), nil
 	default:
 		return x, nil
 	}

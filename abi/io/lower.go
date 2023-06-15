@@ -2,6 +2,7 @@ package io
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/patrickhuber/go-wasm/abi/kind"
@@ -222,7 +223,10 @@ func LowerFlatVariant(cx *types.Context, v any, variant *types.Variant) ([]value
 	if err != nil {
 		return nil, err
 	}
-	flatTypes := variant.Flatten()
+	flatTypes, err := variant.Flatten()
+	if err != nil {
+		return nil, err
+	}
 	if len(flatTypes) == 0 {
 		return nil, fmt.Errorf("expected at least one flattend type")
 	}
@@ -253,7 +257,8 @@ func LowerFlatVariant(cx *types.Context, v any, variant *types.Variant) ([]value
 			if !ok {
 				return nil, types.NewCastError(have.Value(), "float32")
 			}
-			payload[i] = values.U32(f32)
+			u32 := math.Float32bits(f32)
+			payload[i] = values.U32(u32)
 		case have.Kind() == kind.U32 && want == kind.U64:
 			u32, ok := have.Value().(uint32)
 			if !ok {
@@ -265,13 +270,15 @@ func LowerFlatVariant(cx *types.Context, v any, variant *types.Variant) ([]value
 			if !ok {
 				return nil, types.NewCastError(have.Value(), "float32")
 			}
-			payload[i] = values.U64(f32)
+			u32 := math.Float32bits(f32)
+			payload[i] = values.U64(u32)
 		case have.Kind() == kind.Float64 && want == kind.U64:
 			f64, ok := have.Value().(float64)
 			if !ok {
 				return nil, types.NewCastError(have.Value(), "float64")
 			}
-			payload[i] = values.U64(f64)
+			u64 := math.Float64bits(f64)
+			payload[i] = values.U64(u64)
 		default:
 		}
 	}
