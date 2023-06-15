@@ -23,5 +23,5 @@ func (b *Borrow) Despecialize() ValType {
 }
 
 func (Borrow) Flatten() []kind.Kind {
-	return []kind.Kind{kind.S32}
+	return []kind.Kind{kind.U32}
 }

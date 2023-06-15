@@ -46,7 +46,7 @@ func (f *Flags) Flatten() []kind.Kind {
 	flat := []kind.Kind{}
 	n := f.NumI32Flags()
 	for i := uint32(0); i < n; i++ {
-		flat = append(flat, kind.S32)
+		flat = append(flat, kind.U32)
 	}
 	return flat
 }

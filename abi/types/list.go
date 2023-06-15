@@ -23,5 +23,5 @@ func (l *List) Despecialize() ValType {
 }
 
 func (List) Flatten() []kind.Kind {
-	return []kind.Kind{kind.S32, kind.S32}
+	return []kind.Kind{kind.U32, kind.U32}
 }

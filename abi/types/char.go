@@ -21,5 +21,5 @@ func (c Char) Despecialize() ValType {
 }
 
 func (Char) Flatten() []kind.Kind {
-	return []kind.Kind{kind.S32}
+	return []kind.Kind{kind.U32}
 }

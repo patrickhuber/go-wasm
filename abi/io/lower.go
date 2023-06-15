@@ -2,6 +2,7 @@ package io
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/patrickhuber/go-wasm/abi/kind"
 	"github.com/patrickhuber/go-wasm/abi/types"
@@ -44,6 +45,9 @@ func LowerFlat(cx *types.Context, v any, t types.ValType) ([]values.Value, error
 	case kind.Flags:
 		f := t.(*types.Flags)
 		return LowerFlatFlags(cx, v, f)
+	case kind.Variant:
+		variant := t.(*types.Variant)
+		return LowerFlatVariant(cx, v, variant)
 	}
 	return nil, fmt.Errorf("unable to lower type %s", k.String())
 }
@@ -52,7 +56,7 @@ func LowerBool(v any) ([]values.Value, error) {
 	var i values.U32
 	b, ok := v.(bool)
 	if !ok {
-		return nil, NewCastError(v, "bool")
+		return nil, types.NewCastError(v, "bool")
 	}
 	if b {
 		i = 1
@@ -63,31 +67,46 @@ func LowerBool(v any) ([]values.Value, error) {
 }
 
 func LowerU8(v any) ([]values.Value, error) {
-	u8 := v.(uint8)
+	u8, ok := v.(uint8)
+	if !ok {
+		return nil, types.NewCastError(v, "uint8")
+	}
 	i := values.U32(u8)
 	return slice(i), nil
 }
 
 func LowerU16(v any) ([]values.Value, error) {
-	u16 := v.(uint16)
+	u16, ok := v.(uint16)
+	if !ok {
+		return nil, types.NewCastError(v, "uint16")
+	}
 	i := values.U32(u16)
 	return slice(i), nil
 }
 
 func LowerU32(v any) ([]values.Value, error) {
-	u32 := v.(uint32)
+	u32, ok := v.(uint32)
+	if !ok {
+		return nil, types.NewCastError(v, "uint32")
+	}
 	i := values.U32(u32)
 	return slice(i), nil
 }
 
 func LowerU64(v any) ([]values.Value, error) {
-	u64 := v.(uint64)
+	u64, ok := v.(uint64)
+	if !ok {
+		return nil, types.NewCastError(v, "uint64")
+	}
 	i := values.U64(u64)
 	return slice(i), nil
 }
 
 func LowerS8(v any) ([]values.Value, error) {
-	s8 := v.(int8)
+	s8, ok := v.(int8)
+	if !ok {
+		return nil, types.NewCastError(v, "int8")
+	}
 	i := values.U32(s8)
 	return slice(i), nil
 }
@@ -95,7 +114,7 @@ func LowerS8(v any) ([]values.Value, error) {
 func LowerS16(v any) ([]values.Value, error) {
 	s16, ok := v.(int16)
 	if !ok {
-		return nil, NewCastError(v, "int16")
+		return nil, types.NewCastError(v, "int16")
 	}
 	i := values.U32(s16)
 	return slice(i), nil
@@ -104,7 +123,7 @@ func LowerS16(v any) ([]values.Value, error) {
 func LowerS32(v any) ([]values.Value, error) {
 	u32, ok := v.(uint32)
 	if !ok {
-		return nil, NewCastError(v, "int32")
+		return nil, types.NewCastError(v, "int32")
 	}
 	i := values.U32(u32)
 	return slice(i), nil
@@ -113,7 +132,7 @@ func LowerS32(v any) ([]values.Value, error) {
 func LowerS64(v any) ([]values.Value, error) {
 	u64, ok := v.(uint64)
 	if !ok {
-		return nil, NewCastError(v, "int64")
+		return nil, types.NewCastError(v, "int64")
 	}
 	i := values.U64(u64)
 	return slice(i), nil
@@ -122,7 +141,7 @@ func LowerS64(v any) ([]values.Value, error) {
 func LowerFloat32(v any) ([]values.Value, error) {
 	f32, ok := v.(float32)
 	if !ok {
-		return nil, NewCastError(v, "float32")
+		return nil, types.NewCastError(v, "float32")
 	}
 	f := values.Float32(f32)
 	return slice(f), nil
@@ -131,7 +150,7 @@ func LowerFloat32(v any) ([]values.Value, error) {
 func LowerFloat64(v any) ([]values.Value, error) {
 	f64, ok := v.(float64)
 	if !ok {
-		return nil, NewCastError(v, "float64")
+		return nil, types.NewCastError(v, "float64")
 	}
 	f := values.Float64(f64)
 	return slice(f), nil
@@ -164,7 +183,7 @@ func LowerRecord(cx *types.Context, v any, r *types.Record) ([]values.Value, err
 	var flat []values.Value
 	vMap, ok := v.(map[string]any)
 	if !ok {
-		return nil, NewCastError(v, "map[string]any")
+		return nil, types.NewCastError(v, "map[string]any")
 	}
 	for _, field := range r.Fields {
 		lowerFields, err := LowerFlat(cx, vMap[field.Label], field.Type)
@@ -179,7 +198,7 @@ func LowerRecord(cx *types.Context, v any, r *types.Record) ([]values.Value, err
 func LowerFlatFlags(cx *types.Context, v any, f *types.Flags) ([]values.Value, error) {
 	vMap, ok := v.(map[string]any)
 	if !ok {
-		return nil, NewCastError(v, "map[string]any")
+		return nil, types.NewCastError(v, "map[string]any")
 	}
 	packed, err := PackFlagsIntoInt(vMap, f.Labels)
 	if err != nil {
@@ -196,6 +215,100 @@ func LowerFlatFlags(cx *types.Context, v any, f *types.Flags) ([]values.Value, e
 		return nil, fmt.Errorf("invalid flag value")
 	}
 	return flat, nil
+}
+
+func LowerFlatVariant(cx *types.Context, v any, variant *types.Variant) ([]values.Value, error) {
+	caseIndex, caseValue, err := MatchCase(v, variant.Cases)
+	if err != nil {
+		return nil, err
+	}
+	flatTypes := variant.Flatten()
+	if len(flatTypes) == 0 {
+		return nil, fmt.Errorf("expected at least one flattend type")
+	}
+	first := flatTypes[0]
+	flatTypes = flatTypes[1:]
+	if first != kind.U32 {
+		return nil, fmt.Errorf("expected kind.U32")
+	}
+	c := variant.Cases[caseIndex]
+	var payload []values.Value
+	if c.Type == nil {
+		payload = nil
+	} else {
+		payload, err = LowerFlat(cx, caseValue, c.Type)
+		if err != nil {
+			return nil, err
+		}
+	}
+	for i, have := range payload {
+		if len(flatTypes) == 0 {
+			return nil, fmt.Errorf("expected len flatTypes to not be zero")
+		}
+		want := flatTypes[0]
+		flatTypes = flatTypes[1:]
+		switch {
+		case have.Kind() == kind.Float32 && want == kind.U32:
+			f32, ok := have.Value().(float32)
+			if !ok {
+				return nil, types.NewCastError(have.Value(), "float32")
+			}
+			payload[i] = values.U32(f32)
+		case have.Kind() == kind.U32 && want == kind.U64:
+			u32, ok := have.Value().(uint32)
+			if !ok {
+				return nil, types.NewCastError(have.Value(), "uint64")
+			}
+			payload[i] = values.U64(u32)
+		case have.Kind() == kind.Float32 && want == kind.U64:
+			f32, ok := have.Value().(float32)
+			if !ok {
+				return nil, types.NewCastError(have.Value(), "float32")
+			}
+			payload[i] = values.U64(f32)
+		case have.Kind() == kind.Float64 && want == kind.U64:
+			f64, ok := have.Value().(float64)
+			if !ok {
+				return nil, types.NewCastError(have.Value(), "float64")
+			}
+			payload[i] = values.U64(f64)
+		default:
+		}
+	}
+	for _, want := range flatTypes {
+		zero, err := values.Zero(want)
+		if err != nil {
+			return nil, err
+		}
+		payload = append(payload, zero)
+	}
+	return append([]values.Value{values.U32(caseIndex)}, payload...), nil
+}
+
+func MatchCase(v any, cases []types.Case) (uint32, any, error) {
+	vMap, ok := v.(map[string]any)
+	if !ok {
+		return 0, nil, types.NewCastError(v, "map[string]any")
+	}
+	if len(vMap) != 1 {
+		return 0, nil, fmt.Errorf("expected map with one element")
+	}
+	var key string
+	var value any
+	for key, value = range vMap {
+	}
+
+	labelMap := map[string]int{}
+	for i, c := range cases {
+		labelMap[c.Label] = i
+	}
+	for _, label := range strings.Split(key, "|") {
+		caseIndex, ok := labelMap[label]
+		if ok {
+			return uint32(caseIndex), value, nil
+		}
+	}
+	return 0, nil, fmt.Errorf("unable to locate label in cases")
 }
 
 func slice(values ...values.Value) []values.Value {

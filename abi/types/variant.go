@@ -88,12 +88,12 @@ func join(a kind.Kind, b kind.Kind) kind.Kind {
 		return a
 	}
 	switch {
-	case a == kind.S32 && b == kind.Float32:
-		return kind.S32
-	case a == kind.Float32 && b == kind.S32:
-		return kind.S32
+	case a == kind.U32 && b == kind.Float32:
+		return kind.U32
+	case a == kind.Float32 && b == kind.U32:
+		return kind.U32
 	default:
-		return kind.S64
+		return kind.U64
 	}
 }
 

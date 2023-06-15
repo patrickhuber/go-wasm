@@ -21,7 +21,7 @@ func (u U8) Despecialize() ValType {
 }
 
 func (u U8) Flatten() []kind.Kind {
-	return []kind.Kind{kind.S32}
+	return []kind.Kind{kind.U32}
 }
 
 type U16 struct{}
@@ -43,7 +43,7 @@ func (u U16) Despecialize() ValType {
 }
 
 func (u U16) Flatten() []kind.Kind {
-	return []kind.Kind{kind.S32}
+	return []kind.Kind{kind.U32}
 }
 
 type U32 struct{}
@@ -65,7 +65,7 @@ func (u U32) Despecialize() ValType {
 }
 
 func (u U32) Flatten() []kind.Kind {
-	return []kind.Kind{kind.S32}
+	return []kind.Kind{kind.U32}
 }
 
 type U64 struct{}
@@ -87,5 +87,5 @@ func (u U64) Despecialize() ValType {
 }
 
 func (u U64) Flatten() []kind.Kind {
-	return []kind.Kind{kind.S64}
+	return []kind.Kind{kind.U64}
 }

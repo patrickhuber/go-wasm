@@ -302,7 +302,7 @@ func PackFlagsIntoInt(v map[string]any, labels []string) (int, error) {
 		val := v[label]
 		b, ok := val.(bool)
 		if !ok {
-			return 0, NewCastError(val, "bool")
+			return 0, types.NewCastError(val, "bool")
 		}
 		i := 0
 		if b {

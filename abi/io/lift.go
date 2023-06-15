@@ -69,7 +69,7 @@ func LiftFlat(cx *types.Context, vi values.ValueIterator, t types.ValType) (any,
 		if !ok {
 			return nil, types.Trap()
 		}
-		return LiftFlatVariant(cx, vi, v.Cases)
+		return LiftFlatVariant(cx, vi, v)
 	case kind.Flags:
 		f, ok := t.(*types.Flags)
 		if !ok {
@@ -118,7 +118,7 @@ func LiftFlatBool(vi values.ValueIterator) (bool, error) {
 	}
 	u32, ok := b.(uint32)
 	if !ok {
-		return false, NewCastError(b, "uint32")
+		return false, types.NewCastError(b, "uint32")
 	}
 	return u32 == 1, nil
 }
@@ -131,7 +131,7 @@ func LiftFlatU8(vi values.ValueIterator) (uint8, error) {
 	}
 	u32, ok := i.(uint32)
 	if !ok {
-		return 0, NewCastError(i, "uint32")
+		return 0, types.NewCastError(i, "uint32")
 	}
 	return uint8(u32), nil
 }
@@ -143,7 +143,7 @@ func LiftFlatU16(vi values.ValueIterator) (uint16, error) {
 	}
 	u32, ok := i.(uint32)
 	if !ok {
-		return 0, NewCastError(i, "uint32")
+		return 0, types.NewCastError(i, "uint32")
 	}
 	return uint16(u32), nil
 }
@@ -155,7 +155,7 @@ func LiftFlatU32(vi values.ValueIterator) (uint32, error) {
 	}
 	u32, ok := i.(uint32)
 	if !ok {
-		return 0, NewCastError(i, "uint32")
+		return 0, types.NewCastError(i, "uint32")
 	}
 	return u32, nil
 }
@@ -167,7 +167,7 @@ func LiftFlatU64(vi values.ValueIterator) (uint64, error) {
 	}
 	u64, ok := i.(uint64)
 	if !ok {
-		return 0, NewCastError(i, "uint64")
+		return 0, types.NewCastError(i, "uint64")
 	}
 	return u64, nil
 }
@@ -273,8 +273,56 @@ func LiftFlatRecord(cx *types.Context, vi values.ValueIterator, fields []types.F
 	return record, nil
 }
 
-func LiftFlatVariant(cx *types.Context, vi values.ValueIterator, cases []types.Case) (any, error) {
-	panic("unimplemented")
+func LiftFlatVariant(cx *types.Context, vi values.ValueIterator, variant *types.Variant) (any, error) {
+	flatTypes := variant.Flatten()
+	if len(flatTypes) == 0 {
+		return nil, fmt.Errorf("expected at least one type found 0")
+	}
+
+	first := flatTypes[0]
+	flatTypes = flatTypes[1:]
+
+	if first != kind.U32 {
+		return nil, fmt.Errorf("expected kind.U32 found kind.%s", first.String())
+	}
+
+	caseIndex, err := vi.Next(kind.U32)
+	if err != nil {
+		return nil, err
+	}
+
+	u32CaseIndex, ok := caseIndex.(uint32)
+	if !ok {
+		return nil, types.NewCastError(caseIndex, "uint32")
+	}
+
+	if int(u32CaseIndex) >= len(variant.Cases) {
+		return nil, fmt.Errorf("expected case length to be less than %d", u32CaseIndex)
+	}
+
+	c := variant.Cases[u32CaseIndex]
+	var v any
+	if c.Type == nil {
+		v = nil
+	} else {
+		cvi := values.NewCoerceValueIterator(vi, flatTypes)
+		v, err = LiftFlat(cx, cvi, c.Type)
+		if err != nil {
+			return nil, err
+		}
+		flatTypes = cvi.FlatTypes()
+		vi = cvi.ValueIterator()
+	}
+
+	for _, have := range flatTypes {
+		_, err := vi.Next(have)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return map[string]any{
+		variant.CaseLabelWithRefinements(c): v,
+	}, nil
 }
 
 func LiftFlatFlags(vi values.ValueIterator, f *types.Flags) (any, error) {
@@ -288,7 +336,7 @@ func LiftFlatFlags(vi values.ValueIterator, f *types.Flags) (any, error) {
 		}
 		u32Next, ok := next.(uint32)
 		if !ok {
-			return nil, NewCastError(next, "int32")
+			return nil, types.NewCastError(next, "int32")
 		}
 		flat |= (int(u32Next) << shift)
 		shift += 32

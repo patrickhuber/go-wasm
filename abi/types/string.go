@@ -25,5 +25,5 @@ func (s String) Despecialize() ValType {
 }
 
 func (String) Flatten() []kind.Kind {
-	return []kind.Kind{kind.S32, kind.S32}
+	return []kind.Kind{kind.U32, kind.U32}
 }

@@ -44,6 +44,7 @@ func Test(t *testing.T) {
 		{"flags", flags("a", "b"), []any{uint32(3)}, map[string]any{"a": true, "b": true}, encoding.UTF8, nil, nil},
 		{"flags", flags("a", "b"), []any{uint32(4)}, map[string]any{"a": false, "b": false}, encoding.UTF8, nil, nil},
 		{"flags", flags(Apply(Range(0, 33), strconv.Itoa)...), []any{uint32(math.MaxUint32), uint32(0x1)}, Zip(Apply(Range(0, 33), strconv.Itoa), Repeat[any](true, 33)), encoding.UTF8, nil, nil},
+		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(0), uint32(42)}, map[string]any{"x": uint8(42)}, encoding.UTF8, nil, nil},
 	}
 
 	for _, oneTest := range tests {
@@ -64,6 +65,20 @@ func flags(labels ...string) *types.Flags {
 func tuple(t ...types.ValType) *types.Tuple {
 	return &types.Tuple{
 		Types: t,
+	}
+}
+
+func variant(c ...types.Case) *types.Variant {
+	return &types.Variant{
+		Cases: c,
+	}
+}
+
+func vcase(label string, val types.ValType, refines *string) types.Case {
+	return types.Case{
+		Label:   label,
+		Type:    val,
+		Refines: refines,
 	}
 }
 
@@ -173,16 +188,16 @@ func zip(types []kind.Kind, v []any) ([]values.Value, error) {
 		var vals []values.Value
 		var err error
 		switch t {
-		case kind.S32:
-			vals, err = io.LowerS32(v[i])
-		case kind.S64:
-			vals, err = io.LowerS64(v[i])
+		case kind.U32:
+			vals, err = io.LowerU32(v[i])
+		case kind.U64:
+			vals, err = io.LowerU64(v[i])
 		case kind.Float32:
 			vals, err = io.LowerFloat32(v[i])
 		case kind.Float64:
 			vals, err = io.LowerFloat64(v[i])
 		default:
-			err = fmt.Errorf("invalid kind %s", t.String())
+			err = fmt.Errorf("invalid kind.%s", t.String())
 		}
 		if err != nil {
 			return nil, err
