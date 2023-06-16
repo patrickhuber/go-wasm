@@ -48,6 +48,7 @@ func Test(t *testing.T) {
 		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(0), uint32(256)}, map[string]any{"x": uint8(0)}, encoding.UTF8, nil, nil},
 		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(1), uint32(0x4048f5c3)}, map[string]any{"y": float32(3.140000104904175)}, encoding.UTF8, nil, nil},
 		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(2), uint32(0xffffffff)}, map[string]any{"z": nil}, encoding.UTF8, nil, nil},
+		{"union", union(&types.U32{}, &types.U64{}), []any{uint32(0), uint64(42)}, map[string]any{"0": uint64(42)}, encoding.UTF8, nil, nil},
 	}
 
 	for _, oneTest := range tests {
@@ -82,6 +83,12 @@ func vcase(label string, val types.ValType, refines *string) types.Case {
 		Label:   label,
 		Type:    val,
 		Refines: refines,
+	}
+}
+
+func union(typs ...types.ValType) *types.Union {
+	return &types.Union{
+		Types: typs,
 	}
 }
 

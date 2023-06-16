@@ -35,3 +35,7 @@ func (u *Union) Despecialize() ValType {
 		Cases: cases,
 	}
 }
+
+func (u *Union) Flatten() ([]kind.Kind, error) {
+	return u.Despecialize().Flatten()
+}
