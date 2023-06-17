@@ -58,6 +58,10 @@ func Test(t *testing.T) {
 		{"union", union(&types.U8{}), []any{uint32(0), uint32(42)}, map[string]any{"0": uint8(42)}},
 		{"union", union(&types.U8{}), []any{uint32(1), uint32(256)}, nil},
 		{"union", union(&types.U8{}), []any{uint32(0), uint32(256)}, map[string]any{"0": uint8(0)}},
+		{"option", option(&types.Float32{}), []any{uint32(0), float32(3.14)}, map[string]any{"none": nil}},
+		{"option", option(&types.Float32{}), []any{uint32(1), float32(3.14)}, map[string]any{"some": float32(3.14)}},
+		{"result", result(&types.U8{}, &types.U32{}), []any{uint32(0), uint32(42)}, map[string]any{"ok": uint8(42)}},
+		{"result", result(&types.U8{}, &types.U32{}), []any{uint32(1), uint32(1000)}, map[string]any{"error": uint32(1000)}},
 	}
 
 	for _, oneTest := range tests {
@@ -95,9 +99,22 @@ func vcase(label string, val types.ValType, refines *string) types.Case {
 	}
 }
 
-func union(typs ...types.ValType) *types.Union {
+func union(valTypes ...types.ValType) *types.Union {
 	return &types.Union{
-		Types: typs,
+		Types: valTypes,
+	}
+}
+
+func option(valType types.ValType) *types.Option {
+	return &types.Option{
+		Type: valType,
+	}
+}
+
+func result(ok, err types.ValType) *types.Result {
+	return &types.Result{
+		OK:    ok,
+		Error: err,
 	}
 }
 

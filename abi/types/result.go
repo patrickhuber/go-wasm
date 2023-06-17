@@ -1,8 +1,14 @@
 package types
 
+import "github.com/patrickhuber/go-wasm/abi/kind"
+
 type Result struct {
 	OK    ValType
 	Error ValType
+}
+
+func (r *Result) Kind() kind.Kind {
+	return kind.Result
 }
 
 func (r *Result) Size() (uint32, error) {
@@ -27,4 +33,8 @@ func (r *Result) Despecialize() ValType {
 	return &Variant{
 		Cases: cases,
 	}
+}
+
+func (r *Result) Flatten() ([]kind.Kind, error) {
+	return r.Despecialize().Flatten()
 }

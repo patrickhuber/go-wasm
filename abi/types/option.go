@@ -3,7 +3,7 @@ package types
 import "github.com/patrickhuber/go-wasm/abi/kind"
 
 type Option struct {
-	Value ValType
+	Type ValType
 }
 
 func (*Option) Kind() kind.Kind {
@@ -21,7 +21,7 @@ func (o *Option) Alignment() (uint32, error) {
 func (o *Option) Despecialize() ValType {
 	cases := []Case{
 		{Label: "none", Type: nil},
-		{Label: "some", Type: o.Value},
+		{Label: "some", Type: o.Type},
 	}
 	return &Variant{
 		Cases: cases,
