@@ -130,7 +130,7 @@ func (v *Variant) Flatten() ([]kind.Kind, error) {
 	if err != nil {
 		return nil, err
 	}
-	return append(flat, flattened...), nil
+	return append(flattened, flat...), nil
 }
 
 func join(a kind.Kind, b kind.Kind) kind.Kind {

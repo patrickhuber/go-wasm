@@ -2,6 +2,7 @@ package io_test
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math"
 	"reflect"
@@ -18,43 +19,51 @@ import (
 
 func Test(t *testing.T) {
 	type testCase struct {
-		name        string
-		t           types.ValType
-		valsToLift  []any
-		v           any
-		dstEncoding encoding.Encoding
-		lowerT      types.ValType
-		lowerV      any
+		name       string
+		t          types.ValType
+		valsToLift []any
+		v          any
 	}
 	tests := []testCase{
-		{"record", &types.Record{}, []any{}, map[string]any{}, encoding.None, nil, nil},
+		{"record", &types.Record{}, []any{}, map[string]any{}},
 		{"record_fields", &types.Record{
 			Fields: []types.Field{
 				{Label: "x", Type: &types.U8{}},
 				{Label: "y", Type: &types.U16{}},
 				{Label: "z", Type: &types.U32{}},
 			},
-		}, []any{uint32(1), uint32(2), uint32(3)}, map[string]any{"x": uint8(1), "y": uint16(2), "z": uint32(3)}, encoding.None, nil, nil},
+		}, []any{uint32(1), uint32(2), uint32(3)}, map[string]any{"x": uint8(1), "y": uint16(2), "z": uint32(3)}},
 		{"tuple", tuple(
 			tuple(&types.U8{}, &types.U8{}),
-			&types.U8{}), []any{uint32(1), uint32(2), uint32(3)}, map[string]any{"0": map[string]any{"0": uint8(1), "1": uint8(2)}, "1": uint8(3)}, encoding.UTF8, nil, nil},
-		{"flags", flags(), []any{}, map[string]any{}, encoding.UTF8, nil, nil},
-		{"flags", flags("a", "b"), []any{uint32(0)}, map[string]any{"a": false, "b": false}, encoding.UTF8, nil, nil},
-		{"flags", flags("a", "b"), []any{uint32(2)}, map[string]any{"a": false, "b": true}, encoding.UTF8, nil, nil},
-		{"flags", flags("a", "b"), []any{uint32(3)}, map[string]any{"a": true, "b": true}, encoding.UTF8, nil, nil},
-		{"flags", flags("a", "b"), []any{uint32(4)}, map[string]any{"a": false, "b": false}, encoding.UTF8, nil, nil},
-		{"flags", flags(Apply(Range(0, 33), strconv.Itoa)...), []any{uint32(math.MaxUint32), uint32(0x1)}, Zip(Apply(Range(0, 33), strconv.Itoa), Repeat[any](true, 33)), encoding.UTF8, nil, nil},
-		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(0), uint32(42)}, map[string]any{"x": uint8(42)}, encoding.UTF8, nil, nil},
-		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(0), uint32(256)}, map[string]any{"x": uint8(0)}, encoding.UTF8, nil, nil},
-		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(1), uint32(0x4048f5c3)}, map[string]any{"y": float32(3.140000104904175)}, encoding.UTF8, nil, nil},
-		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(2), uint32(0xffffffff)}, map[string]any{"z": nil}, encoding.UTF8, nil, nil},
-		{"union", union(&types.U32{}, &types.U64{}), []any{uint32(0), uint64(42)}, map[string]any{"0": uint64(42)}, encoding.UTF8, nil, nil},
+			&types.U8{}), []any{uint32(1), uint32(2), uint32(3)}, map[string]any{"0": map[string]any{"0": uint8(1), "1": uint8(2)}, "1": uint8(3)}},
+		{"flags", flags(), []any{}, map[string]any{}},
+		{"flags", flags("a", "b"), []any{uint32(0)}, map[string]any{"a": false, "b": false}},
+		{"flags", flags("a", "b"), []any{uint32(2)}, map[string]any{"a": false, "b": true}},
+		{"flags", flags("a", "b"), []any{uint32(3)}, map[string]any{"a": true, "b": true}},
+		{"flags", flags("a", "b"), []any{uint32(4)}, map[string]any{"a": false, "b": false}},
+		{"flags", flags(Apply(Range(0, 33), strconv.Itoa)...), []any{uint32(math.MaxUint32), uint32(0x1)}, Zip(Apply(Range(0, 33), strconv.Itoa), Repeat[any](true, 33))},
+		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(0), uint32(42)}, map[string]any{"x": uint8(42)}},
+		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(0), uint32(256)}, map[string]any{"x": uint8(0)}},
+		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(1), uint32(0x4048f5c3)}, map[string]any{"y": float32(3.140000104904175)}},
+		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(2), uint32(0xffffffff)}, map[string]any{"z": nil}},
+		{"union", union(&types.U32{}, &types.U64{}), []any{uint32(0), uint64(42)}, map[string]any{"0": uint32(42)}},
+		{"union", union(&types.U32{}, &types.U64{}), []any{uint32(0), uint64(1 << 35)}, map[string]any{"0": uint32(0)}},
+		{"union", union(&types.U32{}, &types.U64{}), []any{uint32(1), uint64(1 << 35)}, map[string]any{"1": uint64(1 << 35)}},
+		{"union", union(&types.Float32{}, &types.U64{}), []any{uint32(0), uint64(0x4048f5c3)}, map[string]any{"0": float32(3.140000104904175)}},
+		{"union", union(&types.Float32{}, &types.U64{}), []any{uint32(0), uint64(1 << 35)}, map[string]any{"0": float32(0)}},
+		{"union", union(&types.Float32{}, &types.U64{}), []any{uint32(1), uint64(1 << 35)}, map[string]any{"1": uint64(1 << 35)}},
+		{"union", union(&types.Float64{}, &types.U64{}), []any{uint32(0), uint64(0x40091EB851EB851F)}, map[string]any{"0": float64(3.14)}},
+		{"union", union(&types.Float64{}, &types.U64{}), []any{uint32(0), uint64(1 << 35)}, map[string]any{"0": float64(1.69759663277e-313)}},
+		{"union", union(&types.Float64{}, &types.U64{}), []any{uint32(1), uint64(1 << 35)}, map[string]any{"1": uint64(1 << 35)}},
+		{"union", union(&types.U8{}), []any{uint32(0), uint32(42)}, map[string]any{"0": uint8(42)}},
+		{"union", union(&types.U8{}), []any{uint32(1), uint32(256)}, nil},
+		{"union", union(&types.U8{}), []any{uint32(0), uint32(256)}, map[string]any{"0": uint8(0)}},
 	}
 
 	for _, oneTest := range tests {
 		t.Run(oneTest.name, func(t *testing.T) {
 			cxt := NewContext(&bytes.Buffer{}, encoding.UTF8, nil, nil)
-			err := test(oneTest.t, oneTest.valsToLift, oneTest.v, cxt, oneTest.dstEncoding, oneTest.lowerT, oneTest.lowerV)
+			err := test(oneTest.t, oneTest.valsToLift, oneTest.v, cxt, encoding.UTF8, nil, nil)
 			require.Nil(t, err)
 		})
 	}
@@ -147,12 +156,19 @@ func test(t types.ValType, valsToLift []any, v any,
 
 	vi := values.NewIterator(vs...)
 
+	// this error handling logic is strange
+	// but basically if v is null,
+	// handle the return from the function differently because we are expectig failure
 	got, err := io.LiftFlat(cx, vi, t)
-	if err != nil {
-		return fmt.Errorf("test : %w", err)
-	}
 	if v == nil {
-		return fmt.Errorf("expected trap but got %v", got)
+		if errors.Is(err, types.Trap()) {
+			return nil
+		}
+		return fmt.Errorf("expected trap, but found %v", got)
+	}
+
+	if err != nil {
+		return err
 	}
 
 	err = types.TrapIf(vi.Index() != vi.Length())

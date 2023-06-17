@@ -317,8 +317,9 @@ func LiftFlatVariant(cx *types.Context, vi values.ValueIterator, variant *types.
 		return nil, types.NewCastError(caseIndex, "uint32")
 	}
 
-	if int(u32CaseIndex) >= len(variant.Cases) {
-		return nil, fmt.Errorf("expected case length to be less than %d", u32CaseIndex)
+	err = types.TrapIf(int(u32CaseIndex) >= len(variant.Cases))
+	if err != nil {
+		return nil, fmt.Errorf("expected case length to be less than %d %w", u32CaseIndex, err)
 	}
 
 	c := variant.Cases[u32CaseIndex]
