@@ -26,49 +26,44 @@ func Test(t *testing.T) {
 		v          any
 	}
 	tests := []testCase{
-		{"record", &types.Record{}, []any{}, map[string]any{}},
-		{"record_fields", &types.Record{
-			Fields: []types.Field{
-				{Label: "x", Type: &types.U8{}},
-				{Label: "y", Type: &types.U16{}},
-				{Label: "z", Type: &types.U32{}},
-			},
-		}, []any{uint32(1), uint32(2), uint32(3)}, map[string]any{"x": uint8(1), "y": uint16(2), "z": uint32(3)}},
-		{"tuple", tuple(
-			tuple(&types.U8{}, &types.U8{}),
-			&types.U8{}), []any{uint32(1), uint32(2), uint32(3)}, map[string]any{"0": map[string]any{"0": uint8(1), "1": uint8(2)}, "1": uint8(3)}},
-		{"flags", flags(), []any{}, map[string]any{}},
-		{"flags", flags("a", "b"), []any{uint32(0)}, map[string]any{"a": false, "b": false}},
-		{"flags", flags("a", "b"), []any{uint32(2)}, map[string]any{"a": false, "b": true}},
-		{"flags", flags("a", "b"), []any{uint32(3)}, map[string]any{"a": true, "b": true}},
-		{"flags", flags("a", "b"), []any{uint32(4)}, map[string]any{"a": false, "b": false}},
-		{"flags", flags(Apply(Range(0, 33), strconv.Itoa)...), []any{uint32(math.MaxUint32), uint32(0x1)}, Zip(Apply(Range(0, 33), strconv.Itoa), Repeat[any](true, 33))},
-		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(0), uint32(42)}, map[string]any{"x": uint8(42)}},
-		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(0), uint32(256)}, map[string]any{"x": uint8(0)}},
-		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(1), uint32(0x4048f5c3)}, map[string]any{"y": float32(3.140000104904175)}},
-		{"variant", variant(vcase("x", &types.U8{}, nil), vcase("y", &types.Float32{}, nil), vcase("z", nil, nil)), []any{uint32(2), uint32(0xffffffff)}, map[string]any{"z": nil}},
-		{"union", union(&types.U32{}, &types.U64{}), []any{uint32(0), uint64(42)}, map[string]any{"0": uint32(42)}},
-		{"union", union(&types.U32{}, &types.U64{}), []any{uint32(0), uint64(1 << 35)}, map[string]any{"0": uint32(0)}},
-		{"union", union(&types.U32{}, &types.U64{}), []any{uint32(1), uint64(1 << 35)}, map[string]any{"1": uint64(1 << 35)}},
-		{"union", union(&types.Float32{}, &types.U64{}), []any{uint32(0), uint64(0x4048f5c3)}, map[string]any{"0": float32(3.140000104904175)}},
-		{"union", union(&types.Float32{}, &types.U64{}), []any{uint32(0), uint64(1 << 35)}, map[string]any{"0": float32(0)}},
-		{"union", union(&types.Float32{}, &types.U64{}), []any{uint32(1), uint64(1 << 35)}, map[string]any{"1": uint64(1 << 35)}},
-		{"union", union(&types.Float64{}, &types.U64{}), []any{uint32(0), uint64(0x40091EB851EB851F)}, map[string]any{"0": float64(3.14)}},
-		{"union", union(&types.Float64{}, &types.U64{}), []any{uint32(0), uint64(1 << 35)}, map[string]any{"0": float64(1.69759663277e-313)}},
-		{"union", union(&types.Float64{}, &types.U64{}), []any{uint32(1), uint64(1 << 35)}, map[string]any{"1": uint64(1 << 35)}},
-		{"union", union(&types.U8{}), []any{uint32(0), uint32(42)}, map[string]any{"0": uint8(42)}},
-		{"union", union(&types.U8{}), []any{uint32(1), uint32(256)}, nil},
-		{"union", union(&types.U8{}), []any{uint32(0), uint32(256)}, map[string]any{"0": uint8(0)}},
-		{"option", option(&types.Float32{}), []any{uint32(0), float32(3.14)}, map[string]any{"none": nil}},
-		{"option", option(&types.Float32{}), []any{uint32(1), float32(3.14)}, map[string]any{"some": float32(3.14)}},
-		{"result", result(&types.U8{}, &types.U32{}), []any{uint32(0), uint32(42)}, map[string]any{"ok": uint8(42)}},
-		{"result", result(&types.U8{}, &types.U32{}), []any{uint32(1), uint32(1000)}, map[string]any{"error": uint32(1000)}},
+		{"record", Record(), []any{}, map[string]any{}},
+		{"record", Record(Field("x", U8()), Field("y", U16()), Field("z", U32())),
+			[]any{uint32(1), uint32(2), uint32(3)}, map[string]any{"x": uint8(1), "y": uint16(2), "z": uint32(3)}},
+		{"tuple", Tuple(
+			Tuple(U8(), U8()),
+			U8()), []any{uint32(1), uint32(2), uint32(3)}, map[string]any{"0": map[string]any{"0": uint8(1), "1": uint8(2)}, "1": uint8(3)}},
+		{"flags", Flags(), []any{}, map[string]any{}},
+		{"flags", Flags("a", "b"), []any{uint32(0)}, map[string]any{"a": false, "b": false}},
+		{"flags", Flags("a", "b"), []any{uint32(2)}, map[string]any{"a": false, "b": true}},
+		{"flags", Flags("a", "b"), []any{uint32(3)}, map[string]any{"a": true, "b": true}},
+		{"flags", Flags("a", "b"), []any{uint32(4)}, map[string]any{"a": false, "b": false}},
+		{"flags", Flags(Apply(Range(0, 33), strconv.Itoa)...), []any{uint32(math.MaxUint32), uint32(0x1)}, Zip(Apply(Range(0, 33), strconv.Itoa), Repeat[any](true, 33))},
+		{"variant", Variant(Case("x", U8()), Case("y", Float32()), Case("z", nil)), []any{uint32(0), uint32(42)}, map[string]any{"x": uint8(42)}},
+		{"variant", Variant(Case("x", U8()), Case("y", Float32()), Case("z", nil)), []any{uint32(0), uint32(256)}, map[string]any{"x": uint8(0)}},
+		{"variant", Variant(Case("x", U8()), Case("y", Float32()), Case("z", nil)), []any{uint32(1), uint32(0x4048f5c3)}, map[string]any{"y": float32(3.140000104904175)}},
+		{"variant", Variant(Case("x", U8()), Case("y", Float32()), Case("z", nil)), []any{uint32(2), uint32(0xffffffff)}, map[string]any{"z": nil}},
+		{"union", Union(U32(), U64()), []any{uint32(0), uint64(42)}, map[string]any{"0": uint32(42)}},
+		{"union", Union(U32(), U64()), []any{uint32(0), uint64(1 << 35)}, map[string]any{"0": uint32(0)}},
+		{"union", Union(U32(), U64()), []any{uint32(1), uint64(1 << 35)}, map[string]any{"1": uint64(1 << 35)}},
+		{"union", Union(Float32(), U64()), []any{uint32(0), uint64(0x4048f5c3)}, map[string]any{"0": float32(3.140000104904175)}},
+		{"union", Union(Float32(), U64()), []any{uint32(0), uint64(1 << 35)}, map[string]any{"0": float32(0)}},
+		{"union", Union(Float32(), U64()), []any{uint32(1), uint64(1 << 35)}, map[string]any{"1": uint64(1 << 35)}},
+		{"union", Union(Float64(), U64()), []any{uint32(0), uint64(0x40091EB851EB851F)}, map[string]any{"0": float64(3.14)}},
+		{"union", Union(Float64(), U64()), []any{uint32(0), uint64(1 << 35)}, map[string]any{"0": float64(1.69759663277e-313)}},
+		{"union", Union(Float64(), U64()), []any{uint32(1), uint64(1 << 35)}, map[string]any{"1": uint64(1 << 35)}},
+		{"union", Union(U8()), []any{uint32(0), uint32(42)}, map[string]any{"0": uint8(42)}},
+		{"union", Union(U8()), []any{uint32(1), uint32(256)}, nil},
+		{"union", Union(U8()), []any{uint32(0), uint32(256)}, map[string]any{"0": uint8(0)}},
+		{"option", Option(Float32()), []any{uint32(0), float32(3.14)}, map[string]any{"none": nil}},
+		{"option", Option(Float32()), []any{uint32(1), float32(3.14)}, map[string]any{"some": float32(3.14)}},
+		{"result", Result(U8(), U32()), []any{uint32(0), uint32(42)}, map[string]any{"ok": uint8(42)}},
+		{"result", Result(U8(), U32()), []any{uint32(1), uint32(1000)}, map[string]any{"error": uint32(1000)}},
 	}
-	vt := variant(
-		vcase("w", types.U8{}, nil),
-		vcase("x", types.U8{}, to.Pointer("w")),
-		vcase("y", types.U8{}, nil),
-		vcase("z", types.U8{}, to.Pointer("x")))
+	vt := Variant(
+		Case("w", U8()),
+		CaseWith("x", U8(), "w"),
+		Case("y", U8()),
+		CaseWith("z", U8(), "x"))
 	tests = append(tests,
 		testCase{"variant", vt, []any{uint32(0), uint32(42)}, map[string]any{"w": uint8(42)}},
 		testCase{"variant", vt, []any{uint32(1), uint32(42)}, map[string]any{"x|w": uint8(42)}},
@@ -85,48 +80,76 @@ func Test(t *testing.T) {
 	}
 }
 
-func flags(labels ...string) *types.Flags {
+func U8() *types.U8           { return &types.U8{} }
+func U16() *types.U16         { return &types.U16{} }
+func U32() *types.U32         { return &types.U32{} }
+func U64() *types.U64         { return &types.U64{} }
+func Float32() *types.Float32 { return &types.Float32{} }
+func Float64() *types.Float64 { return &types.Float64{} }
+
+func Flags(labels ...string) *types.Flags {
 	return &types.Flags{
 		Labels: labels,
 	}
 }
 
-func tuple(t ...types.ValType) *types.Tuple {
+func Tuple(t ...types.ValType) *types.Tuple {
 	return &types.Tuple{
 		Types: t,
 	}
 }
 
-func variant(c ...types.Case) *types.Variant {
+func Variant(c ...types.Case) *types.Variant {
 	return &types.Variant{
 		Cases: c,
 	}
 }
 
-func vcase(label string, val types.ValType, refines *string) types.Case {
+func Case(label string, val types.ValType) types.Case {
 	return types.Case{
 		Label:   label,
 		Type:    val,
-		Refines: refines,
+		Refines: nil,
 	}
 }
 
-func union(valTypes ...types.ValType) *types.Union {
+func CaseWith(label string, val types.ValType, refines string) types.Case {
+	return types.Case{
+		Label:   label,
+		Type:    val,
+		Refines: to.Pointer(refines),
+	}
+}
+
+func Union(valTypes ...types.ValType) *types.Union {
 	return &types.Union{
 		Types: valTypes,
 	}
 }
 
-func option(valType types.ValType) *types.Option {
+func Option(valType types.ValType) *types.Option {
 	return &types.Option{
 		Type: valType,
 	}
 }
 
-func result(ok, err types.ValType) *types.Result {
+func Result(ok, err types.ValType) *types.Result {
 	return &types.Result{
 		OK:    ok,
 		Error: err,
+	}
+}
+
+func Record(fields ...types.Field) *types.Record {
+	return &types.Record{
+		Fields: fields,
+	}
+}
+
+func Field(label string, t types.ValType) types.Field {
+	return types.Field{
+		Label: label,
+		Type:  t,
 	}
 }
 
