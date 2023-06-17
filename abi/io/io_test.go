@@ -14,6 +14,7 @@ import (
 	"github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/abi/values"
 	"github.com/patrickhuber/go-wasm/encoding"
+	"github.com/patrickhuber/go-wasm/internal/to"
 	"github.com/stretchr/testify/require"
 )
 
@@ -63,6 +64,17 @@ func Test(t *testing.T) {
 		{"result", result(&types.U8{}, &types.U32{}), []any{uint32(0), uint32(42)}, map[string]any{"ok": uint8(42)}},
 		{"result", result(&types.U8{}, &types.U32{}), []any{uint32(1), uint32(1000)}, map[string]any{"error": uint32(1000)}},
 	}
+	vt := variant(
+		vcase("w", types.U8{}, nil),
+		vcase("x", types.U8{}, to.Pointer("w")),
+		vcase("y", types.U8{}, nil),
+		vcase("z", types.U8{}, to.Pointer("x")))
+	tests = append(tests,
+		testCase{"variant", vt, []any{uint32(0), uint32(42)}, map[string]any{"w": uint8(42)}},
+		testCase{"variant", vt, []any{uint32(1), uint32(42)}, map[string]any{"x|w": uint8(42)}},
+		testCase{"variant", vt, []any{uint32(2), uint32(42)}, map[string]any{"y": uint8(42)}},
+		testCase{"variant", vt, []any{uint32(3), uint32(42)}, map[string]any{"z|x|w": uint8(42)}},
+	)
 
 	for _, oneTest := range tests {
 		t.Run(oneTest.name, func(t *testing.T) {
