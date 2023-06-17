@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/patrickhuber/go-wasm/to"
+	"github.com/patrickhuber/go-wasm/internal/to"
 	"github.com/patrickhuber/go-wasm/wasm"
 	"github.com/stretchr/testify/require"
 )

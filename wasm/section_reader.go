@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/patrickhuber/go-wasm/leb128"
-	"github.com/patrickhuber/go-wasm/to"
+	"github.com/patrickhuber/go-wasm/internal/to"
 )
 
 type SectionReader interface {

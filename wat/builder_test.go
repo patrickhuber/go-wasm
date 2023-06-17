@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/patrickhuber/go-wasm/to"
+	"github.com/patrickhuber/go-wasm/internal/to"
 	"github.com/patrickhuber/go-wasm/wat"
 )
 
