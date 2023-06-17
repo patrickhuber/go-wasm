@@ -82,7 +82,8 @@ func StoreFloat(c *types.Context, val any, ptr uint32, nbytes uint32) error {
 }
 
 func StoreUInt32(c *types.Context, val uint32, ptr uint32) error {
-	return StoreInt(c, val, ptr, 4, false)
+	size, _ := types.U32{}.Size()
+	return StoreInt(c, val, ptr, size, false)
 }
 
 func StoreInt(c *types.Context, val any, ptr uint32, nbytes uint32, signed bool) error {
