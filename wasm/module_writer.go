@@ -20,5 +20,6 @@ type moduleWriter struct {
 }
 
 func (w *moduleWriter) Write(m *Module) error {
+
 	return nil
 }

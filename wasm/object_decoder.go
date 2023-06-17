@@ -6,21 +6,21 @@ import (
 	"io"
 )
 
-type ObjectReader interface {
-	Read() (*Object, error)
+type ObjectDecoder interface {
+	Decode() (*Object, error)
 }
 
 type objectReader struct {
 	reader *bufio.Reader
 }
 
-func NewObjectReader(reader io.Reader) ObjectReader {
+func NewObjectDecoder(reader io.Reader) ObjectDecoder {
 	return &objectReader{
 		reader: bufio.NewReader(reader),
 	}
 }
 
-func (r *objectReader) Read() (*Object, error) {
+func (r *objectReader) Decode() (*Object, error) {
 	header, err := NewHeaderReader(r.reader).Read()
 	if err != nil {
 		return nil, err

@@ -5,21 +5,21 @@ import (
 	"io"
 )
 
-type ObjectWriter interface {
-	Write(object *Object) error
+type ObjectEncoder interface {
+	Encode(object *Object) error
 }
 
-type objectWriter struct {
+type objectEncoder struct {
 	writer *bufio.Writer
 }
 
-func NewObjectWriter(writer io.Writer) ObjectWriter {
-	return &objectWriter{
+func NewObjectEncoder(writer io.Writer) ObjectEncoder {
+	return &objectEncoder{
 		writer: bufio.NewWriter(writer),
 	}
 }
 
-func (w *objectWriter) Write(object *Object) error {
+func (w *objectEncoder) Encode(object *Object) error {
 	err := NewHeaderWriter(w.writer).Write(object.Header)
 	if err != nil {
 		return err
