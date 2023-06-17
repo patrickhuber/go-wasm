@@ -2,7 +2,7 @@ package types
 
 import (
 	"github.com/patrickhuber/go-wasm/abi/kind"
-	"github.com/patrickhuber/go-wasm/collections/stack"
+	"github.com/patrickhuber/go-wasm/internal/collections/stack"
 )
 
 type Handle struct {
