@@ -80,6 +80,35 @@ func Test(t *testing.T) {
 	}
 }
 
+func TestWithLower(t *testing.T) {
+	type testCase struct {
+		name       string
+		t          types.ValType
+		valsToLift []any
+		v          any
+		lowerT     types.ValType
+		lowerV     any
+	}
+	vt := Variant(
+		Case("w", U8()),
+		CaseWith("x", U8(), "w"),
+		Case("y", U8()),
+		CaseWith("z", U8(), "x"))
+
+	vt2 := Variant(Case("w", U8()))
+	tests := []testCase{
+		{"variant", vt, []any{uint32(0), uint32(42)}, map[string]any{"w": uint8(42)}, vt2, map[string]any{"w": uint8(42)}},
+		{"variant", vt, []any{uint32(1), uint32(42)}, map[string]any{"x|w": uint8(42)}, vt2, map[string]any{"w": uint8(42)}},
+		{"variant", vt, []any{uint32(3), uint32(42)}, map[string]any{"z|x|w": uint8(42)}, vt2, map[string]any{"w": uint8(42)}},
+	}
+	for _, oneTest := range tests {
+		t.Run(oneTest.name, func(t *testing.T) {
+			cxt := NewContext(&bytes.Buffer{}, encoding.UTF8, nil, nil)
+			err := test(oneTest.t, oneTest.valsToLift, oneTest.v, cxt, encoding.UTF8, oneTest.lowerT, oneTest.lowerV)
+			require.Nil(t, err)
+		})
+	}
+}
 func U8() *types.U8           { return &types.U8{} }
 func U16() *types.U16         { return &types.U16{} }
 func U32() *types.U32         { return &types.U32{} }
