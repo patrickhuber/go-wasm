@@ -109,7 +109,13 @@ func TestWithLower(t *testing.T) {
 		})
 	}
 }
-func Bool() *types.Bool       { return &types.Bool{} }
+func Bool() *types.Bool { return &types.Bool{} }
+
+func S8() *types.S8   { return &types.S8{} }
+func S16() *types.S16 { return &types.S16{} }
+func S32() *types.S32 { return &types.S32{} }
+func S64() *types.S64 { return &types.S64{} }
+
 func U8() *types.U8           { return &types.U8{} }
 func U16() *types.U16         { return &types.U16{} }
 func U32() *types.U32         { return &types.U32{} }
