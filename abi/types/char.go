@@ -2,7 +2,7 @@ package types
 
 import "github.com/patrickhuber/go-wasm/abi/kind"
 
-type Char rune
+type Char struct{}
 
 func (Char) Kind() kind.Kind {
 	return kind.Char

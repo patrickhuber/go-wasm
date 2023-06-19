@@ -116,12 +116,21 @@ func S16() *types.S16 { return &types.S16{} }
 func S32() *types.S32 { return &types.S32{} }
 func S64() *types.S64 { return &types.S64{} }
 
-func U8() *types.U8           { return &types.U8{} }
-func U16() *types.U16         { return &types.U16{} }
-func U32() *types.U32         { return &types.U32{} }
-func U64() *types.U64         { return &types.U64{} }
+func U8() *types.U8   { return &types.U8{} }
+func U16() *types.U16 { return &types.U16{} }
+func U32() *types.U32 { return &types.U32{} }
+func U64() *types.U64 { return &types.U64{} }
+
 func Float32() *types.Float32 { return &types.Float32{} }
 func Float64() *types.Float64 { return &types.Float64{} }
+
+func Char() *types.Char { return &types.Char{} }
+
+func Enum(labels ...string) *types.Enum {
+	return &types.Enum{
+		Labels: labels,
+	}
+}
 
 func Flags(labels ...string) *types.Flags {
 	return &types.Flags{

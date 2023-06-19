@@ -122,20 +122,20 @@ func LowerS16(v any) ([]values.Value, error) {
 }
 
 func LowerS32(v any) ([]values.Value, error) {
-	u32, ok := v.(uint32)
+	s32, ok := v.(int32)
 	if !ok {
 		return nil, types.NewCastError(v, "int32")
 	}
-	i := values.U32(u32)
+	i := values.U32(s32)
 	return slice(i), nil
 }
 
 func LowerS64(v any) ([]values.Value, error) {
-	u64, ok := v.(uint64)
+	s64, ok := v.(int64)
 	if !ok {
 		return nil, types.NewCastError(v, "int64")
 	}
-	i := values.U64(u64)
+	i := values.U64(s64)
 	return slice(i), nil
 }
 

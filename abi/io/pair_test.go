@@ -56,8 +56,42 @@ func TestPairs(t *testing.T) {
 		Pair(uint32((1<<32)-1), int16(-1)),
 		Pair(uint32((1<<32)-32768), int16(-32768)),
 		Pair(uint32((1<<32)-32769), int16(32767)))
-}
+	testPairs[uint32, uint32](t, U32(),
+		Pair(uint32((1<<31)-1), uint32(1<<31)-1),
+		Pair(uint32(1<<31), uint32(1<<31)),
+		Pair(uint32((1<<32)-1), uint32((1<<32)-1)))
+	testPairs[uint32, int32](t, S32(),
+		Pair(uint32((1<<31)-1), int32((1<<31)-1)),
+		Pair(uint32(1<<31), int32(-(1<<31))),
+		Pair(uint32((1<<32)-1), int32(-1)))
+	testPairs[uint64, uint64](t, U64(),
+		Pair(uint64((1<<63)-1), uint64((1<<63)-1)),
+		Pair(uint64(1<<63), uint64(1<<63)),
+		Pair(uint64((1<<64)-1), uint64((1<<64)-1)))
+	testPairs[uint64, int64](t, S64(),
+		Pair(uint64((1<<63)-1), int64((1<<63)-1)),
+		Pair(uint64(1<<63), int64(-(1<<63))),
+		Pair(uint64((1<<64)-1), int64(-1)))
+	testPairs[float32, float32](t, Float32(),
+		Pair(float32(3.14), float32(3.14)))
+	testPairs[float64, float64](t, Float64(),
+		Pair(float64(3.14), float64(3.14)))
+	testPairs[uint32, rune](t, Char(),
+		Pair(uint32(0), '\x00'),
+		Pair(uint32(65), 'A'),
+		Pair(uint32(0xD7FF), '\uD7FF'),
+		Pair(uint32(0xD800), '\x00'),
+		Pair(uint32(0xDFFF), '\x00'),
+		Pair(uint32(0xE000), '\uE000'),
+		Pair(uint32(0x10FFFF), '\U0010FFFF'),
+		Pair(uint32(0x110000), '\x00'),
+		Pair(uint32(0xFFFFFFFF), '\x00'))
+	testPairs[uint32, map[string]any](t, Enum("a", "b"),
+		Pair(uint32(0), map[string]any{"a": nil}),
+		Pair(uint32(1), map[string]any{"b": nil}),
+		Pair[uint32, map[string]any](uint32(2), nil))
 
+}
 func testPairs[TLift, TValue any](t *testing.T, vt types.ValType, pairs ...pair[TLift, TValue]) {
 	for _, p := range pairs {
 		t.Run(vt.Kind().String(), func(t *testing.T) {
