@@ -111,17 +111,13 @@ func (b *functionBuilder) Parameters(p func(ParametersBuilder)) {
 func (b *functionBuilder) Results(r func(ResultsBuilder)) {
 	results := &results{}
 	r(results)
-	for _, result := range results.results {
-		b.function.Results = append(b.function.Results, result)
-	}
+	b.function.Results = append(b.function.Results, results.results...)
 }
 
 func (b *functionBuilder) Instructions(i func(InstructionsBuilder)) {
 	instructions := &instructionsBuilder{}
 	i(instructions)
-	for _, instruction := range instructions.instructions {
-		b.function.Instructions = append(b.function.Instructions, instruction)
-	}
+	b.function.Instructions = append(b.function.Instructions, instructions.instructions...)
 }
 
 type memoryBuilder struct {
