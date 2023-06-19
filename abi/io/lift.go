@@ -112,7 +112,7 @@ func LiftFlat(cx *types.Context, vi values.ValueIterator, t types.ValType) (any,
 }
 
 func LiftFlatBool(vi values.ValueIterator) (bool, error) {
-	b, err := vi.Next(kind.S32)
+	b, err := vi.Next(kind.U32)
 	if err != nil {
 		return false, err
 	}
@@ -120,7 +120,7 @@ func LiftFlatBool(vi values.ValueIterator) (bool, error) {
 	if !ok {
 		return false, types.NewCastError(b, "uint32")
 	}
-	return u32 == 1, nil
+	return u32 != 0, nil
 }
 
 func LiftFlatU8(vi values.ValueIterator) (uint8, error) {
