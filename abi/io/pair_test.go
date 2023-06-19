@@ -48,6 +48,14 @@ func TestPairs(t *testing.T) {
 		Pair(uint32((1<<32)-1), uint16(65535)),
 		Pair(uint32((1<<32)-32768), uint16(32768)),
 		Pair(uint32((1<<32)-32769), uint16(32767)))
+	testPairs[uint32, int16](t, S16(),
+		Pair(uint32(32767), int16(32767)),
+		Pair(uint32(32768), int16(-32768)),
+		Pair(uint32(65535), int16(-1)),
+		Pair(uint32(65536), int16(0)),
+		Pair(uint32((1<<32)-1), int16(-1)),
+		Pair(uint32((1<<32)-32768), int16(-32768)),
+		Pair(uint32((1<<32)-32769), int16(32767)))
 }
 
 func testPairs[TLift, TValue any](t *testing.T, vt types.ValType, pairs ...pair[TLift, TValue]) {
