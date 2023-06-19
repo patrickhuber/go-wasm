@@ -5,15 +5,16 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/patrickhuber/go-wasm/internal/sexpr"
 	"github.com/patrickhuber/go-wasm/internal/to"
 )
 
-func Parse(lexer Lexer) (*Module, error) {
+func Parse(lexer sexpr.Lexer) (*Module, error) {
 	return NewParser(lexer).Parse()
 }
 
 func ParseString(input string) (*Module, error) {
-	lexer := NewLexer(input)
+	lexer := sexpr.NewLexer(input)
 	return Parse(lexer)
 }
 
@@ -22,10 +23,10 @@ type Parser interface {
 }
 
 type parser struct {
-	lexer Lexer
+	lexer sexpr.Lexer
 }
 
-func NewParser(lexer Lexer) Parser {
+func NewParser(lexer sexpr.Lexer) Parser {
 
 	return &parser{
 		lexer: lexer,
@@ -38,7 +39,7 @@ func (p *parser) Parse() (*Module, error) {
 
 func (p *parser) ParseModule() (*Module, error) {
 
-	err := p.ExpectToken(OpenParen)
+	err := p.ExpectToken(sexpr.OpenParen)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +65,7 @@ func (p *parser) ParseModule() (*Module, error) {
 			module.Memory = append(module.Memory, *section)
 		}
 	}
-	err = p.ExpectToken(CloseParen)
+	err = p.ExpectToken(sexpr.CloseParen)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func (p *parser) TryParseSection() (*Section, bool, error) {
 		return nil, false, err
 	}
 
-	if peek.Type == CloseParen {
+	if peek.Type == sexpr.CloseParen {
 		return nil, false, nil
 	}
 
@@ -92,7 +93,7 @@ func (p *parser) TryParseSection() (*Section, bool, error) {
 }
 
 func (p *parser) ParseSection() (*Section, error) {
-	err := p.ExpectToken(OpenParen)
+	err := p.ExpectToken(sexpr.OpenParen)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +125,7 @@ func (p *parser) ParseSection() (*Section, error) {
 	default:
 		return nil, p.parseError(tok, fmt.Errorf("unexpected token %s found", tok.Type))
 	}
-	return section, p.ExpectToken(CloseParen)
+	return section, p.ExpectToken(sexpr.CloseParen)
 }
 
 func (p *parser) ParseFunction() (*Function, error) {
@@ -163,7 +164,7 @@ func (p *parser) ParseMemory() (*Memory, error) {
 		return nil, err
 	}
 
-	if peek.Type == OpenParen || peek.Type == CloseParen {
+	if peek.Type == sexpr.OpenParen || peek.Type == sexpr.CloseParen {
 		return memory, nil
 	}
 
@@ -190,7 +191,7 @@ func (p *parser) ParseSignature() (*Function, error) {
 		if err != nil {
 			return nil, err
 		}
-		if tok.Type != OpenParen {
+		if tok.Type != sexpr.OpenParen {
 			break
 		}
 		p.nextToken()
@@ -217,7 +218,7 @@ func (p *parser) ParseSignature() (*Function, error) {
 			return nil, p.parseError(name, fmt.Errorf("unrecognized string %s. expected 'param' or 'result'", name.Capture))
 		}
 
-		err = p.ExpectToken(CloseParen)
+		err = p.ExpectToken(sexpr.CloseParen)
 		if err != nil {
 			return nil, err
 		}
@@ -289,7 +290,7 @@ func (p *parser) TryParseInstruction() (*Instruction, bool, error) {
 		return nil, false, err
 	}
 
-	if peek.Type == CloseParen {
+	if peek.Type == sexpr.CloseParen {
 		return nil, false, nil
 	}
 
@@ -394,7 +395,7 @@ func (p *parser) TryParseIdentifier() (*Identifier, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
-	if token.Type != String {
+	if token.Type != sexpr.String {
 		return nil, false, nil
 	}
 	if strings.HasPrefix(token.Capture, "$") {
@@ -416,13 +417,13 @@ func (p *parser) ParseUInt32() (uint32, error) {
 	return uint32(result), err
 }
 
-func (p *parser) ParseString() (*Token, error) {
+func (p *parser) ParseString() (*sexpr.Token, error) {
 	token, err := p.nextToken()
 	if err != nil {
 		return nil, err
 	}
-	if token.Type != String {
-		return nil, p.parseError(token, fmt.Errorf("expected '%s' found '%s' ", String, token.Type))
+	if token.Type != sexpr.String {
+		return nil, p.parseError(token, fmt.Errorf("expected '%s' found '%s' ", sexpr.String, token.Type))
 	}
 	return token, nil
 }
@@ -438,7 +439,7 @@ func (p *parser) ExpectString(expected string) error {
 	return nil
 }
 
-func (p *parser) ExpectToken(t TokenType) error {
+func (p *parser) ExpectToken(t sexpr.TokenType) error {
 	token, err := p.nextToken()
 	if err != nil {
 		return err
@@ -449,29 +450,29 @@ func (p *parser) ExpectToken(t TokenType) error {
 	return nil
 }
 
-func (p *parser) parseError(t *Token, err error) error {
+func (p *parser) parseError(t *sexpr.Token, err error) error {
 	return fmt.Errorf("parse error line: %d, column: %d, position: %d, %w", t.Line+1, t.Column+1, t.Position, err)
 }
 
-func (p *parser) nextToken() (*Token, error) {
+func (p *parser) nextToken() (*sexpr.Token, error) {
 	for {
 		tok, err := p.lexer.Next()
 		if err != nil {
 			return nil, err
 		}
-		if tok.Type != Whitespace {
+		if tok.Type != sexpr.Whitespace {
 			return tok, nil
 		}
 	}
 }
 
-func (p *parser) peekToken() (*Token, error) {
+func (p *parser) peekToken() (*sexpr.Token, error) {
 	for {
 		tok, err := p.lexer.Peek()
 		if err != nil {
 			return nil, err
 		}
-		if tok.Type != Whitespace {
+		if tok.Type != sexpr.Whitespace {
 			return tok, nil
 		}
 		p.lexer.Next()

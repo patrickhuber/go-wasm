@@ -1,127 +1,112 @@
 package wat_test
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"testing"
+
 	"github.com/patrickhuber/go-wasm/wat"
+	"github.com/stretchr/testify/require"
 )
 
-var _ = Describe("Parser", func() {
-	Describe("Parse", func() {
-		It("module", func() {
-			canParse("(module)", &wat.Module{})
-		})
-		It("memory", func() {
-			canParse("(module (memory 1) (func))", wat.NewModule(func(s wat.SectionBuilder) {
-				s.Function(func(f wat.FunctionBuilder) {})
-				s.Memory(func(m wat.MemoryBuilder) {
-					m.Limits(1)
+func TestCanParse(t *testing.T) {
+	type test struct {
+		name   string
+		wat    string
+		module *wat.Module
+	}
+	tests := []test{
+		{"module", "(module)", &wat.Module{}},
+		{"memory", "(module (memory 1) (func))", wat.NewModule(func(s wat.SectionBuilder) {
+			s.Function(func(f wat.FunctionBuilder) {})
+			s.Memory(func(m wat.MemoryBuilder) {
+				m.Limits(1)
+			})
+		}).Build()},
+		{"func_alias", "(module (func $alias ))", wat.NewModule(
+			func(s wat.SectionBuilder) {
+				s.Function(func(f wat.FunctionBuilder) {
+					f.ID("$alias")
 				})
-			}).Build())
-		})
-		Describe("function", func() {
-			It("can parse function alias", func() {
-				canParse("(module (func $alias ))", wat.NewModule(
-					func(s wat.SectionBuilder) {
-						s.Function(func(f wat.FunctionBuilder) {
-							f.ID("$alias")
-						})
-					}).Build())
-			})
-			It("can parse i32 parameter", func() {
-				canParse("(module (func (param i32)))", wat.NewModule(
-					func(s wat.SectionBuilder) {
-						s.Function(func(f wat.FunctionBuilder) {
-							f.Parameters(func(p wat.ParametersBuilder) {
-								p.Parameter(wat.I32)
-							})
-						})
-					}).Build())
-			})
-			It("can parse i64 parameter", func() {
-				canParse("(module (func (param i64)))", wat.NewModule(
-					func(s wat.SectionBuilder) {
-						s.Function(func(f wat.FunctionBuilder) {
-							f.Parameters(func(p wat.ParametersBuilder) {
-								p.Parameter(wat.I64)
-							})
-						})
-					}).Build())
-			})
-			It("can parse f32 parameter", func() {
-				canParse("(module (func (param f32)))", wat.NewModule(
-					func(s wat.SectionBuilder) {
-						s.Function(func(f wat.FunctionBuilder) {
-							f.Parameters(func(p wat.ParametersBuilder) {
-								p.Parameter(wat.F32)
-							})
-						})
-					}).Build())
-			})
-			It("can parse f64 parameter", func() {
-				canParse("(module (func (param f64)))", wat.NewModule(
-					func(s wat.SectionBuilder) {
-						s.Function(func(f wat.FunctionBuilder) {
-							f.Parameters(func(p wat.ParametersBuilder) {
-								p.Parameter(wat.F64)
-							})
-						})
-					}).Build())
-			})
-			It("can parse i32 result", func() {
-				canParse("(module (func (result i32)))", wat.NewModule(
-					func(s wat.SectionBuilder) {
-						s.Function(func(f wat.FunctionBuilder) {
-							f.Results(func(p wat.ResultsBuilder) {
-								p.Result(wat.I32)
-							})
-						})
-					}).Build())
-			})
-			It("can parse i64 result", func() {
-				canParse("(module (func (result i64)))", wat.NewModule(
-					func(s wat.SectionBuilder) {
-						s.Function(func(f wat.FunctionBuilder) {
-							f.Results(func(p wat.ResultsBuilder) {
-								p.Result(wat.I64)
-							})
-						})
-					}).Build())
-			})
-			It("can parse f32 result", func() {
-				canParse("(module (func (result f32)))", wat.NewModule(
-					func(s wat.SectionBuilder) {
-						s.Function(func(f wat.FunctionBuilder) {
-							f.Results(func(p wat.ResultsBuilder) {
-								p.Result(wat.F32)
-							})
-						})
-					}).Build())
-			})
-			It("can parse f64 result", func() {
-				canParse("(module (func (result f64)))", wat.NewModule(
-					func(s wat.SectionBuilder) {
-						s.Function(func(f wat.FunctionBuilder) {
-							f.Results(func(p wat.ResultsBuilder) {
-								p.Result(wat.F64)
-							})
-						})
-					}).Build())
-			})
-			It("can parse mutiple results", func() {
-				canParse("(module (func (result i64) (result i64) ))", wat.NewModule(
-					func(s wat.SectionBuilder) {
-						s.Function(func(f wat.FunctionBuilder) {
-							f.Results(func(p wat.ResultsBuilder) {
-								p.Result(wat.I64)
-								p.Result(wat.I64)
-							})
-						})
-					}).Build())
-			})
-		})
-		It("function", func() {
-			builder := wat.NewModule(func(s wat.SectionBuilder) {
+			}).Build()},
+		{"param_i32", "(module (func (param i32)))", wat.NewModule(
+			func(s wat.SectionBuilder) {
+				s.Function(func(f wat.FunctionBuilder) {
+					f.Parameters(func(p wat.ParametersBuilder) {
+						p.Parameter(wat.I32)
+					})
+				})
+			}).Build()},
+		{"param_i64", "(module (func (param i64)))", wat.NewModule(
+			func(s wat.SectionBuilder) {
+				s.Function(func(f wat.FunctionBuilder) {
+					f.Parameters(func(p wat.ParametersBuilder) {
+						p.Parameter(wat.I64)
+					})
+				})
+			}).Build()},
+		{"param_f32", "(module (func (param f32)))", wat.NewModule(
+			func(s wat.SectionBuilder) {
+				s.Function(func(f wat.FunctionBuilder) {
+					f.Parameters(func(p wat.ParametersBuilder) {
+						p.Parameter(wat.F32)
+					})
+				})
+			}).Build()},
+		{"param_f64", "(module (func (param f64)))", wat.NewModule(
+			func(s wat.SectionBuilder) {
+				s.Function(func(f wat.FunctionBuilder) {
+					f.Parameters(func(p wat.ParametersBuilder) {
+						p.Parameter(wat.F64)
+					})
+				})
+			}).Build()},
+		{"result_i32", "(module (func (result i32)))", wat.NewModule(
+			func(s wat.SectionBuilder) {
+				s.Function(func(f wat.FunctionBuilder) {
+					f.Results(func(p wat.ResultsBuilder) {
+						p.Result(wat.I32)
+					})
+				})
+			}).Build()},
+		{"result_i64", "(module (func (result i64)))", wat.NewModule(
+			func(s wat.SectionBuilder) {
+				s.Function(func(f wat.FunctionBuilder) {
+					f.Results(func(p wat.ResultsBuilder) {
+						p.Result(wat.I64)
+					})
+				})
+			}).Build()},
+		{"result_f32", "(module (func (result f32)))", wat.NewModule(
+			func(s wat.SectionBuilder) {
+				s.Function(func(f wat.FunctionBuilder) {
+					f.Results(func(p wat.ResultsBuilder) {
+						p.Result(wat.F32)
+					})
+				})
+			}).Build()},
+		{"result_f64", "(module (func (result f64)))", wat.NewModule(
+			func(s wat.SectionBuilder) {
+				s.Function(func(f wat.FunctionBuilder) {
+					f.Results(func(p wat.ResultsBuilder) {
+						p.Result(wat.F64)
+					})
+				})
+			}).Build()},
+		{"multi_result", "(module (func (result i64) (result i64) ))", wat.NewModule(
+			func(s wat.SectionBuilder) {
+				s.Function(func(f wat.FunctionBuilder) {
+					f.Results(func(p wat.ResultsBuilder) {
+						p.Result(wat.I64)
+						p.Result(wat.I64)
+					})
+				})
+			}).Build()},
+		{"function", `
+			(module
+				(func (param $lhs i32) (param $rhs i32) (result i32)
+				  local.get $lhs
+				  local.get $rhs
+				  i32.add))`,
+			wat.NewModule(func(s wat.SectionBuilder) {
 				s.Function(func(f wat.FunctionBuilder) {
 					f.Parameters(func(p wat.ParametersBuilder) {
 						p.Parameter(wat.I32).ID("$lhs")
@@ -136,22 +121,18 @@ var _ = Describe("Parser", func() {
 						i.I32Add()
 					})
 				})
-			})
-
-			canParse(`
-			(module
-				(func (param $lhs i32) (param $rhs i32) (result i32)
-				  local.get $lhs
-				  local.get $rhs
-				  i32.add))`,
-				builder.Build())
+			}).Build()},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			CanParse(t, test.wat, test.module)
 		})
-	})
-})
+	}
+}
 
-func canParse(input string, expected *wat.Module) {
+func CanParse(t *testing.T, input string, expected *wat.Module) {
 	result, err := wat.ParseString(input)
-	Expect(err).To(BeNil())
-	Expect(result).ToNot(BeNil())
-	Expect(result).To(Equal(expected))
+	require.Nil(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, result, expected)
 }

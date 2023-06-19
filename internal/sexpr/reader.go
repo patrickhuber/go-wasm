@@ -1,4 +1,4 @@
-package wat
+package sexpr
 
 import (
 	"bufio"
