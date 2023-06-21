@@ -198,6 +198,12 @@ func Field(label string, t types.ValType) types.Field {
 	}
 }
 
+func List(vt types.ValType) *types.List {
+	return &types.List{
+		Type: vt,
+	}
+}
+
 func Range(low int, high int) []int {
 	var result []int
 	for i := low; i < high; i++ {
@@ -268,9 +274,8 @@ func test(t types.ValType, valsToLift []any, v any,
 		return err
 	}
 
-	err = types.TrapIf(vi.Index() != vi.Length())
-	if err != nil {
-		return err
+	if vi.Index() != vi.Length() {
+		return types.TrapWith("value iterator index %d exceeds length %d", vi.Index(), vi.Length())
 	}
 	if !reflect.DeepEqual(got, v) {
 		return fmt.Errorf("initial lift_flat() expected %v but got %v", v, got)

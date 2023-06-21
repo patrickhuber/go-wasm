@@ -83,11 +83,11 @@ func LiftFlat(cx *types.Context, vi values.ValueIterator, t types.ValType) (any,
 		}
 		o, ok := t.(*types.Own)
 		if !ok {
-			return nil, types.Trap()
+			return nil, types.TrapWith("unable to cast kind.%s to kind.Own", t.Kind())
 		}
 		i, ok := v.(uint32)
 		if !ok {
-			return nil, types.Trap()
+			return nil, types.TrapWith("unable to cast %T to uint32", v)
 		}
 		return LiftOwn(cx, i, o)
 	case kind.Borrow:
@@ -99,12 +99,13 @@ func LiftFlat(cx *types.Context, vi values.ValueIterator, t types.ValType) (any,
 
 		b, ok := t.(*types.Borrow)
 		if !ok {
-			return nil, types.Trap()
+
+			return nil, types.TrapWith("unable to cast kind.%s to kind.Borrow", t.Kind())
 		}
 
 		i, ok := v.(uint32)
 		if !ok {
-			return nil, types.Trap()
+			return nil, types.TrapWith("unable to cast %T to uint32", v)
 		}
 		return LiftBorrow(cx, i, b)
 	}
@@ -316,9 +317,8 @@ func LiftFlatVariant(cx *types.Context, vi values.ValueIterator, variant *types.
 		return nil, types.NewCastError(caseIndex, "uint32")
 	}
 
-	err = types.TrapIf(int(u32CaseIndex) >= len(variant.Cases))
-	if err != nil {
-		return nil, fmt.Errorf("expected case length to be less than %d %w", u32CaseIndex, err)
+	if int(u32CaseIndex) >= len(variant.Cases) {
+		return nil, types.TrapWith("case index %d exceeds bounds of cases %d", u32CaseIndex, len(variant.Cases))
 	}
 
 	c := variant.Cases[u32CaseIndex]

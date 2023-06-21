@@ -33,12 +33,12 @@ func (ht *HandleTable) Add(handle *Handle, t ValType) uint32 {
 }
 
 func (ht *HandleTable) Get(i uint32) (*Handle, error) {
-	if err := TrapIf(i >= uint32(len(ht.Array))); err != nil {
-		return nil, err
+	if i >= uint32(len(ht.Array)) {
+		return nil, TrapWith("index is greater than handle table length")
 	}
 	handle := ht.Array[i]
-	if err := TrapIf(handle == nil); err != nil {
-		return nil, err
+	if handle == nil {
+		return nil, TrapWith("handle %d is nil", i)
 	}
 	return handle, nil
 }
@@ -51,32 +51,28 @@ func (ht *HandleTable) TransferOrDrop(i uint32, t ValType, drop bool) (*Handle, 
 	}
 
 	// open handles?
-	err = TrapIf(h.LendCount != 0)
-	if err != nil {
-		return nil, err
+	if h.LendCount != 0 {
+		return nil, TrapWith("handle table end count != 0")
 	}
 
 	switch t.Kind() {
 	case kind.Own:
 		own, ok := t.(*Own)
-		err = TrapIf(!ok)
-		if err != nil {
-			return nil, err
+		if !ok {
+			return nil, TrapWith("unable to cast %T to types.Own", t)
 		}
 		if !drop || own.ResourceType.DTor == nil {
 			break
 		}
-		err = TrapIf(!own.ResourceType.Impl.MayEnter)
-		if err != nil {
-			return nil, err
+		if !own.ResourceType.Impl.MayEnter {
+			return nil, TrapWith("MayEnter is false")
 		}
 		(*own.ResourceType.DTor)(h.Rep)
 
 	case kind.Borrow:
 		_, ok := t.(*Borrow)
-		err = TrapIf(!ok)
-		if err != nil {
-			return nil, err
+		if !ok {
+			return nil, TrapWith("unable to cast %T to types.Borrow", t)
 		}
 		h.Context.BorrowCount -= 1
 	}
@@ -104,20 +100,18 @@ func resourceType(t ValType) (*ResourceType, error) {
 	switch t.Kind() {
 	case kind.Borrow:
 		b, ok := t.(*Borrow)
-		err := TrapIf(!ok)
-		if err != nil {
-			return nil, err
+		if !ok {
+			return nil, TrapWith("unable to cast %T to types.Borrow", t)
 		}
 		return b.ResourceType, nil
 	case kind.Own:
 		o, ok := t.(*Own)
-		err := TrapIf(!ok)
-		if err != nil {
-			return nil, err
+		if !ok {
+			return nil, TrapWith("unable to cast %T to types.Own", t)
 		}
 		return o.ResourceType, nil
 	}
-	return nil, Trap()
+	return nil, TrapWith("unrecognized kind %s", t.Kind())
 }
 
 func (ht *HandleTables) Add(handle *Handle, t ValType) (uint32, error) {

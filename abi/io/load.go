@@ -101,13 +101,11 @@ func LoadChar(cx *types.Context, ptr uint32, nbytes uint32) (any, error) {
 }
 
 func ConvertU32ToRune(u32 uint32) (rune, error) {
-	err := types.TrapIf(u32 >= 0x110000)
-	if err != nil {
-		return 0, err
+	if u32 >= 0x110000 {
+		return 0, types.TrapWith("u32 %d >= 0x110000", u32)
 	}
-	err = types.TrapIf(0xd800 <= u32 && u32 <= 0xdfff)
-	if err != nil {
-		return 0, err
+	if 0xd800 <= u32 && u32 <= 0xdfff {
+		return 0, types.TrapWith(" 0xd800 <= %d <= 0xdfff", u32)
 	}
 	return rune(u32), nil
 }
@@ -203,14 +201,12 @@ func LoadStringFromRange(cx *types.Context, ptr, taggedCodeUnits uint32) (string
 
 	byteLength := tcu.CodeUnits * uint32(codec.RuneSize())
 
-	err = types.TrapIf(ptr != types.AlignTo(ptr, uint32(codec.Alignment())))
-	if err != nil {
-		return "", err
+	if ptr != types.AlignTo(ptr, uint32(codec.Alignment())) {
+		return "", types.TrapWith("error aligning ptr %d to %d", ptr, uint32(codec.Alignment()))
 	}
 
-	err = types.TrapIf(ptr+byteLength > uint32(cx.Options.Memory.Len()))
-	if err != nil {
-		return "", err
+	if ptr+byteLength > uint32(cx.Options.Memory.Len()) {
+		return "", types.TrapWith("destination %d > memory size %d", ptr+byteLength, cx.Options.Memory.Len())
 	}
 
 	buf := cx.Options.Memory.Bytes()[ptr : ptr+byteLength]
@@ -236,15 +232,17 @@ func LoadListFromRange(cx *types.Context, ptr uint32, length uint32, elementType
 	if err != nil {
 		return nil, err
 	}
-	err = types.TrapIf(ptr != types.AlignTo(ptr, alignment))
-	if err != nil {
-		return nil, err
+	if ptr != types.AlignTo(ptr, alignment) {
+		return nil, types.TrapWith("unable to align ptr %d with %d", ptr, alignment)
 	}
+
 	size, err := elementType.Size()
 	if err != nil {
 		return nil, err
 	}
-	err = types.TrapIf(ptr+length*size > uint32(cx.Options.Memory.Len()))
+	if ptr+length*size > uint32(cx.Options.Memory.Len()) {
+		return nil, types.TrapWith("destination size %d is greater than memory size %d", ptr+length*size, cx.Options.Memory.Len())
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -309,9 +307,8 @@ func LoadVariant(cx *types.Context, ptr uint32, v *types.Variant) (map[string]an
 		return nil, err
 	}
 	ptr += discSize
-	err = types.TrapIf(u32CaseIndex >= uint32(len(v.Cases)))
-	if err != nil {
-		return nil, err
+	if u32CaseIndex >= uint32(len(v.Cases)) {
+		return nil, types.TrapWith("case index %d is outside the bounds of the case index length %d", u32CaseIndex, len(v.Cases))
 	}
 	c := v.Cases[u32CaseIndex]
 	maxCaseAlignment, err := v.MaxCaseAlignment()

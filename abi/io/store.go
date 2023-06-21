@@ -66,7 +66,7 @@ func Store(c *types.Context, val any, t types.ValType, ptr uint32) error {
 		l := t.(*types.List)
 		return StoreList(c, val, ptr, l.Type)
 	}
-	return types.Trap()
+	return types.TrapWith("unrecognized kind %s", t.Kind())
 }
 
 func StoreFloat(c *types.Context, val any, ptr uint32, nbytes uint32) error {
@@ -223,23 +223,18 @@ func StoreStringDynamic(
 func StoreStringCopy(cx *types.Context, src string, srcCodeUnits uint32, dstCodeUnitSize uint32, dstAlignment uint32, dstEncoding encoding.Encoder) (uint32, uint32, error) {
 
 	dstByteLength := dstCodeUnitSize * srcCodeUnits
-	err := types.TrapIf(dstByteLength > types.MaxStringByteLength)
-	if err != nil {
-		return 0, 0, err
+	if dstByteLength > types.MaxStringByteLength {
+		return 0, 0, types.TrapWith("destination byte length %d is greater than max string byte length %d", dstByteLength, types.MaxStringByteLength)
 	}
-
 	ptr, err := cx.Options.Realloc(0, 0, dstAlignment, dstByteLength)
 	if err != nil {
 		return 0, 0, err
 	}
-	err = types.TrapIf(ptr != types.AlignTo(ptr, dstAlignment))
-	if err != nil {
-		return 0, 0, err
+	if ptr != types.AlignTo(ptr, dstAlignment) {
+		return 0, 0, types.TrapWith("ptr %d is not aligned to destination %d", ptr, dstAlignment)
 	}
-
-	err = types.TrapIf(ptr+dstByteLength > uint32(cx.Options.Memory.Len()))
-	if err != nil {
-		return 0, 0, err
+	if ptr+dstByteLength > uint32(cx.Options.Memory.Len()) {
+		return 0, 0, types.TrapWith("array size %d is greater than the memory size %d", ptr+dstByteLength, cx.Options.Memory.Len())
 	}
 
 	encoded, err := encoding.EncodeString(dstEncoding, src)
@@ -257,9 +252,8 @@ func StoreUtf8ToUtf16(cx *types.Context, src string, srcCodeUnits uint32) (uint3
 
 	worstCaseSize := 2 * srcCodeUnits
 
-	err := types.TrapIf(worstCaseSize > types.MaxStringByteLength)
-	if err != nil {
-		return 0, 0, err
+	if worstCaseSize > types.MaxStringByteLength {
+		return 0, 0, types.TrapWith("worst case size %d is greater than max string byte length %d", worstCaseSize, types.MaxStringByteLength)
 	}
 
 	ptr, err := cx.Options.Realloc(0, 0, 2, worstCaseSize)
@@ -267,14 +261,12 @@ func StoreUtf8ToUtf16(cx *types.Context, src string, srcCodeUnits uint32) (uint3
 		return 0, 0, err
 	}
 
-	err = types.TrapIf(ptr != types.AlignTo(ptr, 2))
-	if err != nil {
-		return 0, 0, err
+	if ptr != types.AlignTo(ptr, 2) {
+		return 0, 0, types.TrapWith("ptr %d is not alinged to 2", ptr)
 	}
 
-	err = types.TrapIf(ptr+worstCaseSize > uint32(cx.Options.Memory.Len()))
-	if err != nil {
-		return 0, 0, err
+	if ptr+worstCaseSize > uint32(cx.Options.Memory.Len()) {
+		return 0, 0, types.TrapWith("worst case size %d is greater than memory size %d", ptr+worstCaseSize, cx.Options.Memory.Len())
 	}
 
 	encoded, err := encoding.EncodeString(encoding.NewUTF16(), src)
@@ -293,14 +285,12 @@ func StoreUtf8ToUtf16(cx *types.Context, src string, srcCodeUnits uint32) (uint3
 			return 0, 0, err
 		}
 
-		err = types.TrapIf(ptr != types.AlignTo(ptr, 2))
-		if err != nil {
-			return 0, 0, err
+		if ptr != types.AlignTo(ptr, 2) {
+			return 0, 0, types.TrapWith("ptr %d could not be aligned to 2", ptr)
 		}
 
-		err = types.TrapIf(hiPtr > uint32(cx.Options.Memory.Len()))
-		if err != nil {
-			return 0, 0, err
+		if hiPtr > uint32(cx.Options.Memory.Len()) {
+			return 0, 0, types.TrapWith("ptr %d is greater than memory size %d", hiPtr, cx.Options.Memory.Len())
 		}
 	}
 
