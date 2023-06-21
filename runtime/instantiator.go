@@ -11,10 +11,10 @@ type Instantiator interface {
 	Instantiate(io.Reader) (*ObjectInstance, error)
 }
 
-type instaniator struct {
+type instantiator struct {
 }
 
-func (i *instaniator) Instantiate(reader io.Reader) (*ObjectInstance, error) {
+func (i *instantiator) Instantiate(reader io.Reader) (*ObjectInstance, error) {
 	objReader := wasm.NewObjectDecoder(reader)
 
 	obj, err := objReader.Decode()
@@ -25,7 +25,7 @@ func (i *instaniator) Instantiate(reader io.Reader) (*ObjectInstance, error) {
 	return i.instantiateObject(obj)
 }
 
-func (i *instaniator) instantiateObject(obj *wasm.Object) (*ObjectInstance, error) {
+func (i *instantiator) instantiateObject(obj *wasm.Object) (*ObjectInstance, error) {
 	var component *ComponentInstance
 	var module *ModuleInstance
 	var err error
@@ -50,7 +50,7 @@ func (i *instaniator) instantiateObject(obj *wasm.Object) (*ObjectInstance, erro
 	}, nil
 }
 
-func (i *instaniator) instantiateModule(module *wasm.Module) (*ModuleInstance, error) {
+func (i *instantiator) instantiateModule(module *wasm.Module) (*ModuleInstance, error) {
 	instance := &ModuleInstance{}
 	for _, section := range module.Sections {
 		switch section.ID {
@@ -82,6 +82,6 @@ func (i *instaniator) instantiateModule(module *wasm.Module) (*ModuleInstance, e
 	return instance, nil
 }
 
-func (i *instaniator) instantiateComponent(component *wasm.Component) (*ComponentInstance, error) {
+func (i *instantiator) instantiateComponent(component *wasm.Component) (*ComponentInstance, error) {
 	return nil, nil
 }
