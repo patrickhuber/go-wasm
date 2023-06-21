@@ -91,7 +91,25 @@ func LoadChar(cx *types.Context, ptr uint32, nbytes uint32) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return rune(i.(uint32)), nil
+
+	u32, ok := i.(uint32)
+	if !ok {
+		return nil, types.NewCastError(i, "uint32")
+	}
+
+	return ConvertU32ToRune(u32)
+}
+
+func ConvertU32ToRune(u32 uint32) (rune, error) {
+	err := types.TrapIf(u32 >= 0x110000)
+	if err != nil {
+		return 0, err
+	}
+	err = types.TrapIf(0xd800 <= u32 && u32 <= 0xdfff)
+	if err != nil {
+		return 0, err
+	}
+	return rune(u32), nil
 }
 
 func LoadBool(cx *types.Context, ptr uint32) (bool, error) {

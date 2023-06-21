@@ -251,8 +251,7 @@ func LiftFlatChar(vi values.ValueIterator) (rune, error) {
 	if err != nil {
 		return r, err
 	}
-	// range check?
-	return rune(u32), nil
+	return ConvertU32ToRune(u32)
 }
 
 func LiftFlatList(cx *types.Context, vi values.ValueIterator, t types.ValType) (any, error) {

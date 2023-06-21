@@ -80,17 +80,18 @@ func TestPairs(t *testing.T) {
 		Pair(uint32(0), '\x00'),
 		Pair(uint32(65), 'A'),
 		Pair(uint32(0xD7FF), '\uD7FF'),
-		Pair(uint32(0xD800), '\x00'),
-		Pair(uint32(0xDFFF), '\x00'),
 		Pair(uint32(0xE000), '\uE000'),
-		Pair(uint32(0x10FFFF), '\U0010FFFF'),
-		Pair(uint32(0x110000), '\x00'),
-		Pair(uint32(0xFFFFFFFF), '\x00'))
+		Pair(uint32(0x10FFFF), '\U0010FFFF'))
+	testPairs[uint32, any](t, Char(), // any nil values must be passed as 'any'
+		Pair[uint32, any](uint32(0xD800), nil),
+		Pair[uint32, any](uint32(0xDFFF), nil),
+		Pair[uint32, any](uint32(0x110000), nil),
+		Pair[uint32, any](uint32(0xFFFFFFFF), nil))
 	testPairs[uint32, map[string]any](t, Enum("a", "b"),
 		Pair(uint32(0), map[string]any{"a": nil}),
-		Pair(uint32(1), map[string]any{"b": nil}),
-		Pair[uint32, map[string]any](uint32(2), nil))
-
+		Pair(uint32(1), map[string]any{"b": nil}))
+	testPairs[uint32, any](t, Enum("a", "b"),
+		Pair[uint32, any](uint32(2), nil)) // any nil values must be passed as 'any'
 }
 func testPairs[TLift, TValue any](t *testing.T, vt types.ValType, pairs ...pair[TLift, TValue]) {
 	for _, p := range pairs {

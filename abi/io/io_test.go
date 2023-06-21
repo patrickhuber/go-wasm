@@ -254,7 +254,7 @@ func test(t types.ValType, valsToLift []any, v any,
 	vi := values.NewIterator(vs...)
 
 	// this error handling logic is strange
-	// but basically if v is null,
+	// but basically if v is nil,
 	// handle the return from the function differently because we are expectig failure
 	got, err := io.LiftFlat(cx, vi, t)
 	if v == nil {
