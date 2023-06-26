@@ -65,6 +65,9 @@ func Store(c *types.Context, val any, t types.ValType, ptr uint32) error {
 	case kind.List:
 		l := t.(*types.List)
 		return StoreList(c, val, ptr, l.Type)
+	case kind.Record:
+		r := t.(*types.Record)
+		return StoreRecord(c, val, ptr, r)
 	}
 	return types.TrapWith("unrecognized kind %s", t.Kind())
 }
@@ -298,12 +301,113 @@ func StoreUtf8ToUtf16(cx *types.Context, src string, srcCodeUnits uint32) (uint3
 	return ptr, codeUnits, nil
 }
 
-func StoreUtf8ToLatin1OrUtf16(cx *types.Context, src string, srcCodeUnits uint32) (uint32, uint32, error) {
-	return 0, 0, nil
+func StoreList(cx *types.Context, v any, ptr uint32, elementType types.ValType) error {
+	begin, length, err := StoreListIntoRange(cx, v, elementType)
+	if err != nil {
+		return err
+	}
+	err = StoreUInt32(cx, begin, ptr)
+	if err != nil {
+		return err
+	}
+	return StoreUInt32(cx, length, ptr+4)
 }
 
-func StoreList(c *types.Context, v any, ptr uint32, elementType types.ValType) error {
+func StoreListIntoRange(cx *types.Context, v any, elementType types.ValType) (uint32, uint32, error) {
+	slice, err := ToSlice(v)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	size, err := elementType.Size()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	byteLengthInt := len(slice) * int(size)
+	if byteLengthInt >= (1 << 32) {
+		return 0, 0, types.TrapWith("byte length %d exceeds max of %d", byteLengthInt, (1 << 32))
+	}
+	byteLength := uint32(byteLengthInt)
+
+	alignment, err := elementType.Alignment()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	ptr, err := cx.Options.Realloc(0, 0, alignment, byteLength)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if ptr != types.AlignTo(ptr, alignment) {
+		return 0, 0, types.TrapWith("ptr %d not aligned to %d", ptr, alignment)
+	}
+
+	if ptr+byteLength > uint32(cx.Options.Memory.Len()) {
+		return 0, 0, types.TrapWith("ptr %d exceeds mememory size %d", ptr+byteLength, cx.Options.Memory.Len())
+	}
+
+	for i, element := range slice {
+		u32Index := uint32(i)
+		err = Store(cx, element, elementType, ptr+u32Index*size)
+		if err != nil {
+			return 0, 0, err
+		}
+	}
+
+	return ptr, uint32(len(slice)), nil
+}
+
+func ToSlice(val any) ([]any, error) {
+	switch v := val.(type) {
+	case []any:
+		return v, nil
+	default:
+		return nil, types.NewCastError(val, "[]any")
+	}
+}
+
+func StoreRecord(cx *types.Context, val any, ptr uint32, r *types.Record) error {
+	valMap, err := ToMapStringAny(val)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range r.Fields {
+		size, err := StoreField(cx, valMap[f.Label], ptr, f)
+		if err != nil {
+			return err
+		}
+		ptr += size
+	}
+
 	return nil
+}
+
+func StoreField(cx *types.Context, val any, ptr uint32, f types.Field) (uint32, error) {
+	alignment, err := f.Type.Alignment()
+
+	if err != nil {
+		return 0, err
+	}
+
+	ptr = types.AlignTo(ptr, alignment)
+
+	err = Store(cx, val, f.Type, ptr)
+	if err != nil {
+		return 0, err
+	}
+
+	return f.Type.Size()
+}
+
+func ToMapStringAny(val any) (map[string]any, error) {
+	switch v := val.(type) {
+	case map[string]any:
+		return v, nil
+	}
+	return nil, types.NewCastError(val, "map[string]any")
 }
 
 func PackFlagsIntoInt(v map[string]any, labels []string) (int, error) {
