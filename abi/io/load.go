@@ -133,7 +133,11 @@ func LoadBool(cx *types.Context, ptr uint32) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return i != 0, nil
+	u8, ok := i.(uint8)
+	if !ok {
+		return false, types.NewCastError(i, "uint8")
+	}
+	return u8 != 0, nil
 }
 
 func LoadUInt32(cx *types.Context, ptr uint32) (uint32, error) {
