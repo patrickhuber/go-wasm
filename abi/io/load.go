@@ -57,30 +57,48 @@ func Load(cx *types.Context, t types.ValType, ptr uint32) (any, error) {
 	case kind.String:
 		return LoadString(cx, ptr)
 	case kind.List:
-		l := t.(*types.List)
+		l, ok := t.(*types.List)
+		if !ok {
+			return nil, types.NewCastError(t, "*types.List")
+		}
 		return LoadList(cx, ptr, l.Type)
 	case kind.Record:
-		r := t.(*types.Record)
+		r, ok := t.(*types.Record)
+		if !ok {
+			return nil, types.NewCastError(t, "*types.Record")
+		}
 		return LoadRecord(cx, ptr, r.Fields)
 	case kind.Variant:
-		v := t.(*types.Variant)
+		v, ok := t.(*types.Variant)
+		if !ok {
+			return nil, types.NewCastError(t, "*types.Variant")
+		}
 		return LoadVariant(cx, ptr, v)
 	case kind.Flags:
-		f := t.(*types.Flags)
+		f, ok := t.(*types.Flags)
+		if !ok {
+			return nil, types.NewCastError(t, "*types.Flags")
+		}
 		return LoadFlags(cx, ptr, f)
 	case kind.Own:
 		i, err := LoadUInt32(cx, ptr)
 		if err != nil {
 			return nil, err
 		}
-		o := t.(*types.Own)
+		o, ok := t.(*types.Own)
+		if !ok {
+			return nil, types.NewCastError(t, "*types.Own")
+		}
 		return LiftOwn(cx, i, o)
 	case kind.Borrow:
 		i, err := LoadUInt32(cx, ptr)
 		if err != nil {
 			return nil, err
 		}
-		b := t.(*types.Borrow)
+		b, ok := t.(*types.Borrow)
+		if !ok {
+			return nil, types.NewCastError(t, "*types.Borrow")
+		}
 		return LiftBorrow(cx, i, b)
 	}
 	return nil, fmt.Errorf("unrecognized type %s", k.String())

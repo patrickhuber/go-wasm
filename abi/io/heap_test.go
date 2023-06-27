@@ -17,7 +17,10 @@ func TestHeap(t *testing.T) {
 		bytes    []byte
 	}
 	tests := []test{
-		{"list_record", List(Record()), []any{nil, nil, nil}, []any{uint32(0), uint32(3)}, []byte{}},
+		{"list_record", List(Record()), []any{map[string]any{}, map[string]any{}, map[string]any{}}, []any{uint32(0), uint32(3)}, []byte{}},
+		{"list_bool", List(Bool()), []any{true, false, true}, []any{uint32(0), uint32(3)}, []byte{1, 0, 1}},
+		{"list_bool", List(Bool()), []any{true, false, true}, []any{uint32(0), uint32(3)}, []byte{1, 0, 2}},
+		{"list_bool", List(Bool()), []any{true, false, true}, []any{uint32(3), uint32(3)}, []byte{0xff, 0xff, 0xff, 1, 0, 1}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

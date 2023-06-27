@@ -40,14 +40,29 @@ func LowerFlat(cx *types.Context, v any, t types.ValType) ([]values.Value, error
 		return LowerChar(v)
 	case kind.String:
 		return LowerString(cx, v)
+	case kind.List:
+		l, ok := t.(*types.List)
+		if !ok {
+			return nil, types.NewCastError(t, "*types.Record")
+		}
+		return LowerFlatList(cx, v, l.Type)
 	case kind.Record:
-		r := t.(*types.Record)
-		return LowerRecord(cx, v, r)
+		r, ok := t.(*types.Record)
+		if !ok {
+			return nil, types.NewCastError(t, "*types.Record")
+		}
+		return LowerFlatRecord(cx, v, r)
 	case kind.Flags:
-		f := t.(*types.Flags)
+		f, ok := t.(*types.Flags)
+		if !ok {
+			return nil, types.NewCastError(t, "*types.Flags")
+		}
 		return LowerFlatFlags(cx, v, f)
 	case kind.Variant:
-		variant := t.(*types.Variant)
+		variant, ok := t.(*types.Variant)
+		if !ok {
+			return nil, types.NewCastError(t, "*types.Variant")
+		}
 		return LowerFlatVariant(cx, v, variant)
 	}
 	return nil, fmt.Errorf("unable to lower type %s", k.String())
@@ -180,7 +195,18 @@ func LowerString(cx *types.Context, v any) ([]values.Value, error) {
 	return append(iptr, ilen...), nil
 }
 
-func LowerRecord(cx *types.Context, v any, r *types.Record) ([]values.Value, error) {
+func LowerFlatList(cx *types.Context, v any, t types.ValType) ([]values.Value, error) {
+	ptr, length, err := StoreListIntoRange(cx, v, t)
+	if err != nil {
+		return nil, err
+	}
+	return []values.Value{
+		values.U32(ptr),
+		values.U32(length),
+	}, nil
+}
+
+func LowerFlatRecord(cx *types.Context, v any, r *types.Record) ([]values.Value, error) {
 	var flat []values.Value
 	vMap, ok := v.(map[string]any)
 	if !ok {

@@ -57,7 +57,11 @@ func LiftFlat(cx *types.Context, vi values.ValueIterator, t types.ValType) (any,
 	case kind.String:
 		return LiftFlatString(cx, vi)
 	case kind.List:
-		return LiftFlatList(cx, vi, t)
+		l, ok := t.(*types.List)
+		if !ok {
+			return nil, types.NewCastError(t, "*types.List")
+		}
+		return LiftFlatList(cx, vi, l.Type)
 	case kind.Record:
 		r, ok := t.(*types.Record)
 		if !ok {
