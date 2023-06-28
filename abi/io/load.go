@@ -11,7 +11,7 @@ import (
 	"github.com/patrickhuber/go-wasm/encoding"
 )
 
-func Load(cx *types.Context, t types.ValType, ptr uint32) (any, error) {
+func Load(cx *types.CallContext, t types.ValType, ptr uint32) (any, error) {
 	k := t.Kind()
 	switch k {
 	case kind.Bool:
@@ -104,7 +104,7 @@ func Load(cx *types.Context, t types.ValType, ptr uint32) (any, error) {
 	return nil, fmt.Errorf("unrecognized type %s", k.String())
 }
 
-func LoadChar(cx *types.Context, ptr uint32, nbytes uint32) (any, error) {
+func LoadChar(cx *types.CallContext, ptr uint32, nbytes uint32) (any, error) {
 	i, err := LoadInt(cx, ptr, nbytes, false)
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func ConvertU32ToRune(u32 uint32) (rune, error) {
 	return rune(u32), nil
 }
 
-func LoadBool(cx *types.Context, ptr uint32) (bool, error) {
+func LoadBool(cx *types.CallContext, ptr uint32) (bool, error) {
 	i, err := LoadInt(cx, ptr, 1, false)
 	if err != nil {
 		return false, err
@@ -140,7 +140,7 @@ func LoadBool(cx *types.Context, ptr uint32) (bool, error) {
 	return u8 != 0, nil
 }
 
-func LoadUInt32(cx *types.Context, ptr uint32) (uint32, error) {
+func LoadUInt32(cx *types.CallContext, ptr uint32) (uint32, error) {
 	val, err := LoadInt(cx, ptr, 4, false)
 	if err != nil {
 		return 0, err
@@ -148,7 +148,7 @@ func LoadUInt32(cx *types.Context, ptr uint32) (uint32, error) {
 	return val.(uint32), nil
 }
 
-func LoadInt(c *types.Context, ptr uint32, nbytes uint32, signed bool) (any, error) {
+func LoadInt(c *types.CallContext, ptr uint32, nbytes uint32, signed bool) (any, error) {
 	buf := c.Options.Memory.Bytes()[ptr : ptr+nbytes]
 	switch nbytes {
 	case 1:
@@ -178,7 +178,7 @@ func LoadInt(c *types.Context, ptr uint32, nbytes uint32, signed bool) (any, err
 	return nil, fmt.Errorf("invalid type")
 }
 
-func LoadFloat(cx *types.Context, ptr uint32, nbytes uint32) (any, error) {
+func LoadFloat(cx *types.CallContext, ptr uint32, nbytes uint32) (any, error) {
 	i, err := LoadInt(cx, ptr, nbytes, false)
 	if err != nil {
 		return nil, err
@@ -191,7 +191,7 @@ func LoadFloat(cx *types.Context, ptr uint32, nbytes uint32) (any, error) {
 	return math.Float64frombits(ui), nil
 }
 
-func LoadString(cx *types.Context, ptr uint32) (string, error) {
+func LoadString(cx *types.CallContext, ptr uint32) (string, error) {
 	begin, err := LoadUInt32(cx, ptr)
 	if err != nil {
 		return "", err
@@ -204,7 +204,7 @@ func LoadString(cx *types.Context, ptr uint32) (string, error) {
 	return LoadStringFromRange(cx, begin, taggedCodeUnits)
 }
 
-func LoadStringFromRange(cx *types.Context, ptr, taggedCodeUnits uint32) (string, error) {
+func LoadStringFromRange(cx *types.CallContext, ptr, taggedCodeUnits uint32) (string, error) {
 
 	srcEncoding := cx.Options.StringEncoding
 	tcu := UInt32ToTaggedCodeUnits(taggedCodeUnits)
@@ -235,7 +235,7 @@ func LoadStringFromRange(cx *types.Context, ptr, taggedCodeUnits uint32) (string
 	return encoding.DecodeString(codec, bytes.NewReader(buf))
 }
 
-func LoadList(cx *types.Context, ptr uint32, elementType types.ValType) ([]any, error) {
+func LoadList(cx *types.CallContext, ptr uint32, elementType types.ValType) ([]any, error) {
 
 	begin, err := LoadUInt32(cx, ptr)
 	if err != nil {
@@ -249,7 +249,7 @@ func LoadList(cx *types.Context, ptr uint32, elementType types.ValType) ([]any, 
 	return LoadListFromRange(cx, begin, length, elementType)
 }
 
-func LoadListFromRange(cx *types.Context, ptr uint32, length uint32, elementType types.ValType) ([]any, error) {
+func LoadListFromRange(cx *types.CallContext, ptr uint32, length uint32, elementType types.ValType) ([]any, error) {
 	alignment, err := elementType.Alignment()
 	if err != nil {
 		return nil, err
@@ -280,7 +280,7 @@ func LoadListFromRange(cx *types.Context, ptr uint32, length uint32, elementType
 	return list, nil
 }
 
-func LoadRecord(cx *types.Context, ptr uint32, fields []types.Field) (map[string]any, error) {
+func LoadRecord(cx *types.CallContext, ptr uint32, fields []types.Field) (map[string]any, error) {
 	record := map[string]any{}
 	for _, field := range fields {
 		alignment, err := field.Type.Alignment()
@@ -303,7 +303,7 @@ func LoadRecord(cx *types.Context, ptr uint32, fields []types.Field) (map[string
 }
 
 // LoadVariant loads the variant from the context at the ptr
-func LoadVariant(cx *types.Context, ptr uint32, v *types.Variant) (map[string]any, error) {
+func LoadVariant(cx *types.CallContext, ptr uint32, v *types.Variant) (map[string]any, error) {
 	dt, err := v.DiscriminantType()
 	if err != nil {
 		return nil, err
@@ -354,7 +354,7 @@ func LoadVariant(cx *types.Context, ptr uint32, v *types.Variant) (map[string]an
 	}, nil
 }
 
-func LoadFlags(cx *types.Context, ptr uint32, flags *types.Flags) (map[string]bool, error) {
+func LoadFlags(cx *types.CallContext, ptr uint32, flags *types.Flags) (map[string]bool, error) {
 	size, err := flags.Size()
 	if err != nil {
 		return nil, err

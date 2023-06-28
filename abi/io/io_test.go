@@ -246,7 +246,7 @@ func Slice[T any](values ...T) []T {
 }
 
 func test(t types.ValType, valsToLift []any, v any,
-	cx *types.Context,
+	cx *types.CallContext,
 	dstEncoding encoding.Encoding, lowerT types.ValType, lowerV any) error {
 
 	flattened, err := t.Flatten()

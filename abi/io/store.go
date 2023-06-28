@@ -10,7 +10,7 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
-func Store(c *types.Context, val any, t types.ValType, ptr uint32) error {
+func Store(c *types.CallContext, val any, t types.ValType, ptr uint32) error {
 	switch t.Kind() {
 	case kind.Bool:
 		var v byte = 0
@@ -72,7 +72,7 @@ func Store(c *types.Context, val any, t types.ValType, ptr uint32) error {
 	return types.TrapWith("unrecognized kind %s", t.Kind())
 }
 
-func StoreFloat(c *types.Context, val any, ptr uint32, nbytes uint32) error {
+func StoreFloat(c *types.CallContext, val any, ptr uint32, nbytes uint32) error {
 	if nbytes == 4 {
 		f := val.(float32)
 		i := math.Float32bits(f)
@@ -84,12 +84,12 @@ func StoreFloat(c *types.Context, val any, ptr uint32, nbytes uint32) error {
 	}
 }
 
-func StoreUInt32(c *types.Context, val uint32, ptr uint32) error {
+func StoreUInt32(c *types.CallContext, val uint32, ptr uint32) error {
 	size, _ := types.U32{}.Size()
 	return StoreInt(c, val, ptr, size, false)
 }
 
-func StoreInt(c *types.Context, val any, ptr uint32, nbytes uint32, signed bool) error {
+func StoreInt(c *types.CallContext, val any, ptr uint32, nbytes uint32, signed bool) error {
 	buf := c.Options.Memory.Bytes()[ptr : ptr+nbytes]
 	switch nbytes {
 	case 1:
@@ -133,7 +133,7 @@ func StoreInt(c *types.Context, val any, ptr uint32, nbytes uint32, signed bool)
 
 // StoreString stores the string to linear memory using the context encoding
 // All strings in go are assumed to be utf8 encoded
-func StoreString(c *types.Context, str string, ptr uint32) error {
+func StoreString(c *types.CallContext, str string, ptr uint32) error {
 
 	// string storage in wasm components stores the string first
 	begin, taggedCodeUnits, err := StoreStringIntoRange(c, str)
@@ -149,7 +149,7 @@ func StoreString(c *types.Context, str string, ptr uint32) error {
 	return StoreUInt32(c, taggedCodeUnits, ptr+4)
 }
 
-func StoreStringIntoRange(cx *types.Context, str string) (uint32, uint32, error) {
+func StoreStringIntoRange(cx *types.CallContext, str string) (uint32, uint32, error) {
 
 	codec, err := encoding.DefaultFactory().Get(cx.Options.StringEncoding)
 	if err != nil {
@@ -199,7 +199,7 @@ func isLatin1(str string) bool {
 
 // StoreStringDynamic assumes the incoming string is in utf8 and stores the string to the given codec's encoding at the end of the context memory
 func StoreStringDynamic(
-	cx *types.Context,
+	cx *types.CallContext,
 	str string,
 	codec encoding.Codec) (uint32, uint32, error) {
 
@@ -223,7 +223,7 @@ func StoreStringDynamic(
 	return ptr, lenEncoded / uint32(codec.RuneSize()), nil
 }
 
-func StoreStringCopy(cx *types.Context, src string, srcCodeUnits uint32, dstCodeUnitSize uint32, dstAlignment uint32, dstEncoding encoding.Encoder) (uint32, uint32, error) {
+func StoreStringCopy(cx *types.CallContext, src string, srcCodeUnits uint32, dstCodeUnitSize uint32, dstAlignment uint32, dstEncoding encoding.Encoder) (uint32, uint32, error) {
 
 	dstByteLength := dstCodeUnitSize * srcCodeUnits
 	if dstByteLength > types.MaxStringByteLength {
@@ -251,7 +251,7 @@ func StoreStringCopy(cx *types.Context, src string, srcCodeUnits uint32, dstCode
 	return ptr, srcCodeUnits, err
 }
 
-func StoreUtf8ToUtf16(cx *types.Context, src string, srcCodeUnits uint32) (uint32, uint32, error) {
+func StoreUtf8ToUtf16(cx *types.CallContext, src string, srcCodeUnits uint32) (uint32, uint32, error) {
 
 	worstCaseSize := 2 * srcCodeUnits
 
@@ -301,7 +301,7 @@ func StoreUtf8ToUtf16(cx *types.Context, src string, srcCodeUnits uint32) (uint3
 	return ptr, codeUnits, nil
 }
 
-func StoreList(cx *types.Context, v any, ptr uint32, elementType types.ValType) error {
+func StoreList(cx *types.CallContext, v any, ptr uint32, elementType types.ValType) error {
 	begin, length, err := StoreListIntoRange(cx, v, elementType)
 	if err != nil {
 		return err
@@ -313,7 +313,7 @@ func StoreList(cx *types.Context, v any, ptr uint32, elementType types.ValType) 
 	return StoreUInt32(cx, length, ptr+4)
 }
 
-func StoreListIntoRange(cx *types.Context, v any, elementType types.ValType) (uint32, uint32, error) {
+func StoreListIntoRange(cx *types.CallContext, v any, elementType types.ValType) (uint32, uint32, error) {
 	slice, err := ToSlice(v)
 	if err != nil {
 		return 0, 0, err
@@ -368,7 +368,7 @@ func ToSlice(val any) ([]any, error) {
 	}
 }
 
-func StoreRecord(cx *types.Context, val any, ptr uint32, r *types.Record) error {
+func StoreRecord(cx *types.CallContext, val any, ptr uint32, r *types.Record) error {
 	valMap, err := ToMapStringAny(val)
 	if err != nil {
 		return err
@@ -385,7 +385,7 @@ func StoreRecord(cx *types.Context, val any, ptr uint32, r *types.Record) error 
 	return nil
 }
 
-func StoreField(cx *types.Context, val any, ptr uint32, f types.Field) (uint32, error) {
+func StoreField(cx *types.CallContext, val any, ptr uint32, f types.Field) (uint32, error) {
 	alignment, err := f.Type.Alignment()
 
 	if err != nil {

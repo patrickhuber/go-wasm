@@ -5,18 +5,18 @@ import (
 	"github.com/patrickhuber/go-wasm/internal/collections/stack"
 )
 
-type Handle struct {
+type HandleElem struct {
 	Rep       int
 	LendCount int
-	Context   *Context // always null for OwnHandle
+	Context   *CallContext // always null for OwnHandle
 }
 
 type HandleTable struct {
-	Array []*Handle
+	Array []*HandleElem
 	Free  []uint32
 }
 
-func (ht *HandleTable) Add(handle *Handle, t ValType) uint32 {
+func (ht *HandleTable) Add(handle *HandleElem, t ValType) uint32 {
 	free, i, ok := stack.Pop(ht.Free)
 	ht.Free = free
 	if ok {
@@ -32,7 +32,7 @@ func (ht *HandleTable) Add(handle *Handle, t ValType) uint32 {
 	return i
 }
 
-func (ht *HandleTable) Get(i uint32) (*Handle, error) {
+func (ht *HandleTable) Get(i uint32) (*HandleElem, error) {
 	if i >= uint32(len(ht.Array)) {
 		return nil, TrapWith("index is greater than handle table length")
 	}
@@ -43,7 +43,7 @@ func (ht *HandleTable) Get(i uint32) (*Handle, error) {
 	return handle, nil
 }
 
-func (ht *HandleTable) TransferOrDrop(i uint32, t ValType, drop bool) (*Handle, error) {
+func (ht *HandleTable) Remove(i uint32, t ValType, drop bool) (*HandleElem, error) {
 	// null dereference?
 	h, err := ht.Get(i)
 	if err != nil {
@@ -114,7 +114,7 @@ func resourceType(t ValType) (*ResourceType, error) {
 	return nil, TrapWith("unrecognized kind %s", t.Kind())
 }
 
-func (ht *HandleTables) Add(handle *Handle, t ValType) (uint32, error) {
+func (ht *HandleTables) Add(handle *HandleElem, t ValType) (uint32, error) {
 	resourceType, err := resourceType(t)
 	if err != nil {
 		return 0, err
@@ -122,23 +122,14 @@ func (ht *HandleTables) Add(handle *Handle, t ValType) (uint32, error) {
 	return ht.Table(*resourceType).Add(handle, t), nil
 }
 
-func (ht *HandleTables) Get(i uint32, resourceType *ResourceType) (*Handle, error) {
+func (ht *HandleTables) Get(i uint32, resourceType *ResourceType) (*HandleElem, error) {
 	return ht.Table(*resourceType).Get(i)
 }
 
-func (ht *HandleTables) Transfer(i uint32, t ValType) (*Handle, error) {
+func (ht *HandleTables) Remove(i uint32, t ValType) (*HandleElem, error) {
 	resourceType, err := resourceType(t)
 	if err != nil {
 		return nil, err
 	}
-	return ht.Table(*resourceType).TransferOrDrop(i, t, false)
-}
-
-func (ht *HandleTables) Drop(i uint32, t ValType) error {
-	resourceType, err := resourceType(t)
-	if err != nil {
-		return err
-	}
-	_, err = ht.Table(*resourceType).TransferOrDrop(i, t, true)
-	return err
+	return ht.Table(*resourceType).Remove(i, t, false)
 }

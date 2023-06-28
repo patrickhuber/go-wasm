@@ -1,8 +1,8 @@
 package types
 
-type Context struct {
+type CallContext struct {
 	Options     *CanonicalOptions
 	Instance    *ComponentInstance
-	Lenders     []*Handle
+	Lenders     []*HandleElem
 	BorrowCount int
 }

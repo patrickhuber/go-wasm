@@ -8,25 +8,25 @@ import (
 	"github.com/patrickhuber/go-wasm/abi/values"
 )
 
-func LiftOwn(cx *types.Context, i uint32, t *types.Own) (*types.Handle, error) {
-	return cx.Instance.Handles.Transfer(i, t)
+func LiftOwn(cx *types.CallContext, i uint32, t *types.Own) (*types.HandleElem, error) {
+	return cx.Instance.Handles.Remove(i, t)
 }
 
-func LiftBorrow(cx *types.Context, i uint32, t *types.Borrow) (*types.Handle, error) {
+func LiftBorrow(cx *types.CallContext, i uint32, t *types.Borrow) (*types.HandleElem, error) {
 	h, err := cx.Instance.Handles.Get(i, t.ResourceType)
 	if err != nil {
 		return nil, err
 	}
 	h.LendCount += 1
 	cx.Lenders = append(cx.Lenders, h)
-	return &types.Handle{
+	return &types.HandleElem{
 		Rep:       h.Rep,
 		LendCount: 0,
 		Context:   nil,
 	}, nil
 }
 
-func LiftFlat(cx *types.Context, vi values.ValueIterator, t types.ValType) (any, error) {
+func LiftFlat(cx *types.CallContext, vi values.ValueIterator, t types.ValType) (any, error) {
 	t = t.Despecialize()
 	k := t.Kind()
 	switch k {
@@ -259,7 +259,7 @@ func LiftFlatChar(vi values.ValueIterator) (rune, error) {
 	return ConvertU32ToRune(u32)
 }
 
-func LiftFlatList(cx *types.Context, vi values.ValueIterator, t types.ValType) (any, error) {
+func LiftFlatList(cx *types.CallContext, vi values.ValueIterator, t types.ValType) (any, error) {
 	ptr, err := LiftFlatU32(vi)
 	if err != nil {
 		return nil, err
@@ -271,7 +271,7 @@ func LiftFlatList(cx *types.Context, vi values.ValueIterator, t types.ValType) (
 	return LoadListFromRange(cx, ptr, length, t)
 }
 
-func LiftFlatString(cx *types.Context, vi values.ValueIterator) (any, error) {
+func LiftFlatString(cx *types.CallContext, vi values.ValueIterator) (any, error) {
 	ptr, err := LiftFlatU32(vi)
 	if err != nil {
 		return nil, err
@@ -283,7 +283,7 @@ func LiftFlatString(cx *types.Context, vi values.ValueIterator) (any, error) {
 	return LoadStringFromRange(cx, ptr, packedLength)
 }
 
-func LiftFlatRecord(cx *types.Context, vi values.ValueIterator, fields []types.Field) (any, error) {
+func LiftFlatRecord(cx *types.CallContext, vi values.ValueIterator, fields []types.Field) (any, error) {
 	record := map[string]any{}
 	for _, f := range fields {
 		value, err := LiftFlat(cx, vi, f.Type)
@@ -295,7 +295,7 @@ func LiftFlatRecord(cx *types.Context, vi values.ValueIterator, fields []types.F
 	return record, nil
 }
 
-func LiftFlatVariant(cx *types.Context, vi values.ValueIterator, variant *types.Variant) (any, error) {
+func LiftFlatVariant(cx *types.CallContext, vi values.ValueIterator, variant *types.Variant) (any, error) {
 	flatTypes, err := variant.Flatten()
 	if err != nil {
 		return nil, err

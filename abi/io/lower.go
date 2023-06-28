@@ -10,7 +10,7 @@ import (
 	"github.com/patrickhuber/go-wasm/abi/values"
 )
 
-func LowerFlat(cx *types.Context, v any, t types.ValType) ([]values.Value, error) {
+func LowerFlat(cx *types.CallContext, v any, t types.ValType) ([]values.Value, error) {
 	t = t.Despecialize()
 	k := t.Kind()
 	switch k {
@@ -178,7 +178,7 @@ func LowerChar(v any) ([]values.Value, error) {
 	return slice(i), nil
 }
 
-func LowerString(cx *types.Context, v any) ([]values.Value, error) {
+func LowerString(cx *types.CallContext, v any) ([]values.Value, error) {
 	str := v.(string)
 	ptr, packedLength, err := StoreStringIntoRange(cx, str)
 	if err != nil {
@@ -195,7 +195,7 @@ func LowerString(cx *types.Context, v any) ([]values.Value, error) {
 	return append(iptr, ilen...), nil
 }
 
-func LowerFlatList(cx *types.Context, v any, t types.ValType) ([]values.Value, error) {
+func LowerFlatList(cx *types.CallContext, v any, t types.ValType) ([]values.Value, error) {
 	ptr, length, err := StoreListIntoRange(cx, v, t)
 	if err != nil {
 		return nil, err
@@ -206,7 +206,7 @@ func LowerFlatList(cx *types.Context, v any, t types.ValType) ([]values.Value, e
 	}, nil
 }
 
-func LowerFlatRecord(cx *types.Context, v any, r *types.Record) ([]values.Value, error) {
+func LowerFlatRecord(cx *types.CallContext, v any, r *types.Record) ([]values.Value, error) {
 	var flat []values.Value
 	vMap, ok := v.(map[string]any)
 	if !ok {
@@ -222,7 +222,7 @@ func LowerFlatRecord(cx *types.Context, v any, r *types.Record) ([]values.Value,
 	return flat, nil
 }
 
-func LowerFlatFlags(cx *types.Context, v any, f *types.Flags) ([]values.Value, error) {
+func LowerFlatFlags(cx *types.CallContext, v any, f *types.Flags) ([]values.Value, error) {
 	vMap, ok := v.(map[string]any)
 	if !ok {
 		return nil, types.NewCastError(v, "map[string]any")
@@ -244,7 +244,7 @@ func LowerFlatFlags(cx *types.Context, v any, f *types.Flags) ([]values.Value, e
 	return flat, nil
 }
 
-func LowerFlatVariant(cx *types.Context, v any, variant *types.Variant) ([]values.Value, error) {
+func LowerFlatVariant(cx *types.CallContext, v any, variant *types.Variant) ([]values.Value, error) {
 	caseIndex, caseValue, err := MatchCase(v, variant.Cases)
 	if err != nil {
 		return nil, err
