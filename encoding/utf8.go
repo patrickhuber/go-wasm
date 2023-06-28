@@ -7,9 +7,8 @@ const (
 )
 
 func NewUTF8() Codec {
-	enc := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
 	return &codec{
-		enc:       enc,
+		enc:       unicode.UTF8,
 		name:      UTF8,
 		alignment: 1,
 		runeSize:  1,

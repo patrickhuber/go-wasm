@@ -32,7 +32,7 @@ func TestHeap(t *testing.T) {
 		{"list_s64", List(S64()), []any{int64(-1), int64(-2)}, []any{uint32(0), uint32(2)}, []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
 		{"list_char", List(Char()), []any{'A', 'B', 'c'}, []any{uint32(0), uint32(3)}, []byte{65, 00, 00, 00, 66, 00, 00, 00, 99, 00, 00, 00}},
 		{"list_string", List(String()), []any{"hi", "wat"}, []any{uint32(0), uint32(2)}, []byte{16, 0, 0, 0, 2, 0, 0, 0, 21, 0, 0, 0, 3, 0, 0, 0,
-			uint8('h'), uint8('i'), 0xf, 0xf, 0xf, uint8('w'), uint8('a'), uint8('t')}},
+			byte('h'), byte('i'), 0xf, 0xf, 0xf, byte('w'), byte('a'), byte('t')}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
