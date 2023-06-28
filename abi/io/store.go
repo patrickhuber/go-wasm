@@ -405,33 +405,27 @@ func StoreRecord(cx *types.CallContext, val any, ptr uint32, r *types.Record) er
 	if err != nil {
 		return err
 	}
-
 	for _, f := range r.Fields {
-		size, err := StoreField(cx, valMap[f.Label], ptr, f)
+		alignment, err := f.Type.Alignment()
 		if err != nil {
 			return err
 		}
+
+		ptr = types.AlignTo(ptr, alignment)
+
+		err = Store(cx, valMap[f.Label], f.Type, ptr)
+		if err != nil {
+			return err
+		}
+
+		size, err := f.Type.Size()
+		if err != nil {
+			return err
+		}
+
 		ptr += size
 	}
-
 	return nil
-}
-
-func StoreField(cx *types.CallContext, val any, ptr uint32, f types.Field) (uint32, error) {
-	alignment, err := f.Type.Alignment()
-
-	if err != nil {
-		return 0, err
-	}
-
-	ptr = types.AlignTo(ptr, alignment)
-
-	err = Store(cx, val, f.Type, ptr)
-	if err != nil {
-		return 0, err
-	}
-
-	return f.Type.Size()
 }
 
 func ToMapStringAny(val any) (map[string]any, error) {
