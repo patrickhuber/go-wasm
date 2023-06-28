@@ -12,6 +12,7 @@ import (
 )
 
 func Load(cx *types.CallContext, t types.ValType, ptr uint32) (any, error) {
+	t = t.Despecialize()
 	k := t.Kind()
 	switch k {
 	case kind.Bool:

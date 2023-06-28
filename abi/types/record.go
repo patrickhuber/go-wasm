@@ -16,8 +16,27 @@ func (*Record) Kind() kind.Kind {
 }
 
 func (r *Record) Size() (uint32, error) {
+
 	var s uint32 = 0
-	return s, nil
+	for _, f := range r.Fields {
+		alignment, err := f.Type.Alignment()
+		if err != nil {
+			return 0, err
+		}
+		s = AlignTo(s, alignment)
+		size, err := f.Type.Size()
+		if err != nil {
+			return 0, err
+		}
+		s += size
+	}
+
+	alignment, err := r.Alignment()
+	if err != nil {
+		return 0, err
+	}
+
+	return AlignTo(s, alignment), nil
 }
 
 func (r *Record) Alignment() (uint32, error) {

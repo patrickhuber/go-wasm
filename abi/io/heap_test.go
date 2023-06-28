@@ -1,6 +1,7 @@
 package io_test
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/patrickhuber/go-wasm/abi/types"
@@ -33,12 +34,25 @@ func TestHeap(t *testing.T) {
 		{"list_char", List(Char()), []any{'A', 'B', 'c'}, []any{uint32(0), uint32(3)}, []byte{65, 00, 00, 00, 66, 00, 00, 00, 99, 00, 00, 00}},
 		{"list_string", List(String()), []any{"hi", "wat"}, []any{uint32(0), uint32(2)}, []byte{16, 0, 0, 0, 2, 0, 0, 0, 21, 0, 0, 0, 3, 0, 0, 0,
 			byte('h'), byte('i'), 0xf, 0xf, 0xf, byte('w'), byte('a'), byte('t')}},
+		{"list_list_u8", List(List(U8())), []any{[]any{byte(3), byte(4), byte(5)}, []any(nil), []any{byte(6), byte(7)}}, []any{uint32(0), uint32(3)}, []byte{24, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 0, 0, 0, 2, 0, 0, 0, 3, 4, 5, 6, 7}},
+		{"list_list_u16", List(List(U16())), []any{[]any{uint16(5), uint16(6)}}, []any{uint32(0), uint32(1)}, []byte{8, 0, 0, 0, 2, 0, 0, 0, 5, 0, 6, 0}},
+		{"list_list_u16", List(List(U16())), nil, []any{uint32(0), uint32(1)}, []byte{9, 0, 0, 0, 2, 0, 0, 0, 0, 5, 0, 6, 0}},
+		{"list_tuple_u8_u8_u16_u32", List(Tuple(U8(), U8(), U16(), U32())), []any{NewTuple(byte(6), byte(7), uint16(8), uint32(9)), NewTuple(byte(4), byte(5), uint16(6), uint32(7))}, []any{uint32(0), uint32(2)}, []byte{6, 7, 8, 0, 9, 0, 0, 0, 4, 5, 6, 0, 7, 0, 0, 0}},
+		{"list_tuple_u8_u16_u8_u32", List(Tuple(U8(), U16(), U8(), U32())), []any{NewTuple(byte(6), uint16(7), byte(8), uint32(9)), NewTuple(byte(4), uint16(5), byte(6), uint32(7))}, []any{uint32(0), uint32(2)}, []byte{6, 0xff, 7, 0, 8, 0xff, 0xff, 0xff, 9, 0, 0, 0, 4, 0xff, 5, 0, 6, 0xff, 0xff, 0xff, 7, 0, 0, 0}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testHeap(t, test.vt, test.expected, test.args, test.bytes)
 		})
 	}
+}
+
+func NewTuple(values ...any) map[string]any {
+	m := map[string]any{}
+	for i, value := range values {
+		m[strconv.Itoa(i)] = value
+	}
+	return m
 }
 
 func testHeap(t *testing.T, vt types.ValType, expect any, args []any, bytes []byte) {

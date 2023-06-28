@@ -2,6 +2,7 @@ package io
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 
 	"github.com/patrickhuber/go-wasm/abi/kind"
@@ -11,6 +12,11 @@ import (
 )
 
 func Store(c *types.CallContext, val any, t types.ValType, ptr uint32) error {
+	if err := StoreValidate(c, t, ptr); err != nil {
+		return err
+	}
+
+	t = t.Despecialize()
 	switch t.Kind() {
 	case kind.Bool:
 		var v byte = 0
@@ -59,7 +65,11 @@ func Store(c *types.CallContext, val any, t types.ValType, ptr uint32) error {
 		if err != nil {
 			return err
 		}
-		return StoreInt(c, uint32(val.(rune)), ptr, size, false)
+		r, ok := val.(rune)
+		if !ok {
+			return types.NewCastError(val, "rune")
+		}
+		return StoreInt(c, uint32(r), ptr, size, false)
 	case kind.String:
 		return StoreString(c, val.(string), ptr)
 	case kind.List:
@@ -69,7 +79,29 @@ func Store(c *types.CallContext, val any, t types.ValType, ptr uint32) error {
 		r := t.(*types.Record)
 		return StoreRecord(c, val, ptr, r)
 	}
-	return types.TrapWith("unrecognized kind %s", t.Kind())
+	return types.TrapWith("Store: unrecognized kind.%s", t.Kind())
+}
+
+func StoreValidate(c *types.CallContext, t types.ValType, ptr uint32) error {
+	alignment, err := t.Alignment()
+	if err != nil {
+		return err
+	}
+
+	if ptr != types.AlignTo(ptr, alignment) {
+		return fmt.Errorf("Store: ptr %d is not aligned to %d", ptr, alignment)
+	}
+
+	size, err := t.Size()
+	if err != nil {
+		return err
+	}
+
+	if ptr+size > uint32(c.Options.Memory.Len()) {
+		return fmt.Errorf("Store: %d exceeds memory length %d", ptr+size, c.Options.Memory.Len())
+	}
+
+	return err
 }
 
 func StoreFloat(c *types.CallContext, val any, ptr uint32, nbytes uint32) error {
