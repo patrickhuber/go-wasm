@@ -124,7 +124,8 @@ func U64() *types.U64 { return &types.U64{} }
 func Float32() *types.Float32 { return &types.Float32{} }
 func Float64() *types.Float64 { return &types.Float64{} }
 
-func Char() *types.Char { return &types.Char{} }
+func Char() *types.Char     { return &types.Char{} }
+func String() *types.String { return &types.String{} }
 
 func Enum(labels ...string) *types.Enum {
 	return &types.Enum{
