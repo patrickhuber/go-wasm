@@ -39,6 +39,7 @@ func TestHeap(t *testing.T) {
 		{"list_list_u16", List(List(U16())), nil, []any{uint32(0), uint32(1)}, []byte{9, 0, 0, 0, 2, 0, 0, 0, 0, 5, 0, 6, 0}},
 		{"list_tuple_u8_u8_u16_u32", List(Tuple(U8(), U8(), U16(), U32())), []any{NewTuple(byte(6), byte(7), uint16(8), uint32(9)), NewTuple(byte(4), byte(5), uint16(6), uint32(7))}, []any{uint32(0), uint32(2)}, []byte{6, 7, 8, 0, 9, 0, 0, 0, 4, 5, 6, 0, 7, 0, 0, 0}},
 		{"list_tuple_u8_u16_u8_u32", List(Tuple(U8(), U16(), U8(), U32())), []any{NewTuple(byte(6), uint16(7), byte(8), uint32(9)), NewTuple(byte(4), uint16(5), byte(6), uint32(7))}, []any{uint32(0), uint32(2)}, []byte{6, 0xff, 7, 0, 8, 0xff, 0xff, 0xff, 9, 0, 0, 0, 4, 0xff, 5, 0, 6, 0xff, 0xff, 0xff, 7, 0, 0, 0}},
+		{"list_tuple_u16_u8", List(Tuple(U16(), U8())), []any{NewTuple(uint16(6), uint8(7)), NewTuple(uint16(8), uint8(9))}, []any{uint32(0), uint32(2)}, []byte{6, 0, 7, 0x0ff, 8, 0, 9, 0xff}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
