@@ -18,15 +18,15 @@ func TestRoundTrip(t *testing.T) {
 		encoding.Latin1,
 	}
 
-	// hex literals will fail because they are not converted to utf8
+	// some hex literals will fail because they are not converted to utf8
 	// to work around this, use unicode literals instead
 	tests := []string{
 		"",
 		"a",
 		"hi",
-		"\u0000",    // "\x00",
-		"a\u0000b",  // "a\x00b",
-		"\u0000b",   // "\x00b",
+		"\x00",
+		"a\x00b",
+		"\x00b",
 		"\u0080",    // "\x80",
 		"\u0080b",   // "\x80b",
 		"ab\u00efc", // "ab\xefc",
