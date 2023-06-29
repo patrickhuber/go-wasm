@@ -46,6 +46,8 @@ func TestHeap(t *testing.T) {
 		{"list_tuple_union_u8_tuple_u16_u8_u8", List(Tuple(Union(U8(), Tuple(U16(), U8())), U8())), []any{NewTuple(map[string]any{"1": NewTuple(uint16(5), uint8(6))}, uint8(7)), NewTuple(map[string]any{"0": uint8(8)}, uint8(9))}, []any{uint32(0), uint32(2)}, []byte{1, 0xff, 5, 0, 6, 0xff, 7, 0xff, 0, 0xff, 8, 0xff, 0xff, 0xff, 9, 0xff}},
 		{"list_union_u8", List(Union(U8())), []any{map[string]any{"0": uint8(6)}, map[string]any{"0": uint8(7)}, map[string]any{"0": uint8(8)}}, []any{uint32(0), uint32(3)}, []byte{0, 6, 0, 7, 0, 8}},
 		{"list_flags", List(Flags()), []any{map[string]any{}, map[string]any{}, map[string]any{}}, []any{uint32(0), uint32(3)}, []byte{}},
+		{"list_tuple_flags_u8", List(Tuple(Flags(), U8())), []any{NewTuple(map[string]any{}, uint8(42)), NewTuple(map[string]any{}, uint8(43)), NewTuple(map[string]any{}, uint8(44))}, []any{uint32(0), uint32(3)}, []byte{42, 43, 44}},
+
 		// {"", nil, []any{}, []any{}, []byte{}},
 	}
 	for _, test := range tests {
