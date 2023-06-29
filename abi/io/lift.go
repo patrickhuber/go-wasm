@@ -351,7 +351,7 @@ func LiftFlatVariant(cx *types.CallContext, vi values.ValueIterator, variant *ty
 }
 
 func LiftFlatFlags(vi values.ValueIterator, f *types.Flags) (any, error) {
-	flat := 0
+	var flat uint64 = 0
 	shift := 0
 	numFlags := f.NumI32Flags()
 	for i := 0; i < int(numFlags); i++ {
@@ -363,7 +363,7 @@ func LiftFlatFlags(vi values.ValueIterator, f *types.Flags) (any, error) {
 		if !ok {
 			return nil, types.NewCastError(next, "int32")
 		}
-		flat |= (int(u32Next) << shift)
+		flat |= (uint64(u32Next) << shift)
 		shift += 32
 	}
 	return UnpackFlagsFromInt(flat, f.Labels), nil

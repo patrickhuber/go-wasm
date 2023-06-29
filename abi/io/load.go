@@ -396,7 +396,7 @@ func LoadFlags(cx *types.CallContext, ptr uint32, flags *types.Flags) (map[strin
 	return flagMap, nil
 }
 
-func UnpackFlagsFromInt(i int, labels []string) map[string]any {
+func UnpackFlagsFromInt(i uint64, labels []string) map[string]any {
 	unpacked := map[string]any{}
 	for _, label := range labels {
 		unpacked[label] = (i&1 == 1)
