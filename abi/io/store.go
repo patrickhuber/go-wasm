@@ -185,10 +185,11 @@ func StoreInt(c *types.CallContext, val any, ptr uint32, nbytes uint32, signed b
 		return fmt.Errorf("invalid integer %d exceeds max value %d", val, max)
 	}
 	if signed {
-		if int64(u64) > int64(max) {
+		s64 := int64(u64)
+		if s64 > int64(max) {
 			return fmt.Errorf("invalid integer %d exceeds max value %d", val, int64(max))
 		}
-		if int64(u64) < min {
+		if s64 < min {
 			return fmt.Errorf("invalid integer %d exceeds min value %d", val, min)
 		}
 	}
