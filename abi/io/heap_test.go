@@ -41,6 +41,7 @@ func TestHeap(t *testing.T) {
 		{"list_tuple_u8_u16_u8_u32", List(Tuple(U8(), U16(), U8(), U32())), []any{NewTuple(byte(6), uint16(7), byte(8), uint32(9)), NewTuple(byte(4), uint16(5), byte(6), uint32(7))}, []any{uint32(0), uint32(2)}, []byte{6, 0xff, 7, 0, 8, 0xff, 0xff, 0xff, 9, 0, 0, 0, 4, 0xff, 5, 0, 6, 0xff, 0xff, 0xff, 7, 0, 0, 0}},
 		{"list_tuple_u16_u8", List(Tuple(U16(), U8())), []any{NewTuple(uint16(6), uint8(7)), NewTuple(uint16(8), uint8(9))}, []any{uint32(0), uint32(2)}, []byte{6, 0, 7, 0x0ff, 8, 0, 9, 0xff}},
 		{"list_tuple_tuple_u16_u8_u8", List(Tuple(Tuple(U16(), U8()), U8())), []any{NewTuple(NewTuple(uint16(4), uint8(5)), uint8(6)), NewTuple(NewTuple(uint16(7), uint8(8)), uint8(9))}, []any{uint32(0), uint32(2)}, []byte{4, 0, 5, 0xff, 6, 0xff, 7, 0, 8, 0xff, 9, 0xff}},
+		{"list_union_record_u8_tuple_u8_u16", List(Union(Record(), U8(), Tuple(U8(), U16()))), []any{map[string]any{"0": map[string]any{}}, map[string]any{"1": byte(42)}, map[string]any{"2": NewTuple(byte(6), uint16(7))}}, []any{uint32(0), uint32(3)}, []byte{0, 0xff, 0xff, 0xff, 0xff, 0xff, 1, 0xff, 42, 0xff, 0xff, 0xff, 2, 0xff, 6, 0xff, 7, 0}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

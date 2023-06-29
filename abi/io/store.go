@@ -78,6 +78,9 @@ func Store(c *types.CallContext, val any, t types.ValType, ptr uint32) error {
 	case kind.Record:
 		r := t.(*types.Record)
 		return StoreRecord(c, val, ptr, r)
+	case kind.Variant:
+		v := t.(*types.Variant)
+		return StoreVariant(c, val, ptr, v)
 	}
 	return types.TrapWith("Store: unrecognized kind.%s", t.Kind())
 }
@@ -426,6 +429,36 @@ func StoreRecord(cx *types.CallContext, val any, ptr uint32, r *types.Record) er
 		ptr += size
 	}
 	return nil
+}
+
+func StoreVariant(cx *types.CallContext, val any, ptr uint32, v *types.Variant) error {
+	caseIndex, caseValue, err := MatchCase(val, v.Cases)
+	if err != nil {
+		return err
+	}
+	dt, err := v.DiscriminantType()
+	if err != nil {
+		return err
+	}
+	size, err := dt.Size()
+	if err != nil {
+		return err
+	}
+	err = StoreInt(cx, caseIndex, ptr, size, false)
+	if err != nil {
+		return err
+	}
+	ptr += size
+	alignment, err := v.MaxCaseAlignment()
+	if err != nil {
+		return err
+	}
+	ptr = types.AlignTo(ptr, alignment)
+	c := v.Cases[caseIndex]
+	if c.Type == nil {
+		return nil
+	}
+	return Store(cx, caseValue, c.Type, ptr)
 }
 
 func ToMapStringAny(val any) (map[string]any, error) {
