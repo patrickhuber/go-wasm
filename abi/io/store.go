@@ -89,6 +89,9 @@ func Store(c *types.CallContext, val any, t types.ValType, ptr uint32) error {
 	case kind.Variant:
 		v := t.(*types.Variant)
 		return StoreVariant(c, val, ptr, v)
+	case kind.Flags:
+		f := t.(*types.Flags)
+		return StoreFlags(c, val, ptr, f)
 	}
 	return types.TrapWith("Store: unrecognized kind.%s", t.Kind())
 }
@@ -501,6 +504,19 @@ func StoreVariant(cx *types.CallContext, val any, ptr uint32, v *types.Variant) 
 		return nil
 	}
 	return Store(cx, caseValue, c.Type, ptr)
+}
+
+func StoreFlags(c *types.CallContext, val any, ptr uint32, f *types.Flags) error {
+	vMap := val.(map[string]any)
+	i, err := PackFlagsIntoInt(vMap, f.Labels)
+	if err != nil {
+		return err
+	}
+	size, err := f.Size()
+	if err != nil {
+		return err
+	}
+	return StoreInt(c, i, ptr, size, false)
 }
 
 func ToMapStringAny(val any) (map[string]any, error) {

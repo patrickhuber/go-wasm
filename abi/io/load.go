@@ -361,7 +361,7 @@ func LoadVariant(cx *types.CallContext, ptr uint32, v *types.Variant) (map[strin
 	}, nil
 }
 
-func LoadFlags(cx *types.CallContext, ptr uint32, flags *types.Flags) (map[string]bool, error) {
+func LoadFlags(cx *types.CallContext, ptr uint32, flags *types.Flags) (map[string]any, error) {
 	size, err := flags.Size()
 	if err != nil {
 		return nil, err
@@ -383,7 +383,7 @@ func LoadFlags(cx *types.CallContext, ptr uint32, flags *types.Flags) (map[strin
 	case 8:
 		ui = i.(uint64)
 	}
-	flagMap := map[string]bool{}
+	flagMap := map[string]any{}
 	for _, label := range flags.Labels {
 		v := ui & 1
 		b := false
