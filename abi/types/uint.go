@@ -4,12 +4,19 @@ import "github.com/patrickhuber/go-wasm/abi/kind"
 
 type U8 struct{}
 
+const (
+	SizeOfU8  = 1
+	SizeOfU16 = 2
+	SizeOfU32 = 4
+	SizeOfU64 = 8
+)
+
 func (U8) Kind() kind.Kind {
 	return kind.U8
 }
 
 func (U8) Size() (uint32, error) {
-	return 1, nil
+	return SizeOfU8, nil
 }
 
 func (U8) Alignment() (uint32, error) {
@@ -31,7 +38,7 @@ func (U16) Kind() kind.Kind {
 }
 
 func (U16) Size() (uint32, error) {
-	return 2, nil
+	return SizeOfU16, nil
 }
 
 func (U16) Alignment() (uint32, error) {
@@ -53,7 +60,7 @@ func (U32) Kind() kind.Kind {
 }
 
 func (U32) Size() (uint32, error) {
-	return 4, nil
+	return SizeOfU32, nil
 }
 
 func (U32) Alignment() (uint32, error) {
@@ -75,7 +82,7 @@ func (U64) Kind() kind.Kind {
 }
 
 func (U64) Size() (uint32, error) {
-	return 8, nil
+	return SizeOfU64, nil
 }
 
 func (U64) Alignment() (uint32, error) {

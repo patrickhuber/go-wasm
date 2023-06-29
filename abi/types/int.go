@@ -2,6 +2,13 @@ package types
 
 import "github.com/patrickhuber/go-wasm/abi/kind"
 
+const (
+	SizeOfS8  = SizeOfU8
+	SizeOfS16 = SizeOfU16
+	SizeOfS32 = SizeOfU32
+	SizeOfS64 = SizeOfU64
+)
+
 type S8 struct{}
 
 func (S8) Kind() kind.Kind {
@@ -9,7 +16,7 @@ func (S8) Kind() kind.Kind {
 }
 
 func (S8) Size() (uint32, error) {
-	return 1, nil
+	return SizeOfS8, nil
 }
 
 func (S8) Alignment() (uint32, error) {
@@ -31,11 +38,11 @@ func (S16) Kind() kind.Kind {
 }
 
 func (S16) Size() (uint32, error) {
-	return 2, nil
+	return SizeOfS16, nil
 }
 
 func (S16) Alignment() (uint32, error) {
-	return 2, nil
+	return SizeOfS16, nil
 }
 
 func (i S16) Despecialize() ValType {
@@ -53,11 +60,11 @@ func (S32) Kind() kind.Kind {
 }
 
 func (S32) Size() (uint32, error) {
-	return 4, nil
+	return SizeOfS32, nil
 }
 
 func (S32) Alignment() (uint32, error) {
-	return 4, nil
+	return SizeOfS32, nil
 }
 
 func (i S32) Despecialize() ValType {
@@ -75,11 +82,11 @@ func (S64) Kind() kind.Kind {
 }
 
 func (S64) Size() (uint32, error) {
-	return 8, nil
+	return SizeOfS64, nil
 }
 
 func (S64) Alignment() (uint32, error) {
-	return 8, nil
+	return SizeOfS64, nil
 }
 
 func (i S64) Despecialize() ValType {

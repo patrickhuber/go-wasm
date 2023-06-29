@@ -126,42 +126,128 @@ func StoreUInt32(c *types.CallContext, val uint32, ptr uint32) error {
 
 func StoreInt(c *types.CallContext, val any, ptr uint32, nbytes uint32, signed bool) error {
 	buf := c.Options.Memory.Bytes()[ptr : ptr+nbytes]
-	switch nbytes {
-	case 1:
-		var b byte
-		if signed {
-			b = byte(val.(int8))
-		} else {
-			b = val.(byte)
+	switch t := val.(type) {
+	case uint8:
+		switch nbytes {
+		case types.SizeOfU8:
+			buf[0] = t
+		default:
+			return types.NewCastError(t, "uint8")
 		}
-		buf[0] = b
+	case uint16:
+		switch nbytes {
+		case types.SizeOfU8:
+			if t > math.MaxUint8 {
+				return fmt.Errorf("invalid uint8 value %d expected 0..%d", t, math.MaxUint8)
+			}
+			buf[0] = uint8(t)
+		case types.SizeOfU16:
+			binary.LittleEndian.PutUint16(buf, t)
+		default:
+			return types.NewCastError(t, "uint16")
+		}
 
-	case 2:
-		var u16 uint16
-		if signed {
-			u16 = uint16(val.(int16))
-		} else {
-			u16 = val.(uint16)
+	case uint32:
+		switch nbytes {
+		case 1:
+			if t > math.MaxUint8 {
+				return fmt.Errorf("invalid uint8 value %d expected 0..%d", t, math.MaxUint8)
+			}
+			buf[0] = uint8(t)
+		case 2:
+			if t > math.MaxUint16 {
+				return fmt.Errorf("invalid uint8 value %d expected 0..%d", t, math.MaxUint16)
+			}
+			binary.LittleEndian.PutUint16(buf, uint16(t))
+		case 4:
+			binary.LittleEndian.PutUint32(buf, uint32(t))
+		default:
+			return types.NewCastError(t, "uint32")
 		}
-		binary.LittleEndian.PutUint16(buf, u16)
+	case uint64:
+		switch nbytes {
+		case 1:
+			if t > math.MaxUint8 {
+				return fmt.Errorf("invalid uint8 value %d expected 0..%d", t, math.MaxUint8)
+			}
+			buf[0] = uint8(t)
+		case 2:
+			if t > math.MaxUint16 {
+				return fmt.Errorf("invalid uint16 value %d expected 0..%d", t, math.MaxUint16)
+			}
+			binary.LittleEndian.PutUint16(buf, uint16(t))
+		case 4:
+			if t > math.MaxUint32 {
+				return fmt.Errorf("invalid uint32 value %d expected 0..%d", t, math.MaxUint32)
+			}
+			binary.LittleEndian.PutUint32(buf, uint32(t))
+		case types.SizeOfU64:
+			binary.LittleEndian.PutUint64(buf, t)
 
-	case 4:
-		var u32 uint32
-		if signed {
-			u32 = uint32(val.(int32))
-		} else {
-			u32 = val.(uint32)
+		default:
+			return types.NewCastError(t, "uint64")
 		}
-		binary.LittleEndian.PutUint32(buf, u32)
+	case int8:
+		switch nbytes {
+		case types.SizeOfU8:
+			buf[0] = byte(t)
+		default:
+			return types.NewCastError(t, "int8")
+		}
+	case int16:
+		switch nbytes {
+		case types.SizeOfU8:
+			if t > math.MaxInt8 {
+				return fmt.Errorf("invalid int8 value %d expected 0..%d", t, math.MaxInt8)
+			}
+			buf[0] = uint8(t)
+		case types.SizeOfU16:
+			binary.LittleEndian.PutUint16(buf, uint16(t))
+		default:
+			return types.NewCastError(t, "int16")
+		}
 
-	case 8:
-		var u64 uint64
-		if signed {
-			u64 = uint64(val.(int64))
-		} else {
-			u64 = val.(uint64)
+	case int32:
+		switch nbytes {
+		case 1:
+			if t > math.MaxInt8 {
+				return fmt.Errorf("invalid int8 value %d expected 0..%d", t, math.MaxInt8)
+			}
+			buf[0] = uint8(t)
+		case 2:
+			if t > math.MaxInt16 {
+				return fmt.Errorf("invalid int16 value %d expected 0..%d", t, math.MaxInt16)
+			}
+			binary.LittleEndian.PutUint16(buf, uint16(t))
+		case 4:
+			binary.LittleEndian.PutUint32(buf, uint32(t))
+		default:
+			return types.NewCastError(t, "int32")
 		}
-		binary.LittleEndian.PutUint64(buf, u64)
+	case int64:
+		switch nbytes {
+		case types.SizeOfS8:
+			if t > math.MaxInt8 {
+				return fmt.Errorf("invalid int8 value %d expected 0..%d", t, math.MaxInt8)
+			}
+			buf[0] = uint8(t)
+		case types.SizeOfS16:
+			if t > math.MaxInt16 {
+				return fmt.Errorf("invalid int8 value %d expected 0..%d", t, math.MaxInt16)
+			}
+			binary.LittleEndian.PutUint16(buf, uint16(t))
+		case types.SizeOfS32:
+			if t > math.MaxInt32 {
+				return fmt.Errorf("invalid int32 value %d expected 0..%d", t, math.MaxInt32)
+			}
+			binary.LittleEndian.PutUint32(buf, uint32(t))
+		case types.SizeOfS64:
+			binary.LittleEndian.PutUint64(buf, uint64(t))
+		default:
+			return types.NewCastError(t, "int64")
+		}
+	default:
+		return fmt.Errorf("invalid integer %v type %T", val, val)
 	}
 	return nil
 }
