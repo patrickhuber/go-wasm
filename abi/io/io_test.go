@@ -213,6 +213,20 @@ func Range(low int, high int) []int {
 	return result
 }
 
+// Cross creates the cross product of the two slices as a slice of maps
+func Cross[TKey comparable, TValue any](keys []TKey, values []TValue) []any {
+	results := []any{}
+
+	for _, value := range values {
+		result := map[TKey]TValue{}
+		for _, key := range keys {
+			result[key] = value
+		}
+		results = append(results, result)
+	}
+	return results
+}
+
 func Repeat[TValue any](value TValue, times int) []TValue {
 	var result []TValue
 	for i := 0; i < times; i++ {

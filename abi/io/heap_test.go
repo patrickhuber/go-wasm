@@ -49,8 +49,11 @@ func TestHeap(t *testing.T) {
 		{"list_tuple_flags_u8", List(Tuple(Flags(), U8())), []any{NewTuple(map[string]any{}, uint8(42)), NewTuple(map[string]any{}, uint8(43)), NewTuple(map[string]any{}, uint8(44))}, []any{uint32(0), uint32(3)}, []byte{42, 43, 44}},
 		{"list_flags", List(Flags("a", "b")), []any{map[string]any{"a": false, "b": false}, map[string]any{"a": false, "b": true}, map[string]any{"a": true, "b": true}}, []any{uint32(0), uint32(3)}, []byte{0, 2, 3}},
 		{"list_flags", List(Flags("a", "b")), []any{map[string]any{"a": false, "b": false}, map[string]any{"a": false, "b": true}, map[string]any{"a": false, "b": false}}, []any{uint32(0), uint32(3)}, []byte{0, 2, 4}},
+		{"list_flags", List(Flags(Apply(Range(0, 9), strconv.Itoa)...)), Cross(Apply(Range(0, 9), strconv.Itoa), []any{true, false}), []any{uint32(0), uint32(2)}, []byte{0xff, 0x1, 0, 0}},
+		{"list_flags", List(Flags(Apply(Range(0, 9), strconv.Itoa)...)), Cross(Apply(Range(0, 9), strconv.Itoa), []any{true, false}), []any{uint32(0), uint32(2)}, []byte{0xff, 0x3, 0, 0}},
 		// {"", nil, []any{}, []any{}, []byte{}},
 	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testHeap(t, test.vt, test.expected, test.args, test.bytes)
