@@ -174,6 +174,10 @@ func StoreInt(c *types.CallContext, val any, ptr uint32, nbytes uint32, signed b
 		sign = true
 		max = math.MaxInt64
 		min = math.MinInt64
+	case int:
+		return fmt.Errorf("unable to store int. Use sized variant")
+	case uint:
+		return fmt.Errorf("unable to store uint. Use sized variants")
 	}
 
 	if sign != signed {
@@ -508,7 +512,7 @@ func StoreVariant(cx *types.CallContext, val any, ptr uint32, v *types.Variant) 
 
 func StoreFlags(c *types.CallContext, val any, ptr uint32, f *types.Flags) error {
 	vMap := val.(map[string]any)
-	i, err := PackFlagsIntoInt(vMap, f.Labels)
+	i, err := PackFlagsIntoInt(vMap, f)
 	if err != nil {
 		return err
 	}
@@ -527,16 +531,16 @@ func ToMapStringAny(val any) (map[string]any, error) {
 	return nil, types.NewCastError(val, "map[string]any")
 }
 
-func PackFlagsIntoInt(v map[string]any, labels []string) (int, error) {
-	packed := 0
+func PackFlagsIntoInt(v map[string]any, flags *types.Flags) (uint64, error) {
+	var packed uint64 = 0
 	shift := 0
-	for _, label := range labels {
+	for _, label := range flags.Labels {
 		val := v[label]
 		b, ok := val.(bool)
 		if !ok {
 			return 0, types.NewCastError(val, "bool")
 		}
-		i := 0
+		var i uint64 = 0
 		if b {
 			i = 1
 		}

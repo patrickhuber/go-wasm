@@ -227,7 +227,7 @@ func LowerFlatFlags(cx *types.CallContext, v any, f *types.Flags) ([]values.Valu
 	if !ok {
 		return nil, types.NewCastError(v, "map[string]any")
 	}
-	packed, err := PackFlagsIntoInt(vMap, f.Labels)
+	packed, err := PackFlagsIntoInt(vMap, f)
 	if err != nil {
 		return nil, err
 	}
