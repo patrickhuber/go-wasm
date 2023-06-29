@@ -146,37 +146,43 @@ func LoadUInt32(cx *types.CallContext, ptr uint32) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
-	return val.(uint32), nil
+	u32, ok := val.(uint32)
+	if !ok {
+		return 0, types.NewCastError(val, "uint32")
+	}
+	return u32, nil
 }
 
 func LoadInt(c *types.CallContext, ptr uint32, nbytes uint32, signed bool) (any, error) {
 	buf := c.Options.Memory.Bytes()[ptr : ptr+nbytes]
 	switch nbytes {
-	case 1:
+	case types.SizeOfU8:
 		if signed {
 			return int8(buf[0]), nil
 		}
 		return buf[0], nil
-	case 2:
+	case types.SizeOfU16:
 		v := binary.LittleEndian.Uint16(buf)
 		if signed {
 			return int16(v), nil
 		}
 		return v, nil
-	case 4:
+	case types.SizeOfU32:
 		v := binary.LittleEndian.Uint32(buf)
 		if signed {
 			return int32(v), nil
 		}
 		return v, nil
-	case 8:
+	case types.SizeOfU64:
 		v := binary.LittleEndian.Uint64(buf)
 		if signed {
 			return int64(v), nil
 		}
 		return v, nil
+	case 0:
+		return uint32(0), nil
 	}
-	return nil, fmt.Errorf("invalid type")
+	return nil, fmt.Errorf("invalid type size %d", nbytes)
 }
 
 func LoadFloat(cx *types.CallContext, ptr uint32, nbytes uint32) (any, error) {
