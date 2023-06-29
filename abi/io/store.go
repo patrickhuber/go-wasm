@@ -20,7 +20,11 @@ func Store(c *types.CallContext, val any, t types.ValType, ptr uint32) error {
 	switch t.Kind() {
 	case kind.Bool:
 		var v byte = 0
-		if val.(bool) {
+		b, ok := val.(bool)
+		if !ok {
+			return types.NewCastError(val, "bool")
+		}
+		if b {
 			v = 1
 		}
 		size, err := t.Size()
@@ -71,7 +75,11 @@ func Store(c *types.CallContext, val any, t types.ValType, ptr uint32) error {
 		}
 		return StoreInt(c, uint32(r), ptr, size, false)
 	case kind.String:
-		return StoreString(c, val.(string), ptr)
+		s, ok := val.(string)
+		if !ok {
+			return types.NewCastError(val, "string")
+		}
+		return StoreString(c, s, ptr)
 	case kind.List:
 		l := t.(*types.List)
 		return StoreList(c, val, ptr, l.Type)
@@ -120,134 +128,81 @@ func StoreFloat(c *types.CallContext, val any, ptr uint32, nbytes uint32) error 
 }
 
 func StoreUInt32(c *types.CallContext, val uint32, ptr uint32) error {
-	size, _ := types.U32{}.Size()
-	return StoreInt(c, val, ptr, size, false)
+	buf := c.Options.Memory.Bytes()[ptr : ptr+types.SizeOfU32]
+	binary.LittleEndian.PutUint32(buf, val)
+	return nil
 }
 
 func StoreInt(c *types.CallContext, val any, ptr uint32, nbytes uint32, signed bool) error {
-	buf := c.Options.Memory.Bytes()[ptr : ptr+nbytes]
+	var u64 uint64
+	var max uint64
+	var min int64 = 0
+	sign := false
 	switch t := val.(type) {
 	case uint8:
-		switch nbytes {
-		case types.SizeOfU8:
-			buf[0] = t
-		default:
-			return types.NewCastError(t, "uint8")
-		}
+		u64 = uint64(t)
+		max = math.MaxUint8
 	case uint16:
-		switch nbytes {
-		case types.SizeOfU8:
-			if t > math.MaxUint8 {
-				return fmt.Errorf("invalid uint8 value %d expected 0..%d", t, math.MaxUint8)
-			}
-			buf[0] = uint8(t)
-		case types.SizeOfU16:
-			binary.LittleEndian.PutUint16(buf, t)
-		default:
-			return types.NewCastError(t, "uint16")
-		}
-
+		u64 = uint64(t)
+		max = math.MaxUint16
 	case uint32:
-		switch nbytes {
-		case 1:
-			if t > math.MaxUint8 {
-				return fmt.Errorf("invalid uint8 value %d expected 0..%d", t, math.MaxUint8)
-			}
-			buf[0] = uint8(t)
-		case 2:
-			if t > math.MaxUint16 {
-				return fmt.Errorf("invalid uint8 value %d expected 0..%d", t, math.MaxUint16)
-			}
-			binary.LittleEndian.PutUint16(buf, uint16(t))
-		case 4:
-			binary.LittleEndian.PutUint32(buf, uint32(t))
-		default:
-			return types.NewCastError(t, "uint32")
-		}
+		u64 = uint64(t)
+		max = math.MaxUint32
 	case uint64:
-		switch nbytes {
-		case 1:
-			if t > math.MaxUint8 {
-				return fmt.Errorf("invalid uint8 value %d expected 0..%d", t, math.MaxUint8)
-			}
-			buf[0] = uint8(t)
-		case 2:
-			if t > math.MaxUint16 {
-				return fmt.Errorf("invalid uint16 value %d expected 0..%d", t, math.MaxUint16)
-			}
-			binary.LittleEndian.PutUint16(buf, uint16(t))
-		case 4:
-			if t > math.MaxUint32 {
-				return fmt.Errorf("invalid uint32 value %d expected 0..%d", t, math.MaxUint32)
-			}
-			binary.LittleEndian.PutUint32(buf, uint32(t))
-		case types.SizeOfU64:
-			binary.LittleEndian.PutUint64(buf, t)
-
-		default:
-			return types.NewCastError(t, "uint64")
-		}
+		u64 = t
+		max = math.MaxUint64
 	case int8:
-		switch nbytes {
-		case types.SizeOfU8:
-			buf[0] = byte(t)
-		default:
-			return types.NewCastError(t, "int8")
-		}
+		u64 = uint64(t)
+		sign = true
+		max = math.MaxInt8
+		min = math.MinInt8
 	case int16:
-		switch nbytes {
-		case types.SizeOfU8:
-			if t > math.MaxInt8 {
-				return fmt.Errorf("invalid int8 value %d expected 0..%d", t, math.MaxInt8)
-			}
-			buf[0] = uint8(t)
-		case types.SizeOfU16:
-			binary.LittleEndian.PutUint16(buf, uint16(t))
-		default:
-			return types.NewCastError(t, "int16")
-		}
-
+		u64 = uint64(t)
+		sign = true
+		max = math.MaxInt16
+		min = math.MinInt16
 	case int32:
-		switch nbytes {
-		case 1:
-			if t > math.MaxInt8 {
-				return fmt.Errorf("invalid int8 value %d expected 0..%d", t, math.MaxInt8)
-			}
-			buf[0] = uint8(t)
-		case 2:
-			if t > math.MaxInt16 {
-				return fmt.Errorf("invalid int16 value %d expected 0..%d", t, math.MaxInt16)
-			}
-			binary.LittleEndian.PutUint16(buf, uint16(t))
-		case 4:
-			binary.LittleEndian.PutUint32(buf, uint32(t))
-		default:
-			return types.NewCastError(t, "int32")
-		}
+		u64 = uint64(t)
+		sign = true
+		max = math.MaxInt32
+		min = math.MinInt32
 	case int64:
-		switch nbytes {
-		case types.SizeOfS8:
-			if t > math.MaxInt8 {
-				return fmt.Errorf("invalid int8 value %d expected 0..%d", t, math.MaxInt8)
-			}
-			buf[0] = uint8(t)
-		case types.SizeOfS16:
-			if t > math.MaxInt16 {
-				return fmt.Errorf("invalid int8 value %d expected 0..%d", t, math.MaxInt16)
-			}
-			binary.LittleEndian.PutUint16(buf, uint16(t))
-		case types.SizeOfS32:
-			if t > math.MaxInt32 {
-				return fmt.Errorf("invalid int32 value %d expected 0..%d", t, math.MaxInt32)
-			}
-			binary.LittleEndian.PutUint32(buf, uint32(t))
-		case types.SizeOfS64:
-			binary.LittleEndian.PutUint64(buf, uint64(t))
-		default:
-			return types.NewCastError(t, "int64")
+		u64 = uint64(t)
+		sign = true
+		max = math.MaxInt64
+		min = math.MinInt64
+	}
+
+	if sign != signed {
+		signCh := "+"
+		if sign {
+			signCh = "-"
 		}
-	default:
-		return fmt.Errorf("invalid integer %v type %T", val, val)
+		return fmt.Errorf("invalid integer sign %v for value %v", signCh, val)
+	}
+
+	if !signed && u64 > max {
+		return fmt.Errorf("invalid integer %d exceeds max value %d", val, max)
+	}
+	if signed {
+		if int64(u64) > int64(max) {
+			return fmt.Errorf("invalid integer %d exceeds max value %d", val, int64(max))
+		}
+		if int64(u64) < min {
+			return fmt.Errorf("invalid integer %d exceeds min value %d", val, min)
+		}
+	}
+
+	buf := c.Options.Memory.Bytes()[ptr : ptr+nbytes]
+	switch nbytes {
+	case types.SizeOfS8:
+		buf[0] = uint8(u64)
+	case types.SizeOfS16:
+		binary.LittleEndian.PutUint16(buf, uint16(u64))
+	case types.SizeOfS32:
+		binary.LittleEndian.PutUint32(buf, uint32(u64))
+	case types.SizeOfS64:
+		binary.LittleEndian.PutUint64(buf, u64)
 	}
 	return nil
 }
