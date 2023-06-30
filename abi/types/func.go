@@ -5,20 +5,36 @@ type Parameter struct {
 	Type ValType
 }
 
-type FuncType struct {
+type FuncType interface {
+	ExternType
+	ParamTypes() []ValType
+	ResultTypes() []ValType
+	functype()
+}
+
+type FuncTypeImpl struct {
+	ExternTypeImpl
 	Parameters []Parameter
 	Results    []Parameter
 }
 
-func (ft *FuncType) ParamTypes() []ValType {
+func NewFuncType(params []Parameter, results []Parameter) FuncType {
+	return &FuncTypeImpl{
+		Parameters: params,
+		Results:    results,
+	}
+}
+func (*FuncTypeImpl) functype() {}
+
+func (ft *FuncTypeImpl) ParamTypes() []ValType {
 	return ft.extract(ft.Parameters)
 }
 
-func (ft *FuncType) ResultTypes() []ValType {
+func (ft *FuncTypeImpl) ResultTypes() []ValType {
 	return ft.extract(ft.Results)
 }
 
-func (ft *FuncType) extract(vec []Parameter) []ValType {
+func (ft *FuncTypeImpl) extract(vec []Parameter) []ValType {
 	var ret []ValType
 	for _, t := range vec {
 		ret = append(ret, t.Type)

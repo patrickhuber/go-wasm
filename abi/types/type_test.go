@@ -3,7 +3,7 @@ package types_test
 import (
 	"testing"
 
-	"github.com/patrickhuber/go-inheritance/types"
+	"github.com/patrickhuber/go-wasm/abi/types"
 )
 
 func TestTakesObject(t *testing.T) {

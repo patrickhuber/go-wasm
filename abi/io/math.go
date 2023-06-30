@@ -1,4 +1,4 @@
-package types
+package io
 
 import "golang.org/x/exp/constraints"
 
