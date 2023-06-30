@@ -51,6 +51,11 @@ func TestHeap(t *testing.T) {
 		{"list_flags", List(Flags("a", "b")), []any{map[string]any{"a": false, "b": false}, map[string]any{"a": false, "b": true}, map[string]any{"a": false, "b": false}}, []any{uint32(0), uint32(3)}, []byte{0, 2, 4}},
 		{"list_flags", List(Flags(Apply(Range(0, 9), strconv.Itoa)...)), Cross(Apply(Range(0, 9), strconv.Itoa), []any{true, false}), []any{uint32(0), uint32(2)}, []byte{0xff, 0x1, 0, 0}},
 		{"list_flags", List(Flags(Apply(Range(0, 9), strconv.Itoa)...)), Cross(Apply(Range(0, 9), strconv.Itoa), []any{true, false}), []any{uint32(0), uint32(2)}, []byte{0xff, 0x3, 0, 0}},
+		{"list_flags", List(Flags(Apply(Range(0, 17), strconv.Itoa)...)), Cross(Apply(Range(0, 17), strconv.Itoa), []any{true, false}), []any{uint32(0), uint32(2)}, []byte{0xff, 0xff, 0x1, 0, 0, 0, 0, 0}},
+		{"list_flags", List(Flags(Apply(Range(0, 17), strconv.Itoa)...)), Cross(Apply(Range(0, 17), strconv.Itoa), []any{true, false}), []any{uint32(0), uint32(2)}, []byte{0xff, 0xff, 0x3, 0, 0, 0, 0, 0}},
+		{"list_flags", List(Flags(Apply(Range(0, 33), strconv.Itoa)...)), Cross(Apply(Range(0, 33), strconv.Itoa), []any{true, false}), []any{uint32(0), uint32(2)}, []byte{0xff, 0xff, 0xff, 0xff, 0x1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{"list_flags", List(Flags(Apply(Range(0, 33), strconv.Itoa)...)), Cross(Apply(Range(0, 33), strconv.Itoa), []any{true, false}), []any{uint32(0), uint32(2)}, []byte{0xff, 0xff, 0xff, 0xff, 0x3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+
 		// {"", nil, []any{}, []any{}, []byte{}},
 	}
 
