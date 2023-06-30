@@ -1,25 +1,16 @@
 package types
 
-import "github.com/patrickhuber/go-wasm/abi/kind"
-
-type Bool struct{}
-
-func (Bool) Kind() kind.Kind {
-	return kind.Bool
+type Bool interface {
+	ValType
+	bool()
 }
 
-func (Bool) Size() (uint32, error) {
-	return 1, nil
+type BoolImpl struct {
+	ValTypeImpl
 }
 
-func (Bool) Alignment() (uint32, error) {
-	return 1, nil
-}
+func (*BoolImpl) bool() {}
 
-func (b Bool) Despecialize() ValType {
-	return b
-}
-
-func (b Bool) Flatten() ([]kind.Kind, error) {
-	return []kind.Kind{kind.U32}, nil
+func NewBool() Bool {
+	return new(BoolImpl)
 }

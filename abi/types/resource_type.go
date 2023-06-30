@@ -1,14 +1,33 @@
 package types
 
-import "github.com/patrickhuber/go-wasm/abi/kind"
+type ResourceType interface {
+	Type
+	resourcetype()
+	DTor() DTorFunc
+	Impl() *ComponentInstance
+}
 
 type DTorFunc func(int)
 
-type ResourceType struct {
-	Impl *ComponentInstance
-	DTor *DTorFunc
+type ResourceTypeImpl struct {
+	TypeImpl
+	dtor DTorFunc
+	impl *ComponentInstance
 }
 
-func (rt *ResourceType) Kind() kind.Kind {
-	return kind.ResourceType
+func (*ResourceTypeImpl) resourcetype() {}
+
+func (rt *ResourceTypeImpl) DTor() DTorFunc {
+	return rt.dtor
+}
+
+func (rt *ResourceTypeImpl) Impl() *ComponentInstance {
+	return rt.impl
+}
+
+func NewResourceType(dtor DTorFunc, impl *ComponentInstance) ResourceType {
+	return &ResourceTypeImpl{
+		dtor: dtor,
+		impl: impl,
+	}
 }

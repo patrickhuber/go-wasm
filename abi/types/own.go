@@ -1,27 +1,24 @@
 package types
 
-import "github.com/patrickhuber/go-wasm/abi/kind"
-
-type Own struct {
-	ResourceType *ResourceType
+type Own interface {
+	ValType
+	ResourceType() ResourceType
+	own()
 }
 
-func (o *Own) Alignment() (uint32, error) {
-	return 4, nil
+type OwnImpl struct {
+	ValTypeImpl
+	resourceType ResourceType
 }
 
-func (*Own) Kind() kind.Kind {
-	return kind.Own
+func (*OwnImpl) own() {}
+
+func (o *OwnImpl) ResourceType() ResourceType {
+	return o.resourceType
 }
 
-func (*Own) Size() (uint32, error) {
-	return 4, nil
-}
-
-func (o *Own) Despecialize() ValType {
-	return o
-}
-
-func (Own) Flatten() ([]kind.Kind, error) {
-	return []kind.Kind{kind.U32}, nil
+func NewOwn(rt ResourceType) Own {
+	return &OwnImpl{
+		resourceType: rt,
+	}
 }

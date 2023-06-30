@@ -1,41 +1,24 @@
 package types
 
-import (
-	"strconv"
-
-	"github.com/patrickhuber/go-wasm/abi/kind"
-)
-
-type Tuple struct {
-	Types []ValType
+type Tuple interface {
+	ValType
+	Types() []ValType
+	tuple()
 }
 
-func (t *Tuple) Kind() kind.Kind {
-	return kind.Tuple
+type TupleImpl struct {
+	ValTypeImpl
+	types []ValType
 }
 
-func (t *Tuple) Size() (uint32, error) {
-	return t.Despecialize().Size()
+func (*TupleImpl) tuple() {}
+
+func (t *TupleImpl) Types() []ValType {
+	return t.types
 }
 
-func (t *Tuple) Alignment() (uint32, error) {
-	return t.Despecialize().Alignment()
-}
-
-func (t *Tuple) Despecialize() ValType {
-	var fields []Field
-	for i, ty := range t.Types {
-		field := Field{
-			Label: strconv.Itoa(i),
-			Type:  ty,
-		}
-		fields = append(fields, field)
+func NewTuple(types ...ValType) Tuple {
+	return &TupleImpl{
+		types: types,
 	}
-	return &Record{
-		Fields: fields,
-	}
-}
-
-func (t *Tuple) Flatten() ([]kind.Kind, error) {
-	return t.Despecialize().Flatten()
 }

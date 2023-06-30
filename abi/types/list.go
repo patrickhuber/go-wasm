@@ -1,27 +1,24 @@
 package types
 
-import "github.com/patrickhuber/go-wasm/abi/kind"
-
-type List struct {
-	Type ValType
+type List interface {
+	ValType
+	Type() ValType
+	list()
 }
 
-func (List) Kind() kind.Kind {
-	return kind.List
+type ListImpl struct {
+	ValTypeImpl
+	val ValType
 }
 
-func (List) Size() (uint32, error) {
-	return 8, nil
+func (*ListImpl) list() {}
+
+func (l *ListImpl) Type() ValType {
+	return l.val
 }
 
-func (List) Alignment() (uint32, error) {
-	return 4, nil
-}
-
-func (l *List) Despecialize() ValType {
-	return l
-}
-
-func (List) Flatten() ([]kind.Kind, error) {
-	return []kind.Kind{kind.U32, kind.U32}, nil
+func NewList(val ValType) List {
+	return &ListImpl{
+		val: val,
+	}
 }

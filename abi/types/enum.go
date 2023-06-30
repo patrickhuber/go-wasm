@@ -1,39 +1,24 @@
 package types
 
-import "github.com/patrickhuber/go-wasm/abi/kind"
-
-type Enum struct {
-	Labels []string
+type Enum interface {
+	ValType
+	Labels() []string
+	enum()
 }
 
-func (*Enum) Kind() kind.Kind {
-	return kind.Enum
+type EnumImpl struct {
+	ValTypeImpl
+	labels []string
 }
 
-func (e *Enum) Size() (uint32, error) {
-	vt := e.Despecialize()
-	return vt.Size()
+func (*EnumImpl) enum() {}
+
+func (e *EnumImpl) Labels() []string {
+	return e.labels
 }
 
-func (e *Enum) Alignment() (uint32, error) {
-	vt := e.Despecialize()
-	return vt.Alignment()
-}
-
-func (e *Enum) Despecialize() ValType {
-	var cases []Case
-	for _, v := range e.Labels {
-		c := Case{
-			Label: v,
-			Type:  nil,
-		}
-		cases = append(cases, c)
+func NewEnum(labels ...string) Enum {
+	return &EnumImpl{
+		labels: labels,
 	}
-	return &Variant{
-		Cases: cases,
-	}
-}
-
-func (e *Enum) Flatten() ([]kind.Kind, error) {
-	return e.Despecialize().Flatten()
 }

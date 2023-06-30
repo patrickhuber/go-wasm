@@ -1,98 +1,61 @@
 package types
 
-import "github.com/patrickhuber/go-wasm/abi/kind"
-
-type U8 struct{}
-
-const (
-	SizeOfU8  = 1
-	SizeOfU16 = 2
-	SizeOfU32 = 4
-	SizeOfU64 = 8
-)
-
-func (U8) Kind() kind.Kind {
-	return kind.U8
+func NewUInt8() UInt8 {
+	return &UInt8Impl{}
 }
 
-func (U8) Size() (uint32, error) {
-	return SizeOfU8, nil
+type UInt8 interface {
+	ValType
+	uint8()
 }
 
-func (U8) Alignment() (uint32, error) {
-	return 1, nil
+type UInt8Impl struct {
+	ValTypeImpl
 }
 
-func (u U8) Despecialize() ValType {
-	return u
+func (*UInt8Impl) uint8() {}
+
+type UInt16 interface {
+	ValType
+	uint16()
 }
 
-func (u U8) Flatten() ([]kind.Kind, error) {
-	return []kind.Kind{kind.U32}, nil
+type UInt16Impl struct {
+	ValTypeImpl
 }
 
-type U16 struct{}
+func (*UInt16Impl) uint16() {}
 
-func (U16) Kind() kind.Kind {
-	return kind.U16
+func NewUInt16() UInt16 {
+	return &UInt16Impl{}
 }
 
-func (U16) Size() (uint32, error) {
-	return SizeOfU16, nil
+type UInt32 interface {
+	ValType
+	uint32()
 }
 
-func (U16) Alignment() (uint32, error) {
-	return 2, nil
+type UInt32Impl struct {
+	ValTypeImpl
 }
 
-func (u U16) Despecialize() ValType {
-	return u
+func (*UInt32Impl) uint32() {}
+
+func NewUInt32() UInt32 {
+	return &UInt32Impl{}
 }
 
-func (u U16) Flatten() ([]kind.Kind, error) {
-	return []kind.Kind{kind.U32}, nil
+type UInt64 interface {
+	ValType
+	uint64()
 }
 
-type U32 struct{}
-
-func (U32) Kind() kind.Kind {
-	return kind.U32
+type UInt64Impl struct {
+	ValTypeImpl
 }
 
-func (U32) Size() (uint32, error) {
-	return SizeOfU32, nil
-}
+func (*UInt64Impl) uint64() {}
 
-func (U32) Alignment() (uint32, error) {
-	return 4, nil
-}
-
-func (u U32) Despecialize() ValType {
-	return u
-}
-
-func (u U32) Flatten() ([]kind.Kind, error) {
-	return []kind.Kind{kind.U32}, nil
-}
-
-type U64 struct{}
-
-func (U64) Kind() kind.Kind {
-	return kind.U64
-}
-
-func (U64) Size() (uint32, error) {
-	return SizeOfU64, nil
-}
-
-func (U64) Alignment() (uint32, error) {
-	return 8, nil
-}
-
-func (u U64) Despecialize() ValType {
-	return u
-}
-
-func (u U64) Flatten() ([]kind.Kind, error) {
-	return []kind.Kind{kind.U64}, nil
+func NewUInt64() UInt64 {
+	return &UInt64Impl{}
 }

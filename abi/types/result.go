@@ -1,40 +1,29 @@
 package types
 
-import "github.com/patrickhuber/go-wasm/abi/kind"
-
-type Result struct {
-	OK    ValType
-	Error ValType
+type Result interface {
+	Ok() ValType
+	Error() ValType
+	result()
 }
 
-func (r *Result) Kind() kind.Kind {
-	return kind.Result
+type ResultImpl struct {
+	ok  ValType
+	err ValType
 }
 
-func (r *Result) Size() (uint32, error) {
-	return r.Despecialize().Size()
+func (*ResultImpl) result() {}
+
+func (r *ResultImpl) Ok() ValType {
+	return r.ok
 }
 
-func (r *Result) Alignment() (uint32, error) {
-	return r.Despecialize().Alignment()
+func (r *ResultImpl) Error() ValType {
+	return r.err
 }
 
-func (r *Result) Despecialize() ValType {
-	cases := []Case{
-		{
-			Label: "ok",
-			Type:  r.OK,
-		},
-		{
-			Label: "error",
-			Type:  r.Error,
-		},
+func NewResult(ok ValType, err ValType) Result {
+	return &ResultImpl{
+		ok:  ok,
+		err: err,
 	}
-	return &Variant{
-		Cases: cases,
-	}
-}
-
-func (r *Result) Flatten() ([]kind.Kind, error) {
-	return r.Despecialize().Flatten()
 }

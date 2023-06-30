@@ -1,27 +1,24 @@
 package types
 
-import "github.com/patrickhuber/go-wasm/abi/kind"
-
-type Borrow struct {
-	ResourceType *ResourceType
+type Borrow interface {
+	ValType
+	ResourceType() ResourceType
+	borrow()
 }
 
-func (Borrow) Alignment() (uint32, error) {
-	return 4, nil
+type BorrowImpl struct {
+	ValTypeImpl
+	resourceType ResourceType
 }
 
-func (Borrow) Kind() kind.Kind {
-	return kind.Borrow
+func (*BorrowImpl) borrow() {}
+
+func (b *BorrowImpl) ResourceType() ResourceType {
+	return b.resourceType
 }
 
-func (Borrow) Size() (uint32, error) {
-	return 4, nil
-}
-
-func (b *Borrow) Despecialize() ValType {
-	return b
-}
-
-func (Borrow) Flatten() ([]kind.Kind, error) {
-	return []kind.Kind{kind.U32}, nil
+func NewBorrow(rt ResourceType) Borrow {
+	return &BorrowImpl{
+		resourceType: rt,
+	}
 }
