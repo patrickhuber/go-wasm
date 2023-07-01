@@ -11,61 +11,44 @@ import (
 )
 
 func LowerFlat(cx *types.CallContext, v any, t types.ValType) ([]values.Value, error) {
-	t = t.Despecialize()
-	k := t.Kind()
-	switch k {
-	case kind.Bool:
+	t = Despecialize(t)
+	switch vt := t.(type) {
+	case types.Bool:
 		return LowerBool(v)
-	case kind.S8:
+	case types.S8:
 		return LowerS8(v)
-	case kind.S16:
+	case types.S16:
 		return LowerS16(v)
-	case kind.S32:
+	case types.S32:
 		return LowerS32(v)
-	case kind.S64:
+	case types.S64:
 		return LowerS64(v)
-	case kind.U8:
+	case types.U8:
 		return LowerU8(v)
-	case kind.U16:
+	case types.U16:
 		return LowerU16(v)
-	case kind.U32:
+	case types.U32:
 		return LowerU32(v)
-	case kind.U64:
+	case types.U64:
 		return LowerU64(v)
-	case kind.Float32:
+	case types.Float32:
 		return LowerFloat32(v)
-	case kind.Float64:
+	case types.Float64:
 		return LowerFloat64(v)
-	case kind.Char:
+	case types.Char:
 		return LowerChar(v)
-	case kind.String:
+	case types.String:
 		return LowerString(cx, v)
-	case kind.List:
-		l, ok := t.(*types.List)
-		if !ok {
-			return nil, types.NewCastError(t, "*types.Record")
-		}
-		return LowerFlatList(cx, v, l.Type)
-	case kind.Record:
-		r, ok := t.(*types.Record)
-		if !ok {
-			return nil, types.NewCastError(t, "*types.Record")
-		}
-		return LowerFlatRecord(cx, v, r)
-	case kind.Flags:
-		f, ok := t.(*types.Flags)
-		if !ok {
-			return nil, types.NewCastError(t, "*types.Flags")
-		}
-		return LowerFlatFlags(cx, v, f)
-	case kind.Variant:
-		variant, ok := t.(*types.Variant)
-		if !ok {
-			return nil, types.NewCastError(t, "*types.Variant")
-		}
-		return LowerFlatVariant(cx, v, variant)
+	case types.List:
+		return LowerFlatList(cx, v, vt.Type())
+	case types.Record:
+		return LowerFlatRecord(cx, v, vt)
+	case types.Flags:
+		return LowerFlatFlags(cx, v, vt)
+	case types.Variant:
+		return LowerFlatVariant(cx, v, vt)
 	}
-	return nil, fmt.Errorf("unable to lower type %s", k.String())
+	return nil, fmt.Errorf("LowerFlat: unable to match type %T", t)
 }
 
 func LowerBool(v any) ([]values.Value, error) {
@@ -206,13 +189,13 @@ func LowerFlatList(cx *types.CallContext, v any, t types.ValType) ([]values.Valu
 	}, nil
 }
 
-func LowerFlatRecord(cx *types.CallContext, v any, r *types.Record) ([]values.Value, error) {
+func LowerFlatRecord(cx *types.CallContext, v any, r types.Record) ([]values.Value, error) {
 	var flat []values.Value
 	vMap, ok := v.(map[string]any)
 	if !ok {
 		return nil, types.NewCastError(v, "map[string]any")
 	}
-	for _, field := range r.Fields {
+	for _, field := range r.Fields() {
 		lowerFields, err := LowerFlat(cx, vMap[field.Label], field.Type)
 		if err != nil {
 			return nil, err
@@ -222,7 +205,7 @@ func LowerFlatRecord(cx *types.CallContext, v any, r *types.Record) ([]values.Va
 	return flat, nil
 }
 
-func LowerFlatFlags(cx *types.CallContext, v any, f *types.Flags) ([]values.Value, error) {
+func LowerFlatFlags(cx *types.CallContext, v any, f types.Flags) ([]values.Value, error) {
 	vMap, ok := v.(map[string]any)
 	if !ok {
 		return nil, types.NewCastError(v, "map[string]any")
@@ -232,7 +215,7 @@ func LowerFlatFlags(cx *types.CallContext, v any, f *types.Flags) ([]values.Valu
 		return nil, err
 	}
 	var flat []values.Value
-	numFlags := f.NumI32Flags()
+	numFlags := NumI32Flags(f.Labels())
 	for i := 0; i < int(numFlags); i++ {
 		u32 := values.U32(packed & 0xffffffff)
 		flat = append(flat, u32)
@@ -244,12 +227,12 @@ func LowerFlatFlags(cx *types.CallContext, v any, f *types.Flags) ([]values.Valu
 	return flat, nil
 }
 
-func LowerFlatVariant(cx *types.CallContext, v any, variant *types.Variant) ([]values.Value, error) {
-	caseIndex, caseValue, err := MatchCase(v, variant.Cases)
+func LowerFlatVariant(cx *types.CallContext, v any, variant types.Variant) ([]values.Value, error) {
+	caseIndex, caseValue, err := MatchCase(v, variant.Cases())
 	if err != nil {
 		return nil, err
 	}
-	flatTypes, err := variant.Flatten()
+	flatTypes, err := FlattenType(variant)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +244,7 @@ func LowerFlatVariant(cx *types.CallContext, v any, variant *types.Variant) ([]v
 	if first != kind.U32 {
 		return nil, fmt.Errorf("expected kind.U32")
 	}
-	c := variant.Cases[caseIndex]
+	c := variant.Cases()[caseIndex]
 	var payload []values.Value
 	if c.Type == nil {
 		payload = nil
