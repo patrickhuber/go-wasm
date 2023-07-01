@@ -115,7 +115,7 @@ func DiscriminantType(cases []types.Case) (types.ValType, error) {
 	if n > (1 << 32) {
 		return nil, fmt.Errorf("case length %d exceeds max %d", n, (1 << 32))
 	}
-	switch uint32(math.Ceil(math.Log2(float64(n) / 8))) {
+	switch uint64(math.Ceil(math.Log2(float64(n)) / 8)) {
 	case 0:
 		return types.NewU8(), nil
 	case 1:

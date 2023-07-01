@@ -71,7 +71,7 @@ func LoadChar(cx *types.CallContext, ptr uint32, t types.ValType) (any, error) {
 		return nil, fmt.Errorf("LoadChar unable to match type %T", t)
 	}
 
-	i, err := LoadInt(cx, ptr, t)
+	i, err := LoadIntWithSize(cx, ptr, SizeOfChar, false)
 	if err != nil {
 		return nil, err
 	}
@@ -154,13 +154,15 @@ func LoadInt(c *types.CallContext, ptr uint32, t types.ValType) (any, error) {
 	case types.S64:
 		return int64(binary.LittleEndian.Uint64(buf)), nil
 	default:
-		return 0, nil
+		return uint32(0), nil
 	}
 }
 
 func LoadIntWithSize(c *types.CallContext, ptr uint32, nbytes uint32, sign bool) (any, error) {
 	var t types.ValType
 	switch {
+	case nbytes == 0:
+		return uint32(0), nil
 	case nbytes == 1 && !sign:
 		t = types.NewU8()
 	case nbytes == 2 && !sign:
@@ -281,9 +283,6 @@ func LoadListFromRange(cx *types.CallContext, ptr uint32, length uint32, element
 	}
 	if ptr+length*size > uint32(cx.Options.Memory.Len()) {
 		return nil, types.TrapWith("destination size %d is greater than memory size %d", ptr+length*size, cx.Options.Memory.Len())
-	}
-	if err != nil {
-		return nil, err
 	}
 	var list []any
 	var i uint32 = 0

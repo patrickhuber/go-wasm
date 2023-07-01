@@ -32,7 +32,6 @@ func TestTakesType(t *testing.T) {
 }
 
 func TestReturnsType(t *testing.T) {
-
 	ReturnsObject := func() types.Type {
 		return types.NewU8()
 	}
