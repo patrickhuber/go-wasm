@@ -93,6 +93,9 @@ func SizeVariant(v types.Variant) (uint32, error) {
 	}
 
 	s, err = AlignTo(s, alignment)
+	if err != nil {
+		return 0, err
+	}
 	var cs uint32 = 0
 	for _, c := range v.Cases() {
 		if c.Type == nil {
@@ -106,6 +109,9 @@ func SizeVariant(v types.Variant) (uint32, error) {
 	}
 	s += cs
 	alignment, err = AlignmentVariant(v)
+	if err != nil {
+		return 0, err
+	}
 	return AlignTo(s, alignment)
 }
 

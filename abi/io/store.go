@@ -332,6 +332,9 @@ func StoreUtf8ToUtf16(cx *types.CallContext, src string, srcCodeUnits uint32) (u
 	}
 
 	align, err := AlignTo(ptr, 2)
+	if err != nil {
+		return 0, 0, err
+	}
 	if ptr != align {
 		return 0, 0, types.TrapWith("ptr %d is not alinged to 2", ptr)
 	}

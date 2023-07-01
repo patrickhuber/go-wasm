@@ -32,6 +32,8 @@ func FlattenType(t types.ValType) ([]kind.Kind, error) {
 		return []kind.Kind{kind.Float32}, nil
 	case types.Float64:
 		return []kind.Kind{kind.Float64}, nil
+	case types.Char:
+		return []kind.Kind{kind.U32}, nil
 	case types.String:
 		return []kind.Kind{kind.U32, kind.U32}, nil
 	case types.List:
@@ -52,7 +54,7 @@ func FlattenType(t types.ValType) ([]kind.Kind, error) {
 	case types.Borrow:
 		return []kind.Kind{kind.U32}, nil
 	}
-	return nil, fmt.Errorf("Flatten: unable to match type %T", t)
+	return nil, fmt.Errorf("flatten_type: unable to match type %T", t)
 }
 
 func FlattenRecord(r types.Record) ([]kind.Kind, error) {

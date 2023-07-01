@@ -235,7 +235,7 @@ func test(t types.ValType, valsToLift []any, v any,
 	cx *types.CallContext,
 	dstEncoding encoding.Encoding, lowerT types.ValType, lowerV any) error {
 
-	flattened, err := t.Flatten()
+	flattened, err := io.FlattenType(t)
 	if err != nil {
 		return err
 	}
