@@ -3,11 +3,11 @@ package types_test
 import (
 	"testing"
 
-	"github.com/patrickhuber/go-inheritance/types"
+	"github.com/patrickhuber/go-wasm/abi/types"
 )
 
 func TestTakesObject(t *testing.T) {
-	i8 := &types.Int8Impl{}
+	i8 := &types.S8Impl{}
 	TakesObject := func(o types.Object) {}
 	TakesObject(i8)
 }
@@ -15,31 +15,30 @@ func TestTakesObject(t *testing.T) {
 func TestReturnsObject(t *testing.T) {
 
 	ReturnsObject := func() types.Object {
-		return &types.Int8Impl{}
+		return &types.S8Impl{}
 	}
 	obj := ReturnsObject()
 	switch obj.(type) {
-	case types.Int8:
+	case types.S8:
 	default:
 		t.Fail()
 	}
 }
 
 func TestTakesType(t *testing.T) {
-	i8 := &types.Int8Impl{}
+	i8 := &types.S8Impl{}
 	TakesObject := func(t types.Type) {}
 	TakesObject(i8)
 }
 
 func TestReturnsType(t *testing.T) {
-
 	ReturnsObject := func() types.Type {
-		return types.NewInt8()
+		return types.NewU8()
 	}
 	obj := ReturnsObject()
-	switch obj.(type) {
-	case types.Int8:
+	switch typ := obj.(type) {
+	case types.U8:
 	default:
-		t.Fail()
+		t.Fatalf("unable to match type %T", typ)
 	}
 }

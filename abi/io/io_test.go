@@ -14,7 +14,6 @@ import (
 	"github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/abi/values"
 	"github.com/patrickhuber/go-wasm/encoding"
-	"github.com/patrickhuber/go-wasm/internal/to"
 	"github.com/stretchr/testify/require"
 )
 
@@ -109,87 +108,62 @@ func TestWithLower(t *testing.T) {
 		})
 	}
 }
-func Bool() *types.Bool { return &types.Bool{} }
+func Bool() types.Bool { return types.NewBool() }
 
-func S8() *types.S8   { return &types.S8{} }
-func S16() *types.S16 { return &types.S16{} }
-func S32() *types.S32 { return &types.S32{} }
-func S64() *types.S64 { return &types.S64{} }
+func S8() types.S8   { return types.NewS8() }
+func S16() types.S16 { return types.NewS16() }
+func S32() types.S32 { return types.NewS32() }
+func S64() types.S64 { return types.NewS64() }
 
-func U8() *types.U8   { return &types.U8{} }
-func U16() *types.U16 { return &types.U16{} }
-func U32() *types.U32 { return &types.U32{} }
-func U64() *types.U64 { return &types.U64{} }
+func U8() types.U8   { return types.NewU8() }
+func U16() types.U16 { return types.NewU16() }
+func U32() types.U32 { return types.NewU32() }
+func U64() types.U64 { return types.NewU64() }
 
-func Float32() *types.Float32 { return &types.Float32{} }
-func Float64() *types.Float64 { return &types.Float64{} }
+func Float32() types.Float32 { return types.NewFloat32() }
+func Float64() types.Float64 { return types.NewFloat64() }
 
-func Char() *types.Char     { return &types.Char{} }
-func String() *types.String { return &types.String{} }
+func Char() types.Char     { return types.NewChar() }
+func String() types.String { return types.NewString() }
 
-func Enum(labels ...string) *types.Enum {
-	return &types.Enum{
-		Labels: labels,
-	}
+func Enum(labels ...string) types.Enum {
+	return types.NewEnum(labels...)
 }
 
-func Flags(labels ...string) *types.Flags {
-	return &types.Flags{
-		Labels: labels,
-	}
+func Flags(labels ...string) types.Flags {
+	return types.NewFlags(labels...)
 }
 
-func Tuple(t ...types.ValType) *types.Tuple {
-	return &types.Tuple{
-		Types: t,
-	}
+func Tuple(t ...types.ValType) types.Tuple {
+	return types.NewTuple(t...)
 }
 
-func Variant(c ...types.Case) *types.Variant {
-	return &types.Variant{
-		Cases: c,
-	}
+func Variant(c ...types.Case) types.Variant {
+	return types.NewVariant(c...)
 }
 
 func Case(label string, val types.ValType) types.Case {
-	return types.Case{
-		Label:   label,
-		Type:    val,
-		Refines: nil,
-	}
+	return types.NewCase(label, val)
 }
 
 func CaseWith(label string, val types.ValType, refines string) types.Case {
-	return types.Case{
-		Label:   label,
-		Type:    val,
-		Refines: to.Pointer(refines),
-	}
+	return types.NewCaseRefines(label, val, refines)
 }
 
-func Union(valTypes ...types.ValType) *types.Union {
-	return &types.Union{
-		Types: valTypes,
-	}
+func Union(valTypes ...types.ValType) types.Union {
+	return types.NewUnion(valTypes...)
 }
 
-func Option(valType types.ValType) *types.Option {
-	return &types.Option{
-		Type: valType,
-	}
+func Option(valType types.ValType) types.Option {
+	return types.NewOption(valType)
 }
 
-func Result(ok, err types.ValType) *types.Result {
-	return &types.Result{
-		OK:    ok,
-		Error: err,
-	}
+func Result(ok, err types.ValType) types.Result {
+	return types.NewResult(ok, err)
 }
 
-func Record(fields ...types.Field) *types.Record {
-	return &types.Record{
-		Fields: fields,
-	}
+func Record(fields ...types.Field) types.Record {
+	return types.NewRecord(fields...)
 }
 
 func Field(label string, t types.ValType) types.Field {
@@ -199,10 +173,8 @@ func Field(label string, t types.ValType) types.Field {
 	}
 }
 
-func List(vt types.ValType) *types.List {
-	return &types.List{
-		Type: vt,
-	}
+func List(vt types.ValType) types.List {
+	return types.NewList(vt)
 }
 
 func Range(low int, high int) []int {
@@ -263,7 +235,7 @@ func test(t types.ValType, valsToLift []any, v any,
 	cx *types.CallContext,
 	dstEncoding encoding.Encoding, lowerT types.ValType, lowerV any) error {
 
-	flattened, err := t.Flatten()
+	flattened, err := io.FlattenType(t)
 	if err != nil {
 		return err
 	}

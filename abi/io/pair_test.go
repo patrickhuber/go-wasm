@@ -2,6 +2,7 @@ package io_test
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/patrickhuber/go-wasm/abi/types"
@@ -95,7 +96,8 @@ func TestPairs(t *testing.T) {
 }
 func testPairs[TLift, TValue any](t *testing.T, vt types.ValType, pairs ...pair[TLift, TValue]) {
 	for _, p := range pairs {
-		t.Run(vt.Kind().String(), func(t *testing.T) {
+		name := reflect.ValueOf(vt).Elem().Type().Name()
+		t.Run(name, func(t *testing.T) {
 			cxt := NewContext(&bytes.Buffer{}, encoding.UTF8, nil, nil)
 			err := test(vt, []any{p.ValsToLift}, p.Value, cxt, encoding.UTF8, nil, nil)
 			require.Nil(t, err)

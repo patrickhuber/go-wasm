@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/patrickhuber/go-wasm/abi/io"
@@ -18,30 +19,30 @@ func TestCanRoundTrip(t *testing.T) {
 		t   types.ValType
 	}
 	tests := []test{
-		{uint8(math.MaxUint8), types.U8{}},
-		{uint16(math.MaxUint16), types.U16{}},
-		{uint32(math.MaxUint32), types.U32{}},
-		{uint64(math.MaxUint64), types.U64{}},
-		{int8(math.MaxInt8), types.S8{}},
-		{int16(math.MaxInt16), types.S16{}},
-		{int32(math.MaxInt32), types.S32{}},
-		{int64(math.MaxInt64), types.S64{}},
-		{float32(math.MaxFloat32), types.Float32{}},
-		{float64(math.MaxFloat64), types.Float64{}},
+		{uint8(math.MaxUint8), U8()},
+		{uint16(math.MaxUint16), U16()},
+		{uint32(math.MaxUint32), U32()},
+		{uint64(math.MaxUint64), U64()},
+		{int8(math.MaxInt8), S8()},
+		{int16(math.MaxInt16), S16()},
+		{int32(math.MaxInt32), S32()},
+		{int64(math.MaxInt64), S64()},
+		{float32(math.MaxFloat32), Float32()},
+		{float64(math.MaxFloat64), Float64()},
 	}
 
 	heap := NewHeap(8)
 	c := NewContext(heap.Memory, encoding.UTF8, heap.ReAllocate, func() {})
 	for i, test := range tests {
-
-		t.Run(test.t.Kind().String(), func(t *testing.T) {
+		name := reflect.ValueOf(test.t).Elem().Type().Name()
+		t.Run(name, func(t *testing.T) {
 			zero(c.Options.Memory.Bytes())
 			err := io.Store(c, test.val, test.t, 0)
-			require.Nil(t, err, "store %d type %s", i, test.t.Kind())
+			require.Nil(t, err, "store %d type %T", i, test.t)
 
 			val, err := io.Load(c, test.t, 0)
-			require.Nil(t, err, "load %d type %s", i, test.t.Kind())
-			require.Equal(t, test.val, val, "load %d type %s", i, test.t.Kind())
+			require.Nil(t, err, "load %d type %T", i, test.t)
+			require.Equal(t, test.val, val, "load %d type %T", i, test.t)
 		})
 
 	}
@@ -67,10 +68,13 @@ func NewHeap(size int) *Heap {
 
 func (h *Heap) ReAllocate(originalPtr, originalSize, alignment, newSize uint32) (uint32, error) {
 	if originalPtr != 0 && newSize < originalSize {
-		return types.AlignTo(originalPtr, alignment), nil
+		return io.AlignTo(originalPtr, alignment)
 	}
 
-	ret := types.AlignTo(uint32(h.LastAlloc), alignment)
+	ret, err := io.AlignTo(uint32(h.LastAlloc), alignment)
+	if err != nil {
+		return 0, err
+	}
 	h.LastAlloc = int(ret + newSize)
 
 	// are we over the capacity?

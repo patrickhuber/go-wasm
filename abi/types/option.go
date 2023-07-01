@@ -1,33 +1,21 @@
 package types
 
-import "github.com/patrickhuber/go-wasm/abi/kind"
-
-type Option struct {
-	Type ValType
+type Option interface {
+	ValType
+	Type() ValType
+	option()
+}
+type OptionImpl struct {
+	ValTypeImpl
+	val ValType
 }
 
-func (*Option) Kind() kind.Kind {
-	return kind.Option
+func (*OptionImpl) option() {}
+
+func (o *OptionImpl) Type() ValType {
+	return o.val
 }
 
-func (o *Option) Size() (uint32, error) {
-	return o.Despecialize().Size()
-}
-
-func (o *Option) Alignment() (uint32, error) {
-	return o.Despecialize().Alignment()
-}
-
-func (o *Option) Despecialize() ValType {
-	cases := []Case{
-		{Label: "none", Type: nil},
-		{Label: "some", Type: o.Type},
-	}
-	return &Variant{
-		Cases: cases,
-	}
-}
-
-func (o *Option) Flatten() ([]kind.Kind, error) {
-	return o.Despecialize().Flatten()
+func NewOption(val ValType) Option {
+	return &OptionImpl{val: val}
 }

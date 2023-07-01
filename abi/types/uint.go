@@ -1,61 +1,61 @@
 package types
 
-func NewUInt8() UInt8 {
-	return &UInt8Impl{}
+func NewU8() U8 {
+	return &U8Impl{}
 }
 
-type UInt8 interface {
+type U8 interface {
 	ValType
 	uint8()
 }
 
-type UInt8Impl struct {
+type U8Impl struct {
 	ValTypeImpl
 }
 
-func (*UInt8Impl) uint8() {}
+func (*U8Impl) uint8() {}
 
-type UInt16 interface {
+type U16 interface {
 	ValType
 	uint16()
 }
 
-type UInt16Impl struct {
+type U16Impl struct {
 	ValTypeImpl
 }
 
-func (*UInt16Impl) uint16() {}
+func (*U16Impl) uint16() {}
 
-func NewUInt16() UInt16 {
-	return &UInt16Impl{}
+func NewU16() U16 {
+	return &U16Impl{}
 }
 
-type UInt32 interface {
+type U32 interface {
 	ValType
 	uint32()
 }
 
-type UInt32Impl struct {
+type U32Impl struct {
 	ValTypeImpl
 }
 
-func (*UInt32Impl) uint32() {}
+func (*U32Impl) uint32() {}
 
-func NewUInt32() UInt32 {
-	return &UInt32Impl{}
+func NewU32() U32 {
+	return &U32Impl{}
 }
 
-type UInt64 interface {
+type U64 interface {
 	ValType
 	uint64()
 }
 
-type UInt64Impl struct {
+type U64Impl struct {
 	ValTypeImpl
 }
 
-func (*UInt64Impl) uint64() {}
+func (*U64Impl) uint64() {}
 
-func NewUInt64() UInt64 {
-	return &UInt64Impl{}
+func NewU64() U64 {
+	return &U64Impl{}
 }

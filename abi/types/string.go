@@ -1,5 +1,9 @@
 package types
 
+const (
+	MaxStringByteLength uint32 = (1 << 31) - 1
+)
+
 type String interface {
 	ValType
 	string()

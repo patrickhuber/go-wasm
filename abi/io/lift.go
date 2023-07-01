@@ -8,12 +8,12 @@ import (
 	"github.com/patrickhuber/go-wasm/abi/values"
 )
 
-func LiftOwn(cx *types.CallContext, i uint32, t *types.Own) (*types.HandleElem, error) {
+func LiftOwn(cx *types.CallContext, i uint32, t types.Own) (*types.HandleElem, error) {
 	return cx.Instance.Handles.Remove(i, t)
 }
 
-func LiftBorrow(cx *types.CallContext, i uint32, t *types.Borrow) (*types.HandleElem, error) {
-	h, err := cx.Instance.Handles.Get(i, t.ResourceType)
+func LiftBorrow(cx *types.CallContext, i uint32, t types.Borrow) (*types.HandleElem, error) {
+	h, err := cx.Instance.Handles.Get(i, t.ResourceType())
 	if err != nil {
 		return nil, err
 	}
@@ -27,93 +27,66 @@ func LiftBorrow(cx *types.CallContext, i uint32, t *types.Borrow) (*types.Handle
 }
 
 func LiftFlat(cx *types.CallContext, vi values.ValueIterator, t types.ValType) (any, error) {
-	t = t.Despecialize()
-	k := t.Kind()
-	switch k {
-	case kind.Bool:
+	t = Despecialize(t)
+	switch vt := t.(type) {
+	case types.Bool:
 		return LiftFlatBool(vi)
-	case kind.U8:
+	case types.U8:
 		return LiftFlatU8(vi)
-	case kind.U16:
+	case types.U16:
 		return LiftFlatU16(vi)
-	case kind.U32:
+	case types.U32:
 		return LiftFlatU32(vi)
-	case kind.U64:
+	case types.U64:
 		return LiftFlatU64(vi)
-	case kind.S8:
+	case types.S8:
 		return LiftFlatS8(vi)
-	case kind.S16:
+	case types.S16:
 		return LiftFlatS16(vi)
-	case kind.S32:
+	case types.S32:
 		return LiftFlatS32(vi)
-	case kind.S64:
+	case types.S64:
 		return LiftFlatS64(vi)
-	case kind.Float32:
+	case types.Float32:
 		return LiftFlatFloat32(vi)
-	case kind.Float64:
+	case types.Float64:
 		return LiftFlatFloat64(vi)
-	case kind.Char:
+	case types.Char:
 		return LiftFlatChar(vi)
-	case kind.String:
+	case types.String:
 		return LiftFlatString(cx, vi)
-	case kind.List:
-		l, ok := t.(*types.List)
-		if !ok {
-			return nil, types.NewCastError(t, "*types.List")
-		}
-		return LiftFlatList(cx, vi, l.Type)
-	case kind.Record:
-		r, ok := t.(*types.Record)
-		if !ok {
-			return nil, types.NewCastError(t, "*types.Record")
-		}
-		return LiftFlatRecord(cx, vi, r.Fields)
-	case kind.Variant:
-		v, ok := t.(*types.Variant)
-		if !ok {
-			return nil, types.NewCastError(t, "*types.Variant")
-		}
-		return LiftFlatVariant(cx, vi, v)
-	case kind.Flags:
-		f, ok := t.(*types.Flags)
-		if !ok {
-			return nil, types.NewCastError(t, "*types.Flags")
-		}
-		return LiftFlatFlags(vi, f)
-	case kind.Own:
+	case types.List:
+		return LiftFlatList(cx, vi, vt.Type())
+	case types.Record:
+		return LiftFlatRecord(cx, vi, vt.Fields())
+	case types.Variant:
+		return LiftFlatVariant(cx, vi, vt)
+	case types.Flags:
+		return LiftFlatFlags(vi, vt)
+	case types.Own:
 		v, err := vi.Next(kind.S32)
 		if err != nil {
 			return nil, err
-		}
-		o, ok := t.(*types.Own)
-		if !ok {
-			return nil, types.TrapWith("unable to cast kind.%s to kind.Own", t.Kind())
 		}
 		i, ok := v.(uint32)
 		if !ok {
 			return nil, types.TrapWith("unable to cast %T to uint32", v)
 		}
-		return LiftOwn(cx, i, o)
-	case kind.Borrow:
+		return LiftOwn(cx, i, vt)
+	case types.Borrow:
 
 		v, err := vi.Next(kind.S32)
 		if err != nil {
 			return nil, err
 		}
 
-		b, ok := t.(*types.Borrow)
-		if !ok {
-
-			return nil, types.TrapWith("unable to cast kind.%s to kind.Borrow", t.Kind())
-		}
-
 		i, ok := v.(uint32)
 		if !ok {
 			return nil, types.TrapWith("unable to cast %T to uint32", v)
 		}
-		return LiftBorrow(cx, i, b)
+		return LiftBorrow(cx, i, vt)
 	}
-	return nil, fmt.Errorf("unable to lift type %s", k)
+	return nil, fmt.Errorf("LiftFlat: unable to match type %T", t)
 }
 
 func LiftFlatBool(vi values.ValueIterator) (bool, error) {
@@ -295,8 +268,8 @@ func LiftFlatRecord(cx *types.CallContext, vi values.ValueIterator, fields []typ
 	return record, nil
 }
 
-func LiftFlatVariant(cx *types.CallContext, vi values.ValueIterator, variant *types.Variant) (any, error) {
-	flatTypes, err := variant.Flatten()
+func LiftFlatVariant(cx *types.CallContext, vi values.ValueIterator, variant types.Variant) (any, error) {
+	flatTypes, err := FlattenType(variant)
 	if err != nil {
 		return nil, err
 	}
@@ -321,11 +294,11 @@ func LiftFlatVariant(cx *types.CallContext, vi values.ValueIterator, variant *ty
 		return nil, types.NewCastError(caseIndex, "uint32")
 	}
 
-	if int(u32CaseIndex) >= len(variant.Cases) {
-		return nil, types.TrapWith("case index %d exceeds bounds of cases %d", u32CaseIndex, len(variant.Cases))
+	if int(u32CaseIndex) >= len(variant.Cases()) {
+		return nil, types.TrapWith("case index %d exceeds bounds of cases %d", u32CaseIndex, len(variant.Cases()))
 	}
 
-	c := variant.Cases[u32CaseIndex]
+	c := variant.Cases()[u32CaseIndex]
 	var v any
 	if c.Type == nil {
 		v = nil
@@ -346,14 +319,14 @@ func LiftFlatVariant(cx *types.CallContext, vi values.ValueIterator, variant *ty
 		}
 	}
 	return map[string]any{
-		variant.CaseLabelWithRefinements(c): v,
+		CaseLabelWithRefinements(c, variant.Cases()): v,
 	}, nil
 }
 
-func LiftFlatFlags(vi values.ValueIterator, f *types.Flags) (any, error) {
+func LiftFlatFlags(vi values.ValueIterator, f types.Flags) (any, error) {
 	var flat uint64 = 0
 	shift := 0
-	numFlags := f.NumI32Flags()
+	numFlags := NumI32Flags(f.Labels())
 	for i := 0; i < int(numFlags); i++ {
 		next, err := vi.Next(kind.U32)
 		if err != nil {
@@ -366,5 +339,5 @@ func LiftFlatFlags(vi values.ValueIterator, f *types.Flags) (any, error) {
 		flat |= (uint64(u32Next) << shift)
 		shift += 32
 	}
-	return UnpackFlagsFromInt(flat, f.Labels), nil
+	return UnpackFlagsFromInt(flat, f.Labels()), nil
 }
