@@ -37,7 +37,7 @@ func Despecialize(t types.ValType) types.ValType {
 			},
 			types.Case{
 				Label: "some",
-				Type:  vt,
+				Type:  vt.Type(),
 			})
 
 	case types.Result:
