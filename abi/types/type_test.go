@@ -37,9 +37,9 @@ func TestReturnsType(t *testing.T) {
 		return types.NewU8()
 	}
 	obj := ReturnsObject()
-	switch obj.(type) {
-	case types.S8:
+	switch typ := obj.(type) {
+	case types.U8:
 	default:
-		t.Fail()
+		t.Fatalf("unable to match type %T", typ)
 	}
 }
