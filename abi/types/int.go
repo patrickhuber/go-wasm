@@ -1,61 +1,61 @@
 package types
 
-func NewInt8() Int8 {
-	return &Int8Impl{}
+func NewS8() S8 {
+	return &S8Impl{}
 }
 
-type Int8 interface {
-	Type
+type S8 interface {
+	ValType
 	int8()
 }
 
-type Int8Impl struct {
-	TypeImpl
+type S8Impl struct {
+	ValTypeImpl
 }
 
-func (*Int8Impl) int8() {}
+func (*S8Impl) int8() {}
 
-type Int16 interface {
-	Type
+type S16 interface {
+	ValType
 	int16()
 }
 
-type Int16Impl struct {
-	TypeImpl
+type S16Impl struct {
+	ValTypeImpl
 }
 
-func (*Int16Impl) int16() {}
+func (*S16Impl) int16() {}
 
-func NewInt16() Int16 {
-	return &Int16Impl{}
+func NewS16() S16 {
+	return &S16Impl{}
 }
 
-type Int32 interface {
-	Type
+type S32 interface {
+	ValType
 	int32()
 }
 
-type Int32Impl struct {
-	TypeImpl
+type S32Impl struct {
+	ValTypeImpl
 }
 
-func (*Int32Impl) int32() {}
+func (*S32Impl) int32() {}
 
-func NewInt32() Int32 {
-	return &Int32Impl{}
+func NewS32() S32 {
+	return &S32Impl{}
 }
 
-type Int64 interface {
-	Type
+type S64 interface {
+	ValType
 	int64()
 }
 
-type Int64Impl struct {
-	TypeImpl
+type S64Impl struct {
+	ValTypeImpl
 }
 
-func (*Int64Impl) int64() {}
+func (*S64Impl) int64() {}
 
-func NewInt64() Int64 {
-	return &Int64Impl{}
+func NewS64() S64 {
+	return &S64Impl{}
 }

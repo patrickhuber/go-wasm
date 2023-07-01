@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/patrickhuber/go-wasm/abi/io"
-	"github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/encoding"
 	"github.com/stretchr/testify/require"
 )
@@ -101,5 +100,5 @@ func testStringInternal(srcEncoding encoding.Encoding, dstEncoding encoding.Enco
 	buf := heap.Memory.Bytes()
 	copy(buf, encoded)
 	cx := NewContext(heap.Memory, srcEncoding, heap.ReAllocate, nil)
-	return test(types.String{}, []any{uint32(0), uint32(taggedCodeUnits)}, s, cx, dstEncoding, nil, nil)
+	return test(String(), []any{uint32(0), uint32(taggedCodeUnits)}, s, cx, dstEncoding, nil, nil)
 }

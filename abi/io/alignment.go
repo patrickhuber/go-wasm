@@ -16,21 +16,21 @@ func Alignment(t types.ValType) (uint32, error) {
 	switch vt := t.(type) {
 	case types.Bool:
 		return 1, nil
-	case types.UInt8:
+	case types.U8:
 		return 1, nil
-	case types.UInt16:
+	case types.U16:
 		return 2, nil
-	case types.UInt32:
+	case types.U32:
 		return 4, nil
-	case types.UInt64:
+	case types.U64:
 		return 8, nil
-	case types.Int8:
+	case types.S8:
 		return 1, nil
-	case types.Int16:
+	case types.S16:
 		return 2, nil
-	case types.Int32:
+	case types.S32:
 		return 4, nil
-	case types.Int64:
+	case types.S64:
 		return 8, nil
 	case types.Float32:
 		return 4, nil
@@ -69,7 +69,7 @@ func AlignmentRecord(r types.Record) (uint32, error) {
 }
 
 func AlignmentVariant(v types.Variant) (uint32, error) {
-	dt, err := DiscriminateType(v.Cases())
+	dt, err := DiscriminantType(v.Cases())
 	if err != nil {
 		return 0, err
 	}
@@ -110,20 +110,20 @@ func MaxCaseAlignment(cases []types.Case) (uint32, error) {
 	return a, nil
 }
 
-func DiscriminateType(cases []types.Case) (types.ValType, error) {
+func DiscriminantType(cases []types.Case) (types.ValType, error) {
 	n := len(cases)
 	if n > (1 << 32) {
 		return nil, fmt.Errorf("case length %d exceeds max %d", n, (1 << 32))
 	}
 	switch uint32(math.Ceil(math.Log2(float64(n) / 8))) {
 	case 0:
-		return types.NewUInt8(), nil
+		return types.NewU8(), nil
 	case 1:
-		return types.NewUInt8(), nil
+		return types.NewU8(), nil
 	case 2:
-		return types.NewUInt16(), nil
+		return types.NewU16(), nil
 	case 3:
-		return types.NewUInt32(), nil
+		return types.NewU32(), nil
 	}
 	return nil, fmt.Errorf("DiscriminateType unable to match math.ceil(math.log2(%d)/8) to [0,1,2,3]", n)
 }

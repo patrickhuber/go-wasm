@@ -104,8 +104,8 @@ func (ht *HandleTables) Add(handle *HandleElem, t ValType) (uint32, error) {
 	return ht.Table(resourceType).Add(handle, t), nil
 }
 
-func (ht *HandleTables) Get(i uint32, resourceType *ResourceType) (*HandleElem, error) {
-	return ht.Table(*resourceType).Get(i)
+func (ht *HandleTables) Get(i uint32, resourceType ResourceType) (*HandleElem, error) {
+	return ht.Table(resourceType).Get(i)
 }
 
 func (ht *HandleTables) Remove(i uint32, t ValType) (*HandleElem, error) {

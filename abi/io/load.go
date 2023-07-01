@@ -6,107 +6,72 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/patrickhuber/go-wasm/abi/kind"
 	"github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/encoding"
 )
 
 func Load(cx *types.CallContext, t types.ValType, ptr uint32) (any, error) {
-	t = t.Despecialize()
-	k := t.Kind()
-	switch k {
-	case kind.Bool:
+	t = Despecialize(t)
+
+	switch vt := t.(type) {
+	case types.Bool:
 		return LoadBool(cx, ptr)
-	case kind.U8:
-		fallthrough
-	case kind.U16:
-		fallthrough
-	case kind.U32:
-		fallthrough
-	case kind.U64:
-		size, err := t.Size()
-		if err != nil {
-			return nil, err
-		}
-		return LoadInt(cx, ptr, size, false)
-	case kind.S8:
-		fallthrough
-	case kind.S16:
-		fallthrough
-	case kind.S32:
-		fallthrough
-	case kind.S64:
-		size, err := t.Size()
-		if err != nil {
-			return nil, err
-		}
-		return LoadInt(cx, ptr, size, true)
-	case kind.Float32:
-		fallthrough
-	case kind.Float64:
-		size, err := t.Size()
-		if err != nil {
-			return nil, err
-		}
-		return LoadFloat(cx, ptr, size)
-	case kind.Char:
-		size, err := t.Size()
-		if err != nil {
-			return nil, err
-		}
-		return LoadChar(cx, ptr, size)
-	case kind.String:
+	case types.U8:
+		return LoadInt(cx, ptr, t)
+	case types.U16:
+		return LoadInt(cx, ptr, t)
+	case types.U32:
+		return LoadInt(cx, ptr, t)
+	case types.U64:
+		return LoadInt(cx, ptr, t)
+	case types.S8:
+		return LoadInt(cx, ptr, t)
+	case types.S16:
+		return LoadInt(cx, ptr, t)
+	case types.S32:
+		return LoadInt(cx, ptr, t)
+	case types.S64:
+		return LoadInt(cx, ptr, t)
+	case types.Float32:
+		return LoadFloat(cx, ptr, t)
+	case types.Float64:
+		return LoadFloat(cx, ptr, t)
+	case types.Char:
+		return LoadChar(cx, ptr, t)
+	case types.String:
 		return LoadString(cx, ptr)
-	case kind.List:
-		l, ok := t.(*types.List)
-		if !ok {
-			return nil, types.NewCastError(t, "*types.List")
-		}
-		return LoadList(cx, ptr, l.Type)
-	case kind.Record:
-		r, ok := t.(*types.Record)
-		if !ok {
-			return nil, types.NewCastError(t, "*types.Record")
-		}
-		return LoadRecord(cx, ptr, r.Fields)
-	case kind.Variant:
-		v, ok := t.(*types.Variant)
-		if !ok {
-			return nil, types.NewCastError(t, "*types.Variant")
-		}
-		return LoadVariant(cx, ptr, v)
-	case kind.Flags:
-		f, ok := t.(*types.Flags)
-		if !ok {
-			return nil, types.NewCastError(t, "*types.Flags")
-		}
-		return LoadFlags(cx, ptr, f)
-	case kind.Own:
+	case types.List:
+		return LoadList(cx, ptr, vt.Type())
+	case types.Record:
+		return LoadRecord(cx, ptr, vt.Fields())
+	case types.Variant:
+		return LoadVariant(cx, ptr, vt)
+	case types.Flags:
+		return LoadFlags(cx, ptr, vt)
+	case types.Own:
 		i, err := LoadUInt32(cx, ptr)
 		if err != nil {
 			return nil, err
 		}
-		o, ok := t.(*types.Own)
-		if !ok {
-			return nil, types.NewCastError(t, "*types.Own")
-		}
-		return LiftOwn(cx, i, o)
-	case kind.Borrow:
+		return LiftOwn(cx, i, vt)
+	case types.Borrow:
 		i, err := LoadUInt32(cx, ptr)
 		if err != nil {
 			return nil, err
 		}
-		b, ok := t.(*types.Borrow)
-		if !ok {
-			return nil, types.NewCastError(t, "*types.Borrow")
-		}
-		return LiftBorrow(cx, i, b)
+		return LiftBorrow(cx, i, vt)
 	}
-	return nil, fmt.Errorf("unrecognized type %s", k.String())
+	return nil, fmt.Errorf("unrecognized type %T", t)
 }
 
-func LoadChar(cx *types.CallContext, ptr uint32, nbytes uint32) (any, error) {
-	i, err := LoadInt(cx, ptr, nbytes, false)
+func LoadChar(cx *types.CallContext, ptr uint32, t types.ValType) (any, error) {
+	switch t.(type) {
+	case types.Char:
+	default:
+		return nil, fmt.Errorf("LoadChar unable to match type %T", t)
+	}
+
+	i, err := LoadInt(cx, ptr, t)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +95,7 @@ func ConvertU32ToRune(u32 uint32) (rune, error) {
 }
 
 func LoadBool(cx *types.CallContext, ptr uint32) (bool, error) {
-	i, err := LoadInt(cx, ptr, 1, false)
+	i, err := LoadInt(cx, ptr, types.NewU8())
 	if err != nil {
 		return false, err
 	}
@@ -142,7 +107,7 @@ func LoadBool(cx *types.CallContext, ptr uint32) (bool, error) {
 }
 
 func LoadUInt32(cx *types.CallContext, ptr uint32) (uint32, error) {
-	val, err := LoadInt(cx, ptr, 4, false)
+	val, err := LoadInt(cx, ptr, types.NewU32())
 	if err != nil {
 		return 0, err
 	}
@@ -153,49 +118,85 @@ func LoadUInt32(cx *types.CallContext, ptr uint32) (uint32, error) {
 	return u32, nil
 }
 
-func LoadInt(c *types.CallContext, ptr uint32, nbytes uint32, signed bool) (any, error) {
-	buf := c.Options.Memory.Bytes()[ptr : ptr+nbytes]
-	switch nbytes {
-	case types.SizeOfU8:
-		if signed {
-			return int8(buf[0]), nil
-		}
-		return buf[0], nil
-	case types.SizeOfU16:
-		v := binary.LittleEndian.Uint16(buf)
-		if signed {
-			return int16(v), nil
-		}
-		return v, nil
-	case types.SizeOfU32:
-		v := binary.LittleEndian.Uint32(buf)
-		if signed {
-			return int32(v), nil
-		}
-		return v, nil
-	case types.SizeOfU64:
-		v := binary.LittleEndian.Uint64(buf)
-		if signed {
-			return int64(v), nil
-		}
-		return v, nil
-	case 0:
-		return uint32(0), nil
+func LoadUInt64(cx *types.CallContext, ptr uint32) (uint64, error) {
+	val, err := LoadInt(cx, ptr, types.NewU64())
+	if err != nil {
+		return 0, err
 	}
-	return nil, fmt.Errorf("invalid type size %d", nbytes)
+	u64, ok := val.(uint64)
+	if !ok {
+		return 0, types.NewCastError(val, "uint64")
+	}
+	return u64, nil
 }
 
-func LoadFloat(cx *types.CallContext, ptr uint32, nbytes uint32) (any, error) {
-	i, err := LoadInt(cx, ptr, nbytes, false)
+func LoadInt(c *types.CallContext, ptr uint32, t types.ValType) (any, error) {
+	size, err := Size(t)
 	if err != nil {
 		return nil, err
 	}
-	if nbytes == 4 {
-		ui := i.(uint32)
-		return math.Float32frombits(ui), nil
+	buf := c.Options.Memory.Bytes()[ptr : ptr+size]
+	switch t.(type) {
+	case types.U8:
+		return buf[0], nil
+	case types.U16:
+		return binary.LittleEndian.Uint16(buf), nil
+	case types.U32:
+		return binary.LittleEndian.Uint32(buf), nil
+	case types.U64:
+		return binary.LittleEndian.Uint64(buf), nil
+	case types.S8:
+		return int8(buf[0]), nil
+	case types.S16:
+		return int16(binary.LittleEndian.Uint16(buf)), nil
+	case types.S32:
+		return int32(binary.LittleEndian.Uint32(buf)), nil
+	case types.S64:
+		return int64(binary.LittleEndian.Uint64(buf)), nil
+	default:
+		return 0, nil
 	}
-	ui := i.(uint64)
-	return math.Float64frombits(ui), nil
+}
+
+func LoadIntWithSize(c *types.CallContext, ptr uint32, nbytes uint32, sign bool) (any, error) {
+	var t types.ValType
+	switch {
+	case nbytes == 1 && !sign:
+		t = types.NewU8()
+	case nbytes == 2 && !sign:
+		t = types.NewU16()
+	case nbytes == 4 && !sign:
+		t = types.NewU32()
+	case nbytes == 8 && !sign:
+		t = types.NewU64()
+	case nbytes == 1 && sign:
+		t = types.NewS8()
+	case nbytes == 2 && sign:
+		t = types.NewS16()
+	case nbytes == 4 && sign:
+		t = types.NewS32()
+	case nbytes == 8 && sign:
+		t = types.NewS64()
+	}
+	return LoadInt(c, ptr, t)
+}
+
+func LoadFloat(cx *types.CallContext, ptr uint32, t types.ValType) (any, error) {
+	switch t.(type) {
+	case types.Float32:
+		i, err := LoadUInt32(cx, ptr)
+		if err != nil {
+			return nil, err
+		}
+		return math.Float32frombits(i), nil
+	case types.Float64:
+		i, err := LoadUInt64(cx, ptr)
+		if err != nil {
+			return nil, err
+		}
+		return math.Float64frombits(i), nil
+	}
+	return nil, fmt.Errorf("LoadFloat: invalid float type %T", t)
 }
 
 func LoadString(cx *types.CallContext, ptr uint32) (string, error) {
@@ -229,8 +230,13 @@ func LoadStringFromRange(cx *types.CallContext, ptr, taggedCodeUnits uint32) (st
 	}
 
 	byteLength := tcu.CodeUnits * uint32(codec.RuneSize())
+	align, err := AlignTo(ptr, uint32(codec.Alignment()))
 
-	if ptr != types.AlignTo(ptr, uint32(codec.Alignment())) {
+	if err != nil {
+		return "", err
+	}
+
+	if ptr != align {
 		return "", types.TrapWith("error aligning ptr %d to %d", ptr, uint32(codec.Alignment()))
 	}
 
@@ -257,15 +263,19 @@ func LoadList(cx *types.CallContext, ptr uint32, elementType types.ValType) ([]a
 }
 
 func LoadListFromRange(cx *types.CallContext, ptr uint32, length uint32, elementType types.ValType) ([]any, error) {
-	alignment, err := elementType.Alignment()
+	alignment, err := Alignment(elementType)
 	if err != nil {
 		return nil, err
 	}
-	if ptr != types.AlignTo(ptr, alignment) {
+	align, err := AlignTo(ptr, alignment)
+	if err != nil {
+		return nil, err
+	}
+	if ptr != align {
 		return nil, types.TrapWith("unable to align ptr %d with %d", ptr, alignment)
 	}
 
-	size, err := elementType.Size()
+	size, err := Size(elementType)
 	if err != nil {
 		return nil, err
 	}
@@ -290,17 +300,20 @@ func LoadListFromRange(cx *types.CallContext, ptr uint32, length uint32, element
 func LoadRecord(cx *types.CallContext, ptr uint32, fields []types.Field) (map[string]any, error) {
 	record := map[string]any{}
 	for _, field := range fields {
-		alignment, err := field.Type.Alignment()
+		alignment, err := Alignment(field.Type)
 		if err != nil {
 			return nil, err
 		}
-		ptr = types.AlignTo(ptr, alignment)
+		ptr, err = AlignTo(ptr, alignment)
+		if err != nil {
+			return nil, err
+		}
 		val, err := Load(cx, field.Type, ptr)
 		if err != nil {
 			return nil, err
 		}
 		record[field.Label] = val
-		size, err := field.Type.Size()
+		size, err := Size(field.Type)
 		if err != nil {
 			return nil, err
 		}
@@ -310,43 +323,50 @@ func LoadRecord(cx *types.CallContext, ptr uint32, fields []types.Field) (map[st
 }
 
 // LoadVariant loads the variant from the context at the ptr
-func LoadVariant(cx *types.CallContext, ptr uint32, v *types.Variant) (map[string]any, error) {
-	dt, err := v.DiscriminantType()
+func LoadVariant(cx *types.CallContext, ptr uint32, v types.Variant) (map[string]any, error) {
+	dt, err := DiscriminantType(v.Cases())
 	if err != nil {
 		return nil, err
 	}
-	discSize, err := dt.Size()
-	if err != nil {
-		return nil, err
-	}
-	caseIndex, err := LoadInt(cx, ptr, discSize, false)
+	caseIndex, err := LoadInt(cx, ptr, dt)
 	var u32CaseIndex uint32 = 0
-	switch dt.Kind() {
-	case kind.U8:
+	switch dt.(type) {
+	case types.U8:
 		u32CaseIndex = uint32(caseIndex.(uint8))
-	case kind.U16:
+	case types.U16:
 		u32CaseIndex = uint32(caseIndex.(uint16))
-	case kind.U32:
+	case types.U32:
 		u32CaseIndex = caseIndex.(uint32)
-	case kind.U64:
+	case types.U64:
 		// could cause problems if caseIndex is actually a u64
 		u32CaseIndex = uint32(caseIndex.(uint64))
 	}
 	if err != nil {
 		return nil, err
 	}
-	ptr += discSize
-	if u32CaseIndex >= uint32(len(v.Cases)) {
-		return nil, types.TrapWith("case index %d is outside the bounds of the case index length %d", u32CaseIndex, len(v.Cases))
-	}
-	c := v.Cases[u32CaseIndex]
-	maxCaseAlignment, err := v.MaxCaseAlignment()
+
+	discSize, err := Size(dt)
 	if err != nil {
 		return nil, err
 	}
-	ptr = types.AlignTo(ptr, maxCaseAlignment)
 
-	caseLabel := v.CaseLabelWithRefinements(c)
+	ptr += discSize
+	if u32CaseIndex >= uint32(len(v.Cases())) {
+		return nil, types.TrapWith("case index %d is outside the bounds of the case index length %d", u32CaseIndex, len(v.Cases()))
+	}
+
+	c := v.Cases()[u32CaseIndex]
+	maxCaseAlignment, err := MaxCaseAlignment(v.Cases())
+	if err != nil {
+		return nil, err
+	}
+
+	ptr, err = AlignTo(ptr, maxCaseAlignment)
+	if err != nil {
+		return nil, err
+	}
+
+	caseLabel := CaseLabelWithRefinements(c, v.Cases())
 	var value any
 	if c.Type == nil {
 		value = nil
@@ -361,13 +381,38 @@ func LoadVariant(cx *types.CallContext, ptr uint32, v *types.Variant) (map[strin
 	}, nil
 }
 
-func LoadFlags(cx *types.CallContext, ptr uint32, flags *types.Flags) (map[string]any, error) {
-	size, err := flags.Size()
+func CaseLabelWithRefinements(c types.Case, cases []types.Case) string {
+	label := c.Label
+	for {
+		if c.Refines == nil {
+			break
+		}
+		index := FindCaseIndex(cases, *c.Refines)
+		if index < 0 {
+			break
+		}
+		c = cases[index]
+		label += "|" + c.Label
+	}
+	return label
+}
+
+func FindCaseIndex(cases []types.Case, label string) int {
+	for i, c := range cases {
+		if c.Label == label {
+			return i
+		}
+	}
+	return -1
+}
+
+func LoadFlags(cx *types.CallContext, ptr uint32, flags types.Flags) (map[string]any, error) {
+	size, err := Size(flags)
 	if err != nil {
 		return nil, err
 	}
 
-	i, err := LoadInt(cx, ptr, size, false)
+	i, err := LoadIntWithSize(cx, ptr, size, false)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +429,7 @@ func LoadFlags(cx *types.CallContext, ptr uint32, flags *types.Flags) (map[strin
 		ui = i.(uint64)
 	}
 	flagMap := map[string]any{}
-	for _, label := range flags.Labels {
+	for _, label := range flags.Labels() {
 		v := ui & 1
 		b := false
 		if v > 0 {

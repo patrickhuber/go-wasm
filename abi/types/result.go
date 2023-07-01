@@ -1,12 +1,14 @@
 package types
 
 type Result interface {
+	ValType
 	Ok() ValType
 	Error() ValType
 	result()
 }
 
 type ResultImpl struct {
+	ValTypeImpl
 	ok  ValType
 	err ValType
 }
