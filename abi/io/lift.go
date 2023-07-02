@@ -64,7 +64,7 @@ func LiftFlat(cx *types.CallContext, vi values.ValueIterator, t types.ValType) (
 	case types.Flags:
 		return LiftFlatFlags(vi, vt)
 	case types.Own:
-		v, err := vi.Next(kind.S32)
+		v, err := vi.Next(kind.U32)
 		if err != nil {
 			return nil, err
 		}
@@ -75,7 +75,7 @@ func LiftFlat(cx *types.CallContext, vi values.ValueIterator, t types.ValType) (
 		return LiftOwn(cx, i, vt)
 	case types.Borrow:
 
-		v, err := vi.Next(kind.S32)
+		v, err := vi.Next(kind.U32)
 		if err != nil {
 			return nil, err
 		}

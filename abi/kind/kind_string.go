@@ -8,39 +8,17 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[Bool-0]
-	_ = x[U8-1]
-	_ = x[S8-2]
-	_ = x[U16-3]
-	_ = x[S16-4]
-	_ = x[U32-5]
-	_ = x[S32-6]
-	_ = x[U64-7]
-	_ = x[S64-8]
-	_ = x[Float32-9]
-	_ = x[Float64-10]
-	_ = x[Char-11]
-	_ = x[String-12]
-	_ = x[List-13]
-	_ = x[Record-14]
-	_ = x[Tuple-15]
-	_ = x[Variant-16]
-	_ = x[Enum-17]
-	_ = x[Union-18]
-	_ = x[Option-19]
-	_ = x[Result-20]
-	_ = x[Flags-21]
-	_ = x[Own-22]
-	_ = x[Borrow-23]
-	_ = x[ValType-24]
-	_ = x[ExternType-25]
-	_ = x[CoreExternType-26]
-	_ = x[ResourceType-27]
+	_ = x[U8-0]
+	_ = x[U16-1]
+	_ = x[U32-2]
+	_ = x[U64-3]
+	_ = x[Float32-4]
+	_ = x[Float64-5]
 }
 
-const _Kind_name = "BoolU8S8U16S16U32S32U64S64Float32Float64CharStringListRecordTupleVariantEnumUnionOptionResultFlagsOwnBorrowValTypeExternTypeCoreExternTypeResourceType"
+const _Kind_name = "U8U16U32U64Float32Float64"
 
-var _Kind_index = [...]uint8{0, 4, 6, 8, 11, 14, 17, 20, 23, 26, 33, 40, 44, 50, 54, 60, 65, 72, 76, 81, 87, 93, 98, 101, 107, 114, 124, 138, 150}
+var _Kind_index = [...]uint8{0, 2, 5, 8, 11, 18, 25}
 
 func (i Kind) String() string {
 	if i < 0 || i >= Kind(len(_Kind_index)-1) {
