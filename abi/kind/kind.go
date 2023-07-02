@@ -4,9 +4,7 @@ type Kind int
 
 //go:generate stringer -type=Kind
 const (
-	U8 Kind = iota
-	U16
-	U32
+	U32 Kind = iota
 	U64
 	Float32
 	Float64

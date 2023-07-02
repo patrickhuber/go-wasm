@@ -177,6 +177,18 @@ func List(vt types.ValType) types.List {
 	return types.NewList(vt)
 }
 
+func FuncType(params []types.ValType, results []types.ValType) types.FuncType {
+	toParameters := func(valTypes []types.ValType) []types.Parameter {
+		parameters := []types.Parameter{}
+		for i, vt := range valTypes {
+			param := types.Parameter{Name: strconv.Itoa(i), Type: vt}
+			parameters = append(parameters, param)
+		}
+		return parameters
+	}
+	return types.NewFuncType(toParameters(params), toParameters(results))
+}
+
 func Range(low int, high int) []int {
 	var result []int
 	for i := low; i < high; i++ {

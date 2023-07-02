@@ -7,6 +7,18 @@ import (
 	"github.com/patrickhuber/go-wasm/abi/types"
 )
 
+func FlattenTypes(ts []types.ValType) ([]kind.Kind, error) {
+	var flat []kind.Kind
+	for _, t := range ts {
+		flattened, err := FlattenType(t)
+		if err != nil {
+			return nil, err
+		}
+		flat = append(flat, flattened...)
+	}
+	return flat, nil
+}
+
 func FlattenType(t types.ValType) ([]kind.Kind, error) {
 	t = Despecialize(t)
 	switch vt := t.(type) {
@@ -97,6 +109,44 @@ func FlattenVariant(v types.Variant) ([]kind.Kind, error) {
 		return nil, err
 	}
 	return append(flattened, flat...), nil
+}
+
+func FlattenFuncTypeLower(ft types.FuncType, maxFlatParams int, maxFlatResults int) (types.CoreFuncType, error) {
+	flatParams, flatResults, err := flattenFuncType(ft, maxFlatParams)
+	if err != nil {
+		return nil, err
+	}
+	if len(flatResults) > maxFlatResults {
+		flatParams = append(flatParams, kind.U32)
+		flatResults = []kind.Kind{}
+	}
+	return types.NewCoreFuncType(flatParams, flatResults), nil
+}
+
+func FlattenFuncTypeLift(ft types.FuncType, maxFlatParams int, maxFlatResults int) (types.CoreFuncType, error) {
+	flatParams, flatResults, err := flattenFuncType(ft, maxFlatParams)
+	if err != nil {
+		return nil, err
+	}
+	if len(flatResults) > maxFlatResults {
+		flatResults = []kind.Kind{kind.U32}
+	}
+	return types.NewCoreFuncType(flatParams, flatResults), nil
+}
+
+func flattenFuncType(ft types.FuncType, maxFlatParams int) ([]kind.Kind, []kind.Kind, error) {
+	flatParams, err := FlattenTypes(ft.ParamTypes())
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(flatParams) > maxFlatParams {
+		flatParams = []kind.Kind{kind.U32}
+	}
+	flatResults, err := FlattenTypes(ft.ResultTypes())
+	if err != nil {
+		return nil, nil, err
+	}
+	return flatParams, flatResults, nil
 }
 
 func join(a kind.Kind, b kind.Kind) kind.Kind {
