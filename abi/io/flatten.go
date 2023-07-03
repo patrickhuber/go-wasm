@@ -8,7 +8,7 @@ import (
 )
 
 func FlattenTypes(ts []types.ValType) ([]kind.Kind, error) {
-	var flat []kind.Kind
+	flat := []kind.Kind{}
 	for _, t := range ts {
 		flattened, err := FlattenType(t)
 		if err != nil {
@@ -82,7 +82,7 @@ func FlattenRecord(r types.Record) ([]kind.Kind, error) {
 }
 
 func FlattenVariant(v types.Variant) ([]kind.Kind, error) {
-	var flat []kind.Kind
+	flat := []kind.Kind{}
 	for _, c := range v.Cases() {
 		if c.Type == nil {
 			continue
