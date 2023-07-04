@@ -42,7 +42,7 @@ func TestFlatten(t *testing.T) {
 				params = []kind.Kind{kind.U32}
 			}
 			if len(test.results) > MaxFlatResults {
-				params = []kind.Kind{kind.U32}
+				results = []kind.Kind{kind.U32}
 			}
 			expect := CoreFuncType(params, results)
 
@@ -51,7 +51,7 @@ func TestFlatten(t *testing.T) {
 			require.Equal(t, expect, got)
 
 			if len(test.results) > MaxFlatResults {
-				expect = CoreFuncType(append(test.params, kind.U32), []kind.Kind{})
+				expect = CoreFuncType(append(expect.Params(), kind.U32), []kind.Kind{})
 			}
 
 			got, err = io.FlattenFuncTypeLower(test.ft, MaxFlatParams, MaxFlatResults)
