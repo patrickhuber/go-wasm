@@ -1,108 +1,86 @@
 package io_test
 
 import (
-	"bytes"
 	"fmt"
-	"math"
-	"reflect"
 	"testing"
 
 	"github.com/patrickhuber/go-wasm/abi/io"
 	"github.com/patrickhuber/go-wasm/abi/types"
+	"github.com/patrickhuber/go-wasm/abi/values"
 	"github.com/patrickhuber/go-wasm/encoding"
+	"github.com/patrickhuber/go-wasm/internal/collections"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCanRoundTrip(t *testing.T) {
 	type test struct {
-		val any
-		t   types.ValType
+		name string
+		t    types.ValType
+		v    any
 	}
 	tests := []test{
-		{uint8(math.MaxUint8), U8()},
-		{uint16(math.MaxUint16), U16()},
-		{uint32(math.MaxUint32), U32()},
-		{uint64(math.MaxUint64), U64()},
-		{int8(math.MaxInt8), S8()},
-		{int16(math.MaxInt16), S16()},
-		{int32(math.MaxInt32), S32()},
-		{int64(math.MaxInt64), S64()},
-		{float32(math.MaxFloat32), Float32()},
-		{float64(math.MaxFloat64), Float64()},
+		{"u8", S8(), int8(-1)},
+		{"tuple_u16_u16", Tuple(U16(), U16()), NewTuple(uint16(3), uint16(4))},
+		{"list_string", List(String()), []any{"hello there"}},
+		{"list_list_string", List(List(String())), []any{[]any(nil), []any(nil)}},
+		{"list_option_tuple_string_u16", List(Option(Tuple(String(), U16()))), []any{map[string]any{"some": NewTuple("answer", uint16(42))}}},
 	}
-
-	heap := NewHeap(8)
-	c := NewContext(heap.Memory, encoding.UTF8, heap.ReAllocate, func() {})
-	for i, test := range tests {
-		name := reflect.ValueOf(test.t).Elem().Type().Name()
-		t.Run(name, func(t *testing.T) {
-			zero(c.Options.Memory.Bytes())
-			err := io.Store(c, test.val, test.t, 0)
-			require.Nil(t, err, "store %d type %T", i, test.t)
-
-			val, err := io.Load(c, test.t, 0)
-			require.Nil(t, err, "load %d type %T", i, test.t)
-			require.Equal(t, test.val, val, "load %d type %T", i, test.t)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			RoundTripTest(t, test.t, test.v)
 		})
-
 	}
 }
 
-func zero[T byte](slice []T) {
-	for i := 0; i < len(slice); i++ {
-		slice[i] = 0
+func RoundTripTest(t *testing.T, typ types.ValType, v any) {
+	const MaxFlatResults = 16
+	const MaxFlatParams = 16
+	ft := FuncType([]types.ValType{typ}, []types.ValType{typ})
+	callee := func(val any) (any, error) { return val, nil }
+
+	calleeHeap := NewHeap(1000)
+	calleeOpts := NewOptions(calleeHeap.Memory, encoding.UTF8, calleeHeap.ReAllocate, func() {})
+	calleeInst := &types.ComponentInstance{MayEnter: true, MayLeave: true}
+	liftedCallee := func(args []any) ([]any, types.PostReturnFunc, error) {
+		return io.CanonLift(calleeOpts, calleeInst, callee, ft, args, MaxFlatParams, MaxFlatResults)
 	}
+
+	callerHeap := NewHeap(1000)
+	callerOpts := NewOptions(callerHeap.Memory, encoding.UTF8, callerHeap.ReAllocate, nil)
+	callerInst := &types.ComponentInstance{MayEnter: true, MayLeave: true}
+	callerContext := &types.CallContext{Options: callerOpts, Instance: callerInst}
+
+	flatArgs, err := io.LowerFlat(callerContext, v, typ)
+	require.Nil(t, err)
+	args := Select(flatArgs, func(vt values.Value) any { return vt })
+
+	flatResults, err := io.CanonLower(callerOpts, callerInst, liftedCallee, true, ft, args, MaxFlatParams, MaxFlatResults)
+	require.Nil(t, err)
+
+	results, err := collections.Select(flatResults, Cast[any, values.Value])
+	require.Nil(t, err)
+
+	got, err := io.LiftFlat(callerContext, values.NewIterator(results...), typ)
+	require.Nil(t, err)
+
+	require.Equal(t, v, got)
+	require.True(t, callerInst.MayLeave && callerInst.MayEnter)
+	require.True(t, calleeInst.MayLeave && calleeInst.MayEnter)
 }
 
-type Heap struct {
-	Memory    *bytes.Buffer
-	LastAlloc int
+func Cast[TSource, TTarget any](source TSource) (TTarget, error) {
+	target, ok := any(source).(TTarget)
+	if !ok {
+		var zero TTarget
+		return zero, types.NewCastError(source, fmt.Sprintf("%T", zero))
+	}
+	return target, nil
 }
 
-func NewHeap(size int) *Heap {
-	return &Heap{
-		Memory:    bytes.NewBuffer(make([]byte, size)),
-		LastAlloc: 0,
+func Select[TSource, TTarget any](source []TSource, transform func(TSource) TTarget) []TTarget {
+	target := []TTarget{}
+	for _, s := range source {
+		target = append(target, transform(s))
 	}
-}
-
-func (h *Heap) ReAllocate(originalPtr, originalSize, alignment, newSize uint32) (uint32, error) {
-	if originalPtr != 0 && newSize < originalSize {
-		return io.AlignTo(originalPtr, alignment)
-	}
-
-	ret, err := io.AlignTo(uint32(h.LastAlloc), alignment)
-	if err != nil {
-		return 0, err
-	}
-	h.LastAlloc = int(ret + newSize)
-
-	// are we over the capacity?
-	if h.LastAlloc > h.Memory.Cap() {
-		return 0, fmt.Errorf("Out of Memory: Have %d need %d", h.Memory.Cap(), h.LastAlloc)
-	}
-
-	h.Memory.Grow(h.LastAlloc)
-
-	// memcopy here?
-	buf := h.Memory.Bytes()
-	copy(buf[ret:ret+originalSize], buf[originalPtr:originalPtr+originalSize])
-
-	return ret, nil
-}
-
-func NewContext(memory *bytes.Buffer, enc encoding.Encoding, realloc types.ReallocFunc, postReturn types.PostReturnFunc) *types.CallContext {
-	options := NewOptions(memory, enc, realloc, postReturn)
-	return &types.CallContext{
-		Options: options,
-	}
-}
-
-func NewOptions(memory *bytes.Buffer, enc encoding.Encoding, realloc types.ReallocFunc, postReturn types.PostReturnFunc) *types.CanonicalOptions {
-	return &types.CanonicalOptions{
-		Memory:         memory,
-		StringEncoding: enc,
-		Realloc:        realloc,
-		PostReturn:     postReturn,
-	}
+	return target
 }

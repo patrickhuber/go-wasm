@@ -22,24 +22,12 @@ func FlattenTypes(ts []types.ValType) ([]kind.Kind, error) {
 func FlattenType(t types.ValType) ([]kind.Kind, error) {
 	t = Despecialize(t)
 	switch vt := t.(type) {
-	case types.Bool:
+	case types.Bool, types.U8, types.U16, types.U32:
 		return []kind.Kind{kind.U32}, nil
-	case types.U8:
-		return []kind.Kind{kind.U32}, nil
-	case types.U16:
-		return []kind.Kind{kind.U32}, nil
-	case types.U32:
-		return []kind.Kind{kind.U32}, nil
-	case types.U64:
+	case types.U64, types.S64:
 		return []kind.Kind{kind.U64}, nil
-	case types.S8:
+	case types.S8, types.S16, types.S32:
 		return []kind.Kind{kind.U32}, nil
-	case types.S16:
-		return []kind.Kind{kind.U32}, nil
-	case types.S32:
-		return []kind.Kind{kind.U32}, nil
-	case types.S64:
-		return []kind.Kind{kind.U64}, nil
 	case types.Float32:
 		return []kind.Kind{kind.Float32}, nil
 	case types.Float64:
@@ -61,9 +49,7 @@ func FlattenType(t types.ValType) ([]kind.Kind, error) {
 			flat = append(flat, kind.U32)
 		}
 		return flat, nil
-	case types.Own:
-		return []kind.Kind{kind.U32}, nil
-	case types.Borrow:
+	case types.Own, types.Borrow:
 		return []kind.Kind{kind.U32}, nil
 	}
 	return nil, fmt.Errorf("flatten_type: unable to match type %T", t)

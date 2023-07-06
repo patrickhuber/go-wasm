@@ -25,33 +25,17 @@ const (
 func Size(vt types.ValType) (uint32, error) {
 	vt = Despecialize(vt)
 	switch t := vt.(type) {
-	case types.Bool:
-		return SizeOfBool, nil
-	case types.U8:
+	case types.U8, types.S8, types.Bool:
 		return SizeOfU8, nil
-	case types.U16:
+	case types.U16, types.S16:
 		return SizeOfU16, nil
-	case types.U32:
+	case types.U32, types.S32, types.Float32:
 		return SizeOfU32, nil
-	case types.U64:
+	case types.U64, types.S64, types.Float64:
 		return SizeOfU64, nil
-	case types.S8:
-		return SizeOfS8, nil
-	case types.S16:
-		return SizeOfS16, nil
-	case types.S32:
-		return SizeOfS32, nil
-	case types.S64:
-		return SizeOfS64, nil
-	case types.Float32:
-		return SizeOfFloat32, nil
-	case types.Float64:
-		return SizeOfFloat64, nil
 	case types.Char:
 		return SizeOfChar, nil
-	case types.List:
-		return 8, nil
-	case types.String:
+	case types.List, types.String:
 		return 8, nil
 	case types.Record:
 		return SizeRecord(t)
@@ -59,9 +43,7 @@ func Size(vt types.ValType) (uint32, error) {
 		return SizeVariant(t)
 	case types.Flags:
 		return SizeFlags(t)
-	case types.Own:
-		return 4, nil
-	case types.Borrow:
+	case types.Own, types.Borrow:
 		return 4, nil
 	}
 	return 0, fmt.Errorf("size: unable to match type %T", vt)

@@ -156,7 +156,7 @@ func StoreInt(c *types.CallContext, val any, ptr uint32, nbytes uint32, signed b
 	case int:
 		return fmt.Errorf("unable to store int. Use sized variant")
 	case uint:
-		return fmt.Errorf("unable to store uint. Use sized variants")
+		return fmt.Errorf("unable to store uint. Use sized variant")
 	}
 
 	if sign != signed {

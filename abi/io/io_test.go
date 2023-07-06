@@ -108,6 +108,23 @@ func TestWithLower(t *testing.T) {
 		})
 	}
 }
+
+func NewContext(memory *bytes.Buffer, enc encoding.Encoding, realloc types.ReallocFunc, postReturn types.PostReturnFunc) *types.CallContext {
+	options := NewOptions(memory, enc, realloc, postReturn)
+	return &types.CallContext{
+		Options: options,
+	}
+}
+
+func NewOptions(memory *bytes.Buffer, enc encoding.Encoding, realloc types.ReallocFunc, postReturn types.PostReturnFunc) *types.CanonicalOptions {
+	return &types.CanonicalOptions{
+		Memory:         memory,
+		StringEncoding: enc,
+		Realloc:        realloc,
+		PostReturn:     postReturn,
+	}
+}
+
 func Bool() types.Bool { return types.NewBool() }
 
 func S8() types.S8   { return types.NewS8() }
