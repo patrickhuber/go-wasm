@@ -2,31 +2,37 @@ package io
 
 import (
 	"encoding/binary"
-	"fmt"
 	"math"
 
+	. "github.com/patrickhuber/go-types"
+
+	"github.com/patrickhuber/go-types/assert"
+	"github.com/patrickhuber/go-types/handle"
+	"github.com/patrickhuber/go-types/result"
+	"github.com/patrickhuber/go-types/tuple"
+	"github.com/patrickhuber/go-wasm/abi/trap"
 	"github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/encoding"
 	"golang.org/x/text/encoding/charmap"
 )
 
-func Store(c *types.CallContext, val any, t types.ValType, ptr uint32) error {
-	if err := StoreValidate(c, t, ptr); err != nil {
-		return err
+func If[T any](condition bool, value T, otherwise T){
+	if condition{
+		return value
 	}
+	return otherwise
+}
+
+func Store(c *types.CallContext, val any, t types.ValType, ptr uint32) (res Result[any]) {
+	defer handle.Error(&res)
+	
+	_ = StoreValidate(c, t, ptr).Unwrap()
 
 	t = Despecialize(t)
 	switch vt := t.(type) {
 	case types.Bool:
-		var v byte = 0
-		b, ok := val.(bool)
-		if !ok {
-			return types.NewCastError(val, "bool")
-		}
-		if b {
-			v = 1
-		}
-		return StoreInt(c, v, ptr, SizeOfBool, false)
+		b := Cast[any, bool](val).Unwrap()		
+		return StoreInt(c, If[uint32](b, 0, 1), ptr, SizeOfBool, false)
 	case types.U8:
 		return StoreInt(c, val, ptr, SizeOfU8, false)
 	case types.U16:
@@ -48,16 +54,10 @@ func Store(c *types.CallContext, val any, t types.ValType, ptr uint32) error {
 	case types.Float64:
 		return StoreFloat(c, val, ptr, SizeOfFloat64)
 	case types.Char:
-		r, ok := val.(rune)
-		if !ok {
-			return types.NewCastError(val, "rune")
-		}
+		r := Cast[any, rune](val).Unwrap()
 		return StoreInt(c, uint32(r), ptr, SizeOfChar, false)
 	case types.String:
-		s, ok := val.(string)
-		if !ok {
-			return types.NewCastError(val, "string")
-		}
+		s := Cast[any, string](val).Unwrap()
 		return StoreString(c, s, ptr)
 	case types.List:
 		return StoreList(c, val, ptr, vt.Type())
@@ -71,33 +71,21 @@ func Store(c *types.CallContext, val any, t types.ValType, ptr uint32) error {
 	return types.TrapWith("Store: unrecognized type %T", t)
 }
 
-func StoreValidate(c *types.CallContext, t types.ValType, ptr uint32) error {
-	alignment, err := Alignment(t)
-	if err != nil {
-		return err
-	}
+func StoreValidate(c *types.CallContext, t types.ValType, ptr uint32) (res Result[any]) {
+	defer handle.Error(&res)
+	alignment := Alignment(t).Unwrap()
+	align := AlignTo(ptr, alignment)
+	assert.Truef(ptr == align, "Store: ptr %d is not aligned to %d", ptr, alignment)
 
-	align, err := AlignTo(ptr, alignment)
-	if err != nil {
-		return err
-	}
-	if ptr != align {
-		return fmt.Errorf("Store: ptr %d is not aligned to %d", ptr, alignment)
-	}
+	size := Size(t).Unwrap()
 
-	size, err := Size(t)
-	if err != nil {
-		return err
-	}
+	assert.Falsef(ptr+size > uint32(c.Options.Memory.Len()),
+	"Store: %d exceeds memory length %d", ptr+size, c.Options.Memory.Len())
 
-	if ptr+size > uint32(c.Options.Memory.Len()) {
-		return fmt.Errorf("Store: %d exceeds memory length %d", ptr+size, c.Options.Memory.Len())
-	}
-
-	return err
+	return result.Ok[any](nil)
 }
 
-func StoreFloat(c *types.CallContext, val any, ptr uint32, nbytes uint32) error {
+func StoreFloat(c *types.CallContext, val any, ptr uint32, nbytes uint32) Result[any] {
 	if nbytes == SizeOfFloat32 {
 		f := val.(float32)
 		i := math.Float32bits(f)
@@ -115,7 +103,7 @@ func StoreUInt32(c *types.CallContext, val uint32, ptr uint32) error {
 	return nil
 }
 
-func StoreInt(c *types.CallContext, val any, ptr uint32, nbytes uint32, signed bool) error {
+func StoreInt(c *types.CallContext, val any, ptr uint32, nbytes uint32, signed bool) (res Result[any]) {
 	var u64 uint64
 	var max uint64
 	var min int64 = 0
@@ -153,30 +141,20 @@ func StoreInt(c *types.CallContext, val any, ptr uint32, nbytes uint32, signed b
 		sign = true
 		max = math.MaxInt64
 		min = math.MinInt64
-	case int:
-		return fmt.Errorf("unable to store int. Use sized variant")
-	case uint:
-		return fmt.Errorf("unable to store uint. Use sized variant")
+	default:
+		return result.Errorf[any]("unable to store %T. Use sized variant", val)
 	}
 
-	if sign != signed {
-		signCh := "+"
-		if sign {
-			signCh = "-"
-		}
-		return fmt.Errorf("invalid integer sign %v for value %v", signCh, val)
-	}
+	assert.Truef(sign == signed, "invalid integer sign")
+	assert.Truef(signed && u64 <= max, "invalid integer %d exceeds max value %d", val, max)
 
-	if !signed && u64 > max {
-		return fmt.Errorf("invalid integer %d exceeds max value %d", val, max)
-	}
 	if signed {
 		s64 := int64(u64)
 		if s64 > int64(max) {
-			return fmt.Errorf("invalid integer %d exceeds max value %d", val, int64(max))
+			return result.Errorf[any]("invalid integer %d exceeds max value %d", val, int64(max))
 		}
 		if s64 < min {
-			return fmt.Errorf("invalid integer %d exceeds min value %d", val, min)
+			return result.Errorf[any]("invalid integer %d exceeds min value %d", val, min)
 		}
 	}
 
@@ -191,7 +169,7 @@ func StoreInt(c *types.CallContext, val any, ptr uint32, nbytes uint32, signed b
 	case SizeOfS64:
 		binary.LittleEndian.PutUint64(buf, u64)
 	}
-	return nil
+	return result.Ok[any](nil)
 }
 
 // StoreString stores the string to linear memory using the context encoding
@@ -296,10 +274,7 @@ func StoreStringCopy(cx *types.CallContext, src string, srcCodeUnits uint32, dst
 	if err != nil {
 		return 0, 0, err
 	}
-	align, err := AlignTo(ptr, dstAlignment)
-	if err != nil {
-		return 0, 0, err
-	}
+	align := AlignTo(ptr, dstAlignment)
 	if ptr != align {
 		return 0, 0, types.TrapWith("ptr %d is not aligned to destination %d", ptr, dstAlignment)
 	}
@@ -331,17 +306,11 @@ func StoreUtf8ToUtf16(cx *types.CallContext, src string, srcCodeUnits uint32) (u
 		return 0, 0, err
 	}
 
-	align, err := AlignTo(ptr, 2)
-	if err != nil {
-		return 0, 0, err
-	}
-	if ptr != align {
-		return 0, 0, types.TrapWith("ptr %d is not alinged to 2", ptr)
-	}
-
-	if ptr+worstCaseSize > uint32(cx.Options.Memory.Len()) {
-		return 0, 0, types.TrapWith("worst case size %d is greater than memory size %d", ptr+worstCaseSize, cx.Options.Memory.Len())
-	}
+	align := AlignTo(ptr, 2)
+	trap.Iff(ptr == align, "ptr %d is not alinged to 2", ptr)
+	trap.Iff(ptr+worstCaseSize > uint32(cx.Options.Memory.Len()),
+		"worst case size %d is greater than memory size %d",
+		ptr+worstCaseSize, cx.Options.Memory.Len())
 
 	encoded, err := encoding.EncodeString(encoding.NewUTF16(), src)
 	if err != nil {
@@ -353,22 +322,13 @@ func StoreUtf8ToUtf16(cx *types.CallContext, src string, srcCodeUnits uint32) (u
 	copy(buf, encoded)
 
 	if len(encoded) < int(worstCaseSize) {
-
 		ptr, err = cx.Options.Realloc(ptr, worstCaseSize, 2, uint32(len(encoded)))
 		if err != nil {
 			return 0, 0, err
 		}
-		align, err := AlignTo(ptr, 2)
-		if err != nil {
-			return 0, 0, err
-		}
-		if ptr != align {
-			return 0, 0, types.TrapWith("ptr %d could not be aligned to 2", ptr)
-		}
-
-		if hiPtr > uint32(cx.Options.Memory.Len()) {
-			return 0, 0, types.TrapWith("ptr %d is greater than memory size %d", hiPtr, cx.Options.Memory.Len())
-		}
+		align := AlignTo(ptr, 2)
+		trap.Iff(ptr != align, "ptr %d could not be aligned to 2", ptr)
+		trap.Iff(hiPtr > uint32(cx.Options.Memory.Len()), "ptr %d is greater than memory size %d", hiPtr, cx.Options.Memory.Len())
 	}
 
 	codeUnits := uint32(len(encoded) / 2)
@@ -387,63 +347,29 @@ func StoreList(cx *types.CallContext, v any, ptr uint32, elementType types.ValTy
 	return StoreUInt32(cx, length, ptr+4)
 }
 
-func StoreListIntoRange(cx *types.CallContext, v any, elementType types.ValType) (uint32, uint32, error) {
-	slice, err := ToSlice(v)
-	if err != nil {
-		return 0, 0, err
-	}
+func StoreListIntoRange(cx *types.CallContext, v any, elementType types.ValType) (res Result[Tuple2[uint32, uint32]]) {
+	defer handle.Error(&res)
 
-	size, err := Size(elementType)
-	if err != nil {
-		return 0, 0, err
-	}
+	slice := Cast[any, []any](v).Unwrap()
+	size := Size(elementType).Unwrap()
 
-	byteLengthInt := len(slice) * int(size)
-	if byteLengthInt >= (1 << 32) {
-		return 0, 0, types.TrapWith("byte length %d exceeds max of %d", byteLengthInt, (1 << 32))
-	}
-	byteLength := uint32(byteLengthInt)
+	byteLength := len(slice) * int(size)
+	trap.Iff(byteLength >= (1<<32), "byte length %d exceeds max of %d", byteLength, (1 << 32))
 
-	alignment, err := Alignment(elementType)
-	if err != nil {
-		return 0, 0, err
-	}
+	alignment := Alignment(elementType).Unwrap()
+	ptr := cx.Options.Realloc(0, 0, alignment, uint32(byteLength)).Unwrap()
 
-	ptr, err := cx.Options.Realloc(0, 0, alignment, byteLength)
-	if err != nil {
-		return 0, 0, err
-	}
+	align := AlignTo(ptr, alignment)
+	trap.Iff(ptr != align, "ptr %d not aligned to %d", ptr, alignment)
 
-	align, err := AlignTo(ptr, alignment)
-	if err != nil {
-		return 0, 0, err
-	}
-	if ptr != align {
-		return 0, 0, types.TrapWith("ptr %d not aligned to %d", ptr, alignment)
-	}
-
-	if ptr+byteLength > uint32(cx.Options.Memory.Len()) {
-		return 0, 0, types.TrapWith("ptr %d exceeds mememory size %d", ptr+byteLength, cx.Options.Memory.Len())
-	}
+	newPtr := ptr + uint32(byteLength)
+	trap.Iff(newPtr > uint32(cx.Options.Memory.Len()), "ptr %d exceeds mememory size %d", newPtr, cx.Options.Memory.Len()))
 
 	for i, element := range slice {
-		u32Index := uint32(i)
-		err = Store(cx, element, elementType, ptr+u32Index*size)
-		if err != nil {
-			return 0, 0, err
-		}
+		_ = Store(cx, element, elementType, ptr+uint32(i)*size).Unwrap()
 	}
 
-	return ptr, uint32(len(slice)), nil
-}
-
-func ToSlice(val any) ([]any, error) {
-	switch v := val.(type) {
-	case []any:
-		return v, nil
-	default:
-		return nil, types.NewCastError(val, "[]any")
-	}
+	return result.Ok(tuple.New2(ptr, uint32(len(slice))))
 }
 
 func StoreRecord(cx *types.CallContext, val any, ptr uint32, r types.Record) error {
@@ -477,7 +403,8 @@ func StoreRecord(cx *types.CallContext, val any, ptr uint32, r types.Record) err
 	return nil
 }
 
-func StoreVariant(cx *types.CallContext, val any, ptr uint32, v types.Variant) error {
+func StoreVariant(cx *types.CallContext, val any, ptr uint32, v types.Variant) (res Result[any]) {
+	defer handle.Error(&res)
 	caseIndex, caseValue, err := MatchCase(val, v.Cases())
 	if err != nil {
 		return err
@@ -510,16 +437,12 @@ func StoreVariant(cx *types.CallContext, val any, ptr uint32, v types.Variant) e
 	return Store(cx, caseValue, c.Type, ptr)
 }
 
-func StoreFlags(c *types.CallContext, val any, ptr uint32, f types.Flags) error {
+func StoreFlags(c *types.CallContext, val any, ptr uint32, f types.Flags) (res Result[any]) {
+	defer handle.Error(&res)
+
 	vMap := val.(map[string]any)
-	i, err := PackFlagsIntoInt(vMap, f)
-	if err != nil {
-		return err
-	}
-	size, err := Size(f)
-	if err != nil {
-		return err
-	}
+	i := PackFlagsIntoInt(vMap, f).Unwrap()
+	size := Size(f).Unwrap()
 	return StoreInt(c, i, ptr, size, false)
 }
 
@@ -531,7 +454,7 @@ func ToMapStringAny(val any) (map[string]any, error) {
 	return nil, types.NewCastError(val, "map[string]any")
 }
 
-func PackFlagsIntoInt(v map[string]any, flags types.Flags) (uint64, error) {
+func PackFlagsIntoInt(v map[string]any, flags types.Flags) Result[uint64] {
 	var packed uint64 = 0
 	shift := 0
 	for _, label := range flags.Labels() {

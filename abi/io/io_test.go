@@ -9,8 +9,12 @@ import (
 	"strconv"
 	"testing"
 
+	match "github.com/patrickhuber/go-types"
+	"github.com/patrickhuber/go-types/assert"
+	"github.com/patrickhuber/go-types/handle"
 	"github.com/patrickhuber/go-wasm/abi/io"
 	"github.com/patrickhuber/go-wasm/abi/kind"
+	"github.com/patrickhuber/go-wasm/abi/trap"
 	"github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/abi/values"
 	"github.com/patrickhuber/go-wasm/encoding"
@@ -262,17 +266,12 @@ func Slice[T any](values ...T) []T {
 
 func test(t types.ValType, valsToLift []any, v any,
 	cx *types.CallContext,
-	dstEncoding encoding.Encoding, lowerT types.ValType, lowerV any) error {
+	dstEncoding encoding.Encoding, lowerT types.ValType, lowerV any) (res match.Result[any]) {
 
-	flattened, err := io.FlattenType(t)
-	if err != nil {
-		return err
-	}
-	vs, err := zip(flattened, valsToLift)
-	if err != nil {
-		return err
-	}
+	defer handle.Error(&res)
 
+	flattened := io.FlattenType(t).Unwrap()
+	vs := zip(flattened, valsToLift).Unwrap()
 	vi := values.NewIterator(vs...)
 
 	// this error handling logic is strange
@@ -290,12 +289,8 @@ func test(t types.ValType, valsToLift []any, v any,
 		return err
 	}
 
-	if vi.Index() != vi.Length() {
-		return types.TrapWith("value iterator index %d exceeds length %d", vi.Index(), vi.Length())
-	}
-	if !reflect.DeepEqual(got, v) {
-		return fmt.Errorf("initial lift_flat() expected %v but got %v", v, got)
-	}
+	trap.Iff(vi.Index() != vi.Length(), "value iterator index %d exceeds length %d", vi.Index(), vi.Length())
+	trap.Iff(!reflect.DeepEqual(got, v), "initial lift_flat() expected %v but got %v", v, got)
 
 	lowerT = coalesce(lowerT, t)
 	lowerV = coalesce(lowerV, v)
@@ -325,12 +320,10 @@ func test(t types.ValType, valsToLift []any, v any,
 }
 
 // zip emulates python zip but only used here
-func zip(types []kind.Kind, v []any) ([]values.Value, error) {
+func zip(types []kind.Kind, v []any) (res match.Result[[]values.Value]) {
 	vs := []values.Value{}
 
-	if len(v) != len(types) {
-		return nil, fmt.Errorf("expected len(values)=%d to equal len(types)=%d", len(v), len(types))
-	}
+	assert.Truef(len(v) == len(types), "expected len(values)=%d to equal len(types)=%d", len(v), len(types))
 	for i := 0; i < len(v); i++ {
 		t := types[i]
 		var vals []values.Value

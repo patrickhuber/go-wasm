@@ -3,19 +3,26 @@ package io
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"math"
 
+	. "github.com/patrickhuber/go-types"
+	"github.com/patrickhuber/go-types/handle"
+	"github.com/patrickhuber/go-types/result"
+
+	"github.com/patrickhuber/go-wasm/abi/trap"
 	"github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/encoding"
 )
 
-func Load(cx *types.CallContext, t types.ValType, ptr uint32) (any, error) {
+func Load(cx *types.CallContext, t types.ValType, ptr uint32) (res Result[any]) {
+	defer handle.Error(&res)
+
 	t = Despecialize(t)
 
 	switch vt := t.(type) {
 	case types.Bool:
-		return LoadBool(cx, ptr)
+		b := LoadBool(cx, ptr).Unwrap()
+		return Cast[bool, any](b)
 	case types.U8:
 		return LoadInt(cx, ptr, t)
 	case types.U16:
@@ -49,120 +56,85 @@ func Load(cx *types.CallContext, t types.ValType, ptr uint32) (any, error) {
 	case types.Flags:
 		return LoadFlags(cx, ptr, vt)
 	case types.Own:
-		i, err := LoadUInt32(cx, ptr)
-		if err != nil {
-			return nil, err
-		}
+		i := LoadUInt32(cx, ptr).Unwrap()
 		return LiftOwn(cx, i, vt)
 	case types.Borrow:
-		i, err := LoadUInt32(cx, ptr)
-		if err != nil {
-			return nil, err
-		}
+		i := LoadUInt32(cx, ptr).Unwrap()
 		return LiftBorrow(cx, i, vt)
 	}
-	return nil, fmt.Errorf("unrecognized type %T", t)
+	return result.Errorf[any]("unrecognized type %T", t)
 }
 
-func LoadChar(cx *types.CallContext, ptr uint32, t types.ValType) (any, error) {
-	switch t.(type) {
-	case types.Char:
-	default:
-		return nil, fmt.Errorf("LoadChar unable to match type %T", t)
-	}
-
-	i, err := LoadIntWithSize(cx, ptr, SizeOfChar, false)
-	if err != nil {
-		return nil, err
-	}
-
-	u32, ok := i.(uint32)
-	if !ok {
-		return nil, types.NewCastError(i, "uint32")
-	}
-
-	return ConvertU32ToRune(u32)
+func LoadChar(cx *types.CallContext, ptr uint32, t types.ValType) (res Result[any]) {
+	defer handle.Error(&res)
+	t = Castf[types.ValType, types.Char](t, "load char unable to match type").Unwrap()
+	i := LoadIntWithSize(cx, ptr, SizeOfChar, false).Unwrap()
+	u32 := Cast[any, uint32](i).Unwrap()
+	r := ConvertU32ToRune(u32).Unwrap()
+	return result.Ok[any](r)
 }
 
-func ConvertU32ToRune(u32 uint32) (rune, error) {
-	if u32 >= 0x110000 {
-		return 0, types.TrapWith("u32 %d >= 0x110000", u32)
-	}
-	if 0xd800 <= u32 && u32 <= 0xdfff {
-		return 0, types.TrapWith(" 0xd800 <= %d <= 0xdfff", u32)
-	}
-	return rune(u32), nil
+func ConvertU32ToRune(u32 uint32) (res Result[rune]) {
+	defer handle.Error(&res)
+	trap.Iff(u32 >= 0x110000, "u32 %d >= 0x110000", u32)
+	trap.Iff(0xd800 <= u32 && u32 <= 0xdfff, " 0xd800 <= %d <= 0xdfff", u32)
+	return result.Ok(rune(u32))
 }
 
-func LoadBool(cx *types.CallContext, ptr uint32) (bool, error) {
-	i, err := LoadInt(cx, ptr, types.NewU8())
-	if err != nil {
-		return false, err
-	}
-	u8, ok := i.(uint8)
-	if !ok {
-		return false, types.NewCastError(i, "uint8")
-	}
-	return u8 != 0, nil
+func LoadBool(cx *types.CallContext, ptr uint32) (res Result[bool]) {
+	defer handle.Error(&res)
+	i := LoadInt(cx, ptr, types.NewU8()).Unwrap()
+	u8 := Cast[any, uint8](i).Unwrap()
+	return result.Ok(u8 != 0)
 }
 
-func LoadUInt32(cx *types.CallContext, ptr uint32) (uint32, error) {
-	val, err := LoadInt(cx, ptr, types.NewU32())
-	if err != nil {
-		return 0, err
-	}
-	u32, ok := val.(uint32)
-	if !ok {
-		return 0, types.NewCastError(val, "uint32")
-	}
-	return u32, nil
+func LoadUInt32(cx *types.CallContext, ptr uint32) (res Result[uint32]) {
+	defer handle.Error(&res)
+	val := LoadInt(cx, ptr, types.NewU32()).Unwrap()
+	return Cast[any, uint32](val)
 }
 
-func LoadUInt64(cx *types.CallContext, ptr uint32) (uint64, error) {
-	val, err := LoadInt(cx, ptr, types.NewU64())
-	if err != nil {
-		return 0, err
-	}
-	u64, ok := val.(uint64)
-	if !ok {
-		return 0, types.NewCastError(val, "uint64")
-	}
-	return u64, nil
+func LoadUInt64(cx *types.CallContext, ptr uint32) (res Result[uint64]) {
+	defer handle.Error(&res)
+	val := LoadInt(cx, ptr, types.NewU64()).Unwrap()
+	return Cast[any, uint64](val)
 }
 
-func LoadInt(c *types.CallContext, ptr uint32, t types.ValType) (any, error) {
-	size, err := Size(t)
-	if err != nil {
-		return nil, err
-	}
+func LoadInt(c *types.CallContext, ptr uint32, t types.ValType) (res Result[any]) {
+	defer handle.Error(&res)
+
+	size := Size(t).Unwrap()
 	buf := c.Options.Memory.Bytes()[ptr : ptr+size]
+
+	var value any
 	switch t.(type) {
 	case types.U8:
-		return buf[0], nil
+		value = buf[0]
 	case types.U16:
-		return binary.LittleEndian.Uint16(buf), nil
+		value = binary.LittleEndian.Uint16(buf)
 	case types.U32:
-		return binary.LittleEndian.Uint32(buf), nil
+		value = binary.LittleEndian.Uint32(buf)
 	case types.U64:
-		return binary.LittleEndian.Uint64(buf), nil
+		value = binary.LittleEndian.Uint64(buf)
 	case types.S8:
-		return int8(buf[0]), nil
+		value = int8(buf[0])
 	case types.S16:
-		return int16(binary.LittleEndian.Uint16(buf)), nil
+		value = int16(binary.LittleEndian.Uint16(buf))
 	case types.S32:
-		return int32(binary.LittleEndian.Uint32(buf)), nil
+		value = int32(binary.LittleEndian.Uint32(buf))
 	case types.S64:
-		return int64(binary.LittleEndian.Uint64(buf)), nil
+		value = int64(binary.LittleEndian.Uint64(buf))
 	default:
-		return uint32(0), nil
+		value = uint32(0)
 	}
+	return result.Ok(value)
 }
 
-func LoadIntWithSize(c *types.CallContext, ptr uint32, nbytes uint32, sign bool) (any, error) {
+func LoadIntWithSize(c *types.CallContext, ptr uint32, nbytes uint32, sign bool) Result[any] {
 	var t types.ValType
 	switch {
 	case nbytes == 0:
-		return uint32(0), nil
+		return result.Ok[any](uint32(0))
 	case nbytes == 1 && !sign:
 		t = types.NewU8()
 	case nbytes == 2 && !sign:
@@ -183,39 +155,33 @@ func LoadIntWithSize(c *types.CallContext, ptr uint32, nbytes uint32, sign bool)
 	return LoadInt(c, ptr, t)
 }
 
-func LoadFloat(cx *types.CallContext, ptr uint32, t types.ValType) (any, error) {
+func LoadFloat(cx *types.CallContext, ptr uint32, t types.ValType) (res Result[any]) {
+	defer handle.Error(&res)
 	switch t.(type) {
 	case types.Float32:
-		i, err := LoadUInt32(cx, ptr)
-		if err != nil {
-			return nil, err
-		}
-		return math.Float32frombits(i), nil
+		i := LoadUInt32(cx, ptr).Unwrap()
+		f := math.Float32frombits(i)
+		return result.Ok[any](f)
 	case types.Float64:
-		i, err := LoadUInt64(cx, ptr)
-		if err != nil {
-			return nil, err
-		}
-		return math.Float64frombits(i), nil
+		i := LoadUInt64(cx, ptr).Unwrap()
+		f := math.Float64frombits(i)
+		return result.Ok[any](f)
 	}
-	return nil, fmt.Errorf("LoadFloat: invalid float type %T", t)
+	return result.Errorf[any]("LoadFloat: invalid float type %T", t)
 }
 
-func LoadString(cx *types.CallContext, ptr uint32) (string, error) {
-	begin, err := LoadUInt32(cx, ptr)
-	if err != nil {
-		return "", err
-	}
+func LoadString(cx *types.CallContext, ptr uint32) (res Result[string]) {
+	defer handle.Error(&res)
+	begin := LoadUInt32(cx, ptr).Unwrap()
+
 	// is this byte order mark?
-	taggedCodeUnits, err := LoadUInt32(cx, ptr+4)
-	if err != nil {
-		return "", err
-	}
+	taggedCodeUnits := LoadUInt32(cx, ptr+4).Unwrap()
 	return LoadStringFromRange(cx, begin, taggedCodeUnits)
 }
 
-func LoadStringFromRange(cx *types.CallContext, ptr, taggedCodeUnits uint32) (string, error) {
-
+func LoadStringFromRange(cx *types.CallContext, ptr, taggedCodeUnits uint32) (res Result[string]) {
+	defer handle.Error(&res)
+	
 	srcEncoding := cx.Options.StringEncoding
 	tcu := UInt32ToTaggedCodeUnits(taggedCodeUnits)
 	if srcEncoding == encoding.Latin1Utf16 {
@@ -232,20 +198,11 @@ func LoadStringFromRange(cx *types.CallContext, ptr, taggedCodeUnits uint32) (st
 	}
 
 	byteLength := tcu.CodeUnits * uint32(codec.RuneSize())
-	align, err := AlignTo(ptr, uint32(codec.Alignment()))
+	align := AlignTo(ptr, uint32(codec.Alignment()))
 
-	if err != nil {
-		return "", err
-	}
-
-	if ptr != align {
-		return "", types.TrapWith("error aligning ptr %d to %d", ptr, uint32(codec.Alignment()))
-	}
-
-	if ptr+byteLength > uint32(cx.Options.Memory.Len()) {
-		return "", types.TrapWith("destination %d > memory size %d", ptr+byteLength, cx.Options.Memory.Len())
-	}
-
+	trap.Iff(ptr != align, "error aligning ptr %d to %d", ptr, uint32(codec.Alignment()))
+	trap.Iff(ptr+byteLength > uint32(cx.Options.Memory.Len(),"destination %d > memory size %d", ptr+byteLength, cx.Options.Memory.Len())
+	
 	buf := cx.Options.Memory.Bytes()[ptr : ptr+byteLength]
 	return encoding.DecodeString(codec, bytes.NewReader(buf))
 }

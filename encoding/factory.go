@@ -3,12 +3,15 @@ package encoding
 import (
 	"fmt"
 
+	match "github.com/patrickhuber/go-types"
+	"github.com/patrickhuber/go-types/option"
+	"github.com/patrickhuber/go-types/result"
 	"golang.org/x/text/encoding/unicode"
 )
 
 type Factory interface {
-	Lookup(Encoding) (Codec, bool)
-	Get(Encoding) (Codec, error)
+	Lookup(Encoding) match.Option[Codec]
+	Get(Encoding) match.Result[Codec]
 }
 
 type factory struct {
@@ -38,15 +41,16 @@ func NewFactory(codecs ...Codec) Factory {
 
 var ErrNotExist = fmt.Errorf("does not exist")
 
-func (f *factory) Get(enc Encoding) (Codec, error) {
-	codec, ok := f.Lookup(enc)
-	if ok {
-		return codec, nil
+func (f *factory) Get(enc Encoding) (res match.Result[Codec]) {
+	switch codec := f.Lookup(enc).(type) {
+	case match.Some[Codec]:
+		return result.Ok(codec.Value())
+	default:
+		return result.Errorf[Codec]("encoding %s %w", string(enc), ErrNotExist)
 	}
-	return nil, fmt.Errorf("encoding %s %w", string(enc), ErrNotExist)
 }
 
-func (f *factory) Lookup(enc Encoding) (Codec, bool) {
+func (f *factory) Lookup(enc Encoding) match.Option[Codec] {
 	c, ok := f.data[enc]
-	return c, ok
+	return option.New(c, ok)
 }

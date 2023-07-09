@@ -10,6 +10,18 @@ import (
 )
 
 func TestRoundTrip(t *testing.T) {
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+		err, ok := r.(error)
+		if !ok {
+			return
+		}
+		t.Fatal(err)
+	}()
+
 	encodings := []encoding.Encoding{
 		encoding.UTF8,
 		encoding.UTF16,
@@ -40,13 +52,12 @@ func TestRoundTrip(t *testing.T) {
 	}
 
 	factory := encoding.DefaultFactory()
-	fallback, err := factory.Get(encoding.UTF16LE)
-	require.Nil(t, err)
+	fallback := factory.Get(encoding.UTF16LE).Unwrap()
 
 	for i, test := range tests {
 		for _, enc := range encodings {
-			codec, err := factory.Get(enc)
-			require.Nil(t, err)
+
+			codec := factory.Get(enc).Unwrap()
 			name := fmt.Sprintf("iteration %d codec %s", i, codec.Encoding())
 			t.Run(name, func(t *testing.T) {
 

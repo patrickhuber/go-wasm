@@ -3,26 +3,37 @@ package io
 import (
 	"fmt"
 
+	. "github.com/patrickhuber/go-types"
+	"github.com/patrickhuber/go-types/handle"
+	"github.com/patrickhuber/go-types/result"
+	"github.com/patrickhuber/go-types/tuple"
 	"github.com/patrickhuber/go-wasm/abi/kind"
+	"github.com/patrickhuber/go-wasm/abi/trap"
 	"github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/abi/values"
 	"github.com/patrickhuber/go-wasm/internal/collections"
 )
 
-func CanonLift(
-	opts *types.CanonicalOptions,
+func SetError[T any](res Result[T], err error) Result[T] {
+	return NewError[T](err)
+}
+
+func CanonLift(opts *types.CanonicalOptions,
 	inst *types.ComponentInstance,
-	callee func(any) (any, error),
+	callee func(any) Result[any],
 	ft types.FuncType,
 	args []any,
 	maxFlatParams int,
-	maxFlatResults int) ([]any, types.PostReturnFunc, error) {
+	maxFlatResults int) (res Result[Tuple2[[]any, types.PostReturnFunc]]) {
+
+	// handle any try failures
+	handle.Error(&res)
 
 	if !inst.MayEnter {
-		return nil, nil, types.TrapWith("ComponentInstance MayEnter must be true")
+		return SetError(res, types.TrapWith("ComponentInstance MayEnter must be true"))
 	}
 	if !inst.MayLeave {
-		return nil, nil, fmt.Errorf("ComponentInstance MayLeave must be true")
+		return SetError(res, fmt.Errorf("ComponentInstance MayLeave must be true"))
 	}
 	cx := &types.CallContext{
 		Options:  opts,
@@ -30,41 +41,27 @@ func CanonLift(
 	}
 
 	inst.MayLeave = false
-
-	flatArgs, err := LowerValues(cx, maxFlatParams, args, ft.ParamTypes(), nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
+	flatArgs := result.New(
+		LowerValues(cx, maxFlatParams, args, ft.ParamTypes(), nil)).Unwrap()
 	inst.MayLeave = true
 
-	flatResults, err := callee(flatArgs)
-	if err != nil {
-		return nil, nil, err
-	}
-
+	flatResults := callee(flatArgs).Unwrap()
 	results, ok := flatResults.([]any)
 	if !ok {
-		return nil, nil, types.NewCastError(flatResults, "[]any")
+		SetError(res, types.NewCastError(flatResults, "[]any"))
 	}
 
-	valueResults, err := collections.Select[any, values.Value](results, func(source any) (values.Value, error) {
+	valueResults := result.New(collections.Select[any, values.Value](results, func(source any) (values.Value, error) {
 		v, ok := source.(values.Value)
 		if !ok {
 			return nil, types.NewCastError(source, "values.Value")
 		}
 		return v, nil
-	})
-	if err != nil {
-		return nil, nil, err
-	}
+	})).Unwrap()
 
-	lifted, err := LiftValues(cx, maxFlatResults, values.NewIterator(valueResults...), ft.ResultTypes())
-	if err != nil {
-		return nil, nil, err
-	}
+	lifted := LiftValues(cx, maxFlatResults, values.NewIterator(valueResults...), ft.ResultTypes()).Unwrap()
 
-	postResult := func() {
+	var postResult types.PostReturnFunc = func() {
 		if opts.PostReturn != nil {
 			// python code has this set as:
 			// opts.PostReturn(flatResults)
@@ -72,17 +69,12 @@ func CanonLift(
 		}
 		cx.ExitCall()
 	}
-
-	return lifted, postResult, nil
+	return result.Ok(tuple.New2(lifted, postResult))
 }
 
-func LiftValues(cx *types.CallContext, maxFlat int, vi values.ValueIterator, ts []types.ValType) ([]any, error) {
-	flatTypes, err := FlattenTypes(ts)
-
-	if err != nil {
-		return nil, err
-	}
-
+func LiftValues(cx *types.CallContext, maxFlat int, vi values.ValueIterator, ts []types.ValType) (res Result[[]any]) {
+	defer handle.Error(&res)
+	flatTypes := FlattenTypes(ts).Unwrap()
 	if len(flatTypes) <= maxFlat {
 		liftFlat := func(t types.ValType) (any, error) {
 			return LiftFlat(cx, vi, t)
@@ -90,45 +82,22 @@ func LiftValues(cx *types.CallContext, maxFlat int, vi values.ValueIterator, ts 
 		return collections.Select(ts, liftFlat)
 	}
 
-	anyPtr, err := vi.Next(kind.U32)
-	if err != nil {
-		return nil, err
-	}
-
-	ptr, ok := anyPtr.(uint32)
-	if !ok {
-		return nil, types.NewCastError(anyPtr, "uint32")
-	}
+	ptr := Cast[any, uint32](vi.Next(kind.U32).Unwrap()).Unwrap()
 
 	tupleType := types.NewTuple(ts...)
 
-	alignment, err := Alignment(tupleType)
-	if err != nil {
-		return nil, err
-	}
+	alignment := Alignment(tupleType).Unwrap()
+	aligned := AlignTo(ptr, alignment)
 
-	aligned, err := AlignTo(ptr, alignment)
-	if err != nil {
-		return nil, err
-	}
+	trap.Iff(ptr != aligned, "ptr %d not aligned to %d", ptr, aligned)
 
-	if ptr != aligned {
-		return nil, types.TrapWith("ptr %d not aligned to %d", ptr, aligned)
-	}
+	size := Size(tupleType).Unwrap()
 
-	size, err := Size(tupleType)
-	if err != nil {
-		return nil, err
-	}
+	trap.Iff(ptr+size > uint32(cx.Options.Memory.Len()),
+		"ptr %d + offset %d is greater than len(memory) %d",
+		ptr, size, cx.Options.Memory.Len())
 
-	if ptr+size > uint32(cx.Options.Memory.Len()) {
-		return nil, types.TrapWith("ptr %d + offset %d is greater than len(memory) %d", ptr, size, cx.Options.Memory.Len())
-	}
-
-	load, err := Load(cx, tupleType, ptr)
-	if err != nil {
-		return nil, err
-	}
+	load := Load(cx, tupleType, ptr).Unwrap()
 
 	m, ok := load.(map[string]any)
 	if !ok {

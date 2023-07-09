@@ -1,43 +1,44 @@
 package io
 
 import (
-	"fmt"
+	. "github.com/patrickhuber/go-types"
+	"github.com/patrickhuber/go-types/handle"
+	"github.com/patrickhuber/go-types/result"
+	"github.com/patrickhuber/go-types/tuple"
 
 	"github.com/patrickhuber/go-wasm/abi/kind"
 	"github.com/patrickhuber/go-wasm/abi/types"
 )
 
-func FlattenTypes(ts []types.ValType) ([]kind.Kind, error) {
+func FlattenTypes(ts []types.ValType) (res Result[[]kind.Kind]) {
+	defer handle.Error(&res)
 	flat := []kind.Kind{}
 	for _, t := range ts {
-		flattened, err := FlattenType(t)
-		if err != nil {
-			return nil, err
-		}
+		flattened := FlattenType(t).Unwrap()
 		flat = append(flat, flattened...)
 	}
-	return flat, nil
+	return result.Ok(flat)
 }
 
-func FlattenType(t types.ValType) ([]kind.Kind, error) {
+func FlattenType(t types.ValType) Result[[]kind.Kind] {
 	t = Despecialize(t)
 	switch vt := t.(type) {
 	case types.Bool, types.U8, types.U16, types.U32:
-		return []kind.Kind{kind.U32}, nil
+		return result.Ok([]kind.Kind{kind.U32})
 	case types.U64, types.S64:
-		return []kind.Kind{kind.U64}, nil
+		return result.Ok([]kind.Kind{kind.U64})
 	case types.S8, types.S16, types.S32:
-		return []kind.Kind{kind.U32}, nil
+		return result.Ok([]kind.Kind{kind.U32})
 	case types.Float32:
-		return []kind.Kind{kind.Float32}, nil
+		return result.Ok([]kind.Kind{kind.Float32})
 	case types.Float64:
-		return []kind.Kind{kind.Float64}, nil
+		return result.Ok([]kind.Kind{kind.Float64})
 	case types.Char:
-		return []kind.Kind{kind.U32}, nil
+		return result.Ok([]kind.Kind{kind.U32})
 	case types.String:
-		return []kind.Kind{kind.U32, kind.U32}, nil
+		return result.Ok([]kind.Kind{kind.U32})
 	case types.List:
-		return []kind.Kind{kind.U32, kind.U32}, nil
+		return result.Ok([]kind.Kind{kind.U32})
 	case types.Record:
 		return FlattenRecord(vt)
 	case types.Variant:
@@ -48,35 +49,30 @@ func FlattenType(t types.ValType) ([]kind.Kind, error) {
 		for i := uint32(0); i < n; i++ {
 			flat = append(flat, kind.U32)
 		}
-		return flat, nil
+		return result.Ok(flat)
 	case types.Own, types.Borrow:
-		return []kind.Kind{kind.U32}, nil
+		return result.Ok([]kind.Kind{kind.U32})
 	}
-	return nil, fmt.Errorf("flatten_type: unable to match type %T", t)
+	return result.Errorf[[]kind.Kind]("flatten_type: unable to match type %T", t)
 }
 
-func FlattenRecord(r types.Record) ([]kind.Kind, error) {
+func FlattenRecord(r types.Record) Result[[]kind.Kind] {
 	flat := []kind.Kind{}
 	for _, f := range r.Fields() {
-		flattened, err := FlattenType(f.Type)
-		if err != nil {
-			return nil, err
-		}
+		flattened := FlattenType(f.Type).Unwrap()
 		flat = append(flat, flattened...)
 	}
-	return flat, nil
+	return result.Ok(flat)
 }
 
-func FlattenVariant(v types.Variant) ([]kind.Kind, error) {
+func FlattenVariant(v types.Variant) (res Result[[]kind.Kind]) {
+	defer handle.Error(&res)
 	flat := []kind.Kind{}
 	for _, c := range v.Cases() {
 		if c.Type == nil {
 			continue
 		}
-		flattened, err := FlattenType(c.Type)
-		if err != nil {
-			return nil, err
-		}
+		flattened := FlattenType(c.Type).Unwrap()
 		for i, ft := range flattened {
 			if i < len(flat) {
 				flat[i] = join(flat[i], ft)
@@ -85,54 +81,40 @@ func FlattenVariant(v types.Variant) ([]kind.Kind, error) {
 			}
 		}
 	}
-	dt, err := DiscriminantType(v.Cases())
-	if err != nil {
-		return nil, err
-	}
-
-	flattened, err := FlattenType(dt)
-	if err != nil {
-		return nil, err
-	}
-	return append(flattened, flat...), nil
+	dt := DiscriminantType(v.Cases()).Unwrap()
+	flattened := FlattenType(dt).Unwrap()
+	return result.Ok(append(flattened, flat...))
 }
 
-func FlattenFuncTypeLower(ft types.FuncType, maxFlatParams int, maxFlatResults int) (types.CoreFuncType, error) {
-	flatParams, flatResults, err := flattenFuncType(ft, maxFlatParams)
-	if err != nil {
-		return nil, err
-	}
+func FlattenFuncTypeLower(ft types.FuncType, maxFlatParams int, maxFlatResults int) (res Result[types.CoreFuncType]) {
+	defer handle.Error(&res)
+	flatParams, flatResults := flattenFuncType(ft, maxFlatParams).Unwrap().Deconstruct()
+
 	if len(flatResults) > maxFlatResults {
 		flatParams = append(flatParams, kind.U32)
 		flatResults = []kind.Kind{}
 	}
-	return types.NewCoreFuncType(flatParams, flatResults), nil
+	return result.Ok(types.NewCoreFuncType(flatParams, flatResults))
 }
 
-func FlattenFuncTypeLift(ft types.FuncType, maxFlatParams int, maxFlatResults int) (types.CoreFuncType, error) {
-	flatParams, flatResults, err := flattenFuncType(ft, maxFlatParams)
-	if err != nil {
-		return nil, err
-	}
+func FlattenFuncTypeLift(ft types.FuncType, maxFlatParams int, maxFlatResults int) (res Result[types.CoreFuncType]) {
+	defer handle.Error(&res)
+	flat := flattenFuncType(ft, maxFlatParams).Unwrap()
+	flatParams, flatResults := flat.Deconstruct()
 	if len(flatResults) > maxFlatResults {
 		flatResults = []kind.Kind{kind.U32}
 	}
-	return types.NewCoreFuncType(flatParams, flatResults), nil
+	return result.Ok(types.NewCoreFuncType(flatParams, flatResults))
 }
 
-func flattenFuncType(ft types.FuncType, maxFlatParams int) ([]kind.Kind, []kind.Kind, error) {
-	flatParams, err := FlattenTypes(ft.ParamTypes())
-	if err != nil {
-		return nil, nil, err
-	}
+func flattenFuncType(ft types.FuncType, maxFlatParams int) (res Result[Tuple2[[]kind.Kind, []kind.Kind]]) {
+	defer handle.Error(&res)
+	flatParams := FlattenTypes(ft.ParamTypes()).Unwrap()
 	if len(flatParams) > maxFlatParams {
 		flatParams = []kind.Kind{kind.U32}
 	}
-	flatResults, err := FlattenTypes(ft.ResultTypes())
-	if err != nil {
-		return nil, nil, err
-	}
-	return flatParams, flatResults, nil
+	flatResults := FlattenTypes(ft.ResultTypes()).Unwrap()
+	return result.Ok(tuple.New2(flatParams, flatResults))
 }
 
 func join(a kind.Kind, b kind.Kind) kind.Kind {

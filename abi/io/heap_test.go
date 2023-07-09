@@ -2,9 +2,13 @@ package io_test
 
 import (
 	"bytes"
-	"fmt"
 	"strconv"
 	"testing"
+
+	match "github.com/patrickhuber/go-types"
+	"github.com/patrickhuber/go-types/assert"
+	"github.com/patrickhuber/go-types/handle"
+	"github.com/patrickhuber/go-types/result"
 
 	"github.com/patrickhuber/go-wasm/abi/io"
 	"github.com/patrickhuber/go-wasm/abi/types"
@@ -24,29 +28,24 @@ func NewHeap(size int) *Heap {
 	}
 }
 
-func (h *Heap) ReAllocate(originalPtr, originalSize, alignment, newSize uint32) (uint32, error) {
+func (h *Heap) ReAllocate(originalPtr, originalSize, alignment, newSize uint32) (res match.Result[uint32]) {
+	defer handle.Error(&res)
 	if originalPtr != 0 && newSize < originalSize {
-		return io.AlignTo(originalPtr, alignment)
+		return result.Ok(io.AlignTo(originalPtr, alignment))
 	}
 
-	ret, err := io.AlignTo(uint32(h.LastAlloc), alignment)
-	if err != nil {
-		return 0, err
-	}
+	ret := io.AlignTo(uint32(h.LastAlloc), alignment)
 	h.LastAlloc = int(ret + newSize)
 
 	// are we over the capacity?
-	if h.LastAlloc > h.Memory.Cap() {
-		return 0, fmt.Errorf("Out of Memory: Have %d need %d", h.Memory.Cap(), h.LastAlloc)
-	}
-
+	assert.Truef(h.LastAlloc <= h.Memory.Cap(), "Out of Memory: Have %d need %d", h.Memory.Cap(), h.LastAlloc)
 	h.Memory.Grow(h.LastAlloc)
 
 	// memcopy here?
 	buf := h.Memory.Bytes()
 	copy(buf[ret:ret+originalSize], buf[originalPtr:originalPtr+originalSize])
 
-	return ret, nil
+	return result.Ok(ret)
 }
 func TestHeap(t *testing.T) {
 	type test struct {

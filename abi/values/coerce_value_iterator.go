@@ -1,11 +1,13 @@
 package values
 
 import (
-	"fmt"
 	"math"
 
+	. "github.com/patrickhuber/go-types"
+	"github.com/patrickhuber/go-types/assert"
+	"github.com/patrickhuber/go-types/handle"
+	"github.com/patrickhuber/go-types/result"
 	"github.com/patrickhuber/go-wasm/abi/kind"
-	"github.com/patrickhuber/go-wasm/abi/types"
 )
 
 type CoerceValueIterator interface {
@@ -38,46 +40,31 @@ func (vi *coerceValueIterator) Length() int {
 }
 
 // Next implements ValueIterator.
-func (vi *coerceValueIterator) Next(want kind.Kind) (any, error) {
-	if vi.inner == nil {
-		return nil, fmt.Errorf("inner value iterator is nil")
-	}
-	if len(vi.flatTypes) == 0 {
-		return nil, fmt.Errorf("inner flat types is nil")
-	}
+func (vi *coerceValueIterator) Next(want kind.Kind) (res Result[any]) {
+	defer handle.Error(&res)
+	assert.NotNilf(vi.inner, "inner value iterator is nil")
+	assert.Falsef(len(vi.flatTypes) == 0, "inner flat types is nil")
+
 	have := vi.flatTypes[0]
 	vi.flatTypes = vi.flatTypes[1:]
-	x, err := vi.inner.Next(have)
-	if err != nil {
-		return nil, err
-	}
+	
+	x := vi.inner.Next(have).Unwrap()
+
 	switch {
 	case have == kind.U32 && want == kind.Float32:
-		u32, ok := x.(uint32)
-		if !ok {
-			return nil, types.NewCastError(x, "uint32")
-		}
-		return math.Float32frombits(u32), nil
+		u32 := Cast[any, uint32](x).Unwrap()
+		return result.Ok[any](math.Float32frombits(u32))
 	case have == kind.U64 && want == kind.U32:
-		u64, ok := x.(uint64)
-		if !ok {
-			return nil, types.NewCastError(x, "uint64")
-		}
-		return uint32(u64), nil
+		u64 := Cast[any, uint64](x).Unwrap()
+		return result.Ok[any](uint32(u64))
 	case have == kind.U64 && want == kind.Float32:
-		u64, ok := x.(uint64)
-		if !ok {
-			return nil, types.NewCastError(x, "uint64")
-		}
-		return math.Float32frombits(uint32(u64)), nil
+		u64 := Cast[any, uint64](x).Unwrap()
+		return result.Ok[any](math.Float32frombits(uint32(u64)))
 	case have == kind.U64 && want == kind.Float64:
-		u64, ok := x.(uint64)
-		if !ok {
-			return nil, types.NewCastError(x, "uint64")
-		}
-		return math.Float64frombits(u64), nil
+		u64 := Cast[any, uint64](x).Unwrap()
+		return result.Ok[any](math.Float64frombits(u64))
 	default:
-		return x, nil
+		return result.Ok[any](x)
 	}
 }
 

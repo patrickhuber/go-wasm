@@ -1,9 +1,11 @@
 package io
 
 import (
-	"fmt"
 	"math"
 
+	. "github.com/patrickhuber/go-types"
+	"github.com/patrickhuber/go-types/handle"
+	"github.com/patrickhuber/go-types/result"
 	"github.com/patrickhuber/go-wasm/abi/types"
 )
 
@@ -22,21 +24,21 @@ const (
 	SizeOfChar           = SizeOfU32
 )
 
-func Size(vt types.ValType) (uint32, error) {
+func Size(vt types.ValType) Result[uint32] {
 	vt = Despecialize(vt)
 	switch t := vt.(type) {
 	case types.U8, types.S8, types.Bool:
-		return SizeOfU8, nil
+		return result.Ok(SizeOfU8)
 	case types.U16, types.S16:
-		return SizeOfU16, nil
+		return result.Ok(SizeOfU16)
 	case types.U32, types.S32, types.Float32:
-		return SizeOfU32, nil
+		return result.Ok(SizeOfU32)
 	case types.U64, types.S64, types.Float64:
-		return SizeOfU64, nil
+		return result.Ok(SizeOfU64)
 	case types.Char:
-		return SizeOfChar, nil
+		return result.Ok(SizeOfChar)
 	case types.List, types.String:
-		return 8, nil
+		return result.Ok(uint32(8))
 	case types.Record:
 		return SizeRecord(t)
 	case types.Variant:
@@ -44,87 +46,55 @@ func Size(vt types.ValType) (uint32, error) {
 	case types.Flags:
 		return SizeFlags(t)
 	case types.Own, types.Borrow:
-		return 4, nil
+		return result.Ok(uint32(4))
 	}
-	return 0, fmt.Errorf("size: unable to match type %T", vt)
+	return result.Errorf[uint32]("size: unable to match type %T", vt)
 }
 
-func SizeRecord(r types.Record) (uint32, error) {
+func SizeRecord(r types.Record) (res Result[uint32]) {
+	defer handle.Error(&res)
 	var s uint32 = 0
 	for _, f := range r.Fields() {
-		alignment, err := Alignment(f.Type)
-		if err != nil {
-			return 0, err
-		}
-		s, err = AlignTo(s, alignment)
-		if err != nil {
-			return 0, err
-		}
-		size, err := Size(f.Type)
-		if err != nil {
-			return 0, err
-		}
+		alignment := Alignment(f.Type).Unwrap()
+		s = AlignTo(s, alignment)
+		size := Size(f.Type).Unwrap()
 		s += size
 	}
-	alignment, err := AlignmentRecord(r)
-	if err != nil {
-		return 0, err
-	}
-	return AlignTo(s, alignment)
+	alignment := AlignmentRecord(r).Unwrap()
+	return result.Ok(AlignTo(s, alignment))
 }
 
-func SizeVariant(v types.Variant) (uint32, error) {
-
-	dt, err := DiscriminantType(v.Cases())
-	if err != nil {
-		return 0, err
-	}
-
-	s, err := Size(dt)
-	if err != nil {
-		return 0, err
-	}
-
-	alignment, err := MaxCaseAlignment(v.Cases())
-	if err != nil {
-		return 0, err
-	}
-
-	s, err = AlignTo(s, alignment)
-	if err != nil {
-		return 0, err
-	}
+func SizeVariant(v types.Variant) (res Result[uint32]) {
+	defer handle.Error(&res)
+	dt := DiscriminantType(v.Cases()).Unwrap()
+	s := Size(dt).Unwrap()
+	alignment := MaxCaseAlignment(v.Cases()).Unwrap()
+	s = AlignTo(s, alignment)
 	var cs uint32 = 0
 	for _, c := range v.Cases() {
 		if c.Type == nil {
 			continue
 		}
-		size, err := Size(c.Type)
-		if err != nil {
-			return 0, err
-		}
+		size := Size(c.Type).Unwrap()
 		cs = max(cs, size)
 	}
 	s += cs
-	alignment, err = AlignmentVariant(v)
-	if err != nil {
-		return 0, err
-	}
-	return AlignTo(s, alignment)
+	alignment = AlignmentVariant(v).Unwrap()
+	return result.Ok(AlignTo(s, alignment))
 }
 
-func SizeFlags(f types.Flags) (uint32, error) {
+func SizeFlags(f types.Flags) Result[uint32] {
 	n := len(f.Labels())
 	if n == 0 {
-		return 0, nil
+		return result.Ok(uint32(0))
 	}
 	if n <= 8 {
-		return 1, nil
+		return result.Ok(uint32(1))
 	}
 	if n <= 16 {
-		return 2, nil
+		return result.Ok(uint32(2))
 	}
-	return 4 * NumI32Flags(f.Labels()), nil
+	return result.Ok(4 * NumI32Flags(f.Labels()))
 }
 
 func NumI32Flags(labels []string) uint32 {
