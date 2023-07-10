@@ -1,7 +1,6 @@
 package io_test
 
 import (
-	"bytes"
 	"reflect"
 	"testing"
 
@@ -98,7 +97,7 @@ func testPairs[TLift, TValue any](t *testing.T, vt types.ValType, pairs ...pair[
 	for _, p := range pairs {
 		name := reflect.ValueOf(vt).Elem().Type().Name()
 		t.Run(name, func(t *testing.T) {
-			cxt := NewContext(&bytes.Buffer{}, encoding.UTF8, nil, nil)
+			cxt := Context()
 			err := test(vt, []any{p.ValsToLift}, p.Value, cxt, encoding.UTF8, nil, nil)
 			require.Nil(t, err)
 		})

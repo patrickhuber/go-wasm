@@ -72,7 +72,7 @@ func Test(t *testing.T) {
 
 	for _, oneTest := range tests {
 		t.Run(oneTest.name, func(t *testing.T) {
-			cxt := NewContext(&bytes.Buffer{}, encoding.UTF8, nil, nil)
+			cxt := Context()
 			err := test(oneTest.t, oneTest.valsToLift, oneTest.v, cxt, encoding.UTF8, nil, nil)
 			require.Nil(t, err)
 		})
@@ -102,27 +102,100 @@ func TestWithLower(t *testing.T) {
 	}
 	for _, oneTest := range tests {
 		t.Run(oneTest.name, func(t *testing.T) {
-			cxt := NewContext(&bytes.Buffer{}, encoding.UTF8, nil, nil)
+			cxt := Context() // &bytes.Buffer{}, encoding.UTF8, nil, nil)
 			err := test(oneTest.t, oneTest.valsToLift, oneTest.v, cxt, encoding.UTF8, oneTest.lowerT, oneTest.lowerV)
 			require.Nil(t, err)
 		})
 	}
 }
 
-func NewContext(memory *bytes.Buffer, enc encoding.Encoding, realloc types.ReallocFunc, postReturn types.PostReturnFunc) *types.CallContext {
-	options := NewOptions(memory, enc, realloc, postReturn)
-	return &types.CallContext{
-		Options: options,
+type ContextOption func(*types.CallContext)
+type CanonicalOptionsOption func(*types.CanonicalOptions)
+type ComponentInstanceOption func(*types.ComponentInstance)
+
+func CanonicalOptions(options ...CanonicalOptionsOption) ContextOption {
+	return func(cc *types.CallContext) {
+		if cc == nil {
+			return
+		}
+		if cc.Options == nil && len(options) > 0 {
+			cc.Options = Options()
+		}
+		for _, op := range options {
+			op(cc.Options)
+		}
 	}
 }
 
-func NewOptions(memory *bytes.Buffer, enc encoding.Encoding, realloc types.ReallocFunc, postReturn types.PostReturnFunc) *types.CanonicalOptions {
-	return &types.CanonicalOptions{
-		Memory:         memory,
-		StringEncoding: enc,
-		Realloc:        realloc,
-		PostReturn:     postReturn,
+func ComponentInstance(options ...ComponentInstanceOption) ContextOption {
+	return func(cc *types.CallContext) {
+		if cc == nil || cc.Instance == nil {
+			return
+		}
+		if cc.Instance == nil && len(options) > 0 {
+			cc.Instance = &types.ComponentInstance{}
+		}
+		for _, op := range options {
+			op(cc.Instance)
+		}
 	}
+}
+
+func Memory(memory *bytes.Buffer) CanonicalOptionsOption {
+	return func(op *types.CanonicalOptions) {
+		op.Memory = memory
+	}
+}
+
+func Encoding(enc encoding.Encoding) CanonicalOptionsOption {
+	return func(op *types.CanonicalOptions) {
+		op.StringEncoding = enc
+	}
+}
+
+func Realloc(realloc types.ReallocFunc) CanonicalOptionsOption {
+	return func(op *types.CanonicalOptions) {
+		op.Realloc = realloc
+	}
+}
+
+func PostReturn(postReturn types.PostReturnFunc) CanonicalOptionsOption {
+	return func(op *types.CanonicalOptions) {
+		op.PostReturn = postReturn
+	}
+}
+
+func Context(options ...ContextOption) *types.CallContext {
+	cx := &types.CallContext{
+		BorrowCount: 0,
+		Options:     Options(),
+		Instance:    Instance(),
+	}
+	for _, op := range options {
+		op(cx)
+	}
+	return cx
+}
+
+func Options(options ...CanonicalOptionsOption) *types.CanonicalOptions {
+	opt := &types.CanonicalOptions{
+		StringEncoding: encoding.UTF8,
+	}
+	for _, op := range options {
+		op(opt)
+	}
+	if opt.Memory == nil {
+		opt.Memory = &bytes.Buffer{}
+	}
+	return opt
+}
+
+func Instance(options ...ComponentInstanceOption) *types.ComponentInstance {
+	inst := &types.ComponentInstance{}
+	for _, op := range options {
+		op(inst)
+	}
+	return inst
 }
 
 func Bool() types.Bool { return types.NewBool() }
@@ -305,7 +378,12 @@ func test(t types.ValType, valsToLift []any, v any,
 		dstEncoding = cx.Options.StringEncoding
 	}
 
-	cx = NewContext(heap.Memory, dstEncoding, heap.ReAllocate, cx.Options.PostReturn)
+	cx = Context(
+		CanonicalOptions(
+			Memory(heap.Memory),
+			Encoding(dstEncoding),
+			Realloc(heap.ReAllocate),
+			PostReturn(cx.Options.PostReturn)))
 
 	loweredValues, err := io.LowerFlat(cx, v, lowerT)
 	if err != nil {

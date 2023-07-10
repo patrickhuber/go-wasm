@@ -7,7 +7,6 @@ import (
 	"github.com/patrickhuber/go-wasm/abi/io"
 	"github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/abi/values"
-	"github.com/patrickhuber/go-wasm/encoding"
 	"github.com/patrickhuber/go-wasm/internal/collections"
 	"github.com/stretchr/testify/require"
 )
@@ -39,14 +38,14 @@ func RoundTripTest(t *testing.T, typ types.ValType, v any) {
 	callee := func(val any) (any, error) { return val, nil }
 
 	calleeHeap := NewHeap(1000)
-	calleeOpts := NewOptions(calleeHeap.Memory, encoding.UTF8, calleeHeap.ReAllocate, func() {})
+	calleeOpts := Options(Memory(calleeHeap.Memory), Realloc(calleeHeap.ReAllocate))
 	calleeInst := &types.ComponentInstance{MayEnter: true, MayLeave: true}
 	liftedCallee := func(args []any) ([]any, types.PostReturnFunc, error) {
 		return io.CanonLift(calleeOpts, calleeInst, callee, ft, args, MaxFlatParams, MaxFlatResults)
 	}
 
 	callerHeap := NewHeap(1000)
-	callerOpts := NewOptions(callerHeap.Memory, encoding.UTF8, callerHeap.ReAllocate, nil)
+	callerOpts := Options(Memory(callerHeap.Memory), Realloc(callerHeap.ReAllocate))
 	callerInst := &types.ComponentInstance{MayEnter: true, MayLeave: true}
 	callerContext := &types.CallContext{Options: callerOpts, Instance: callerInst}
 

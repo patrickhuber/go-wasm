@@ -190,13 +190,15 @@ func LoadFloat(cx *types.CallContext, ptr uint32, t types.ValType) (any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return math.Float32frombits(i), nil
+		f := math.Float32frombits(i)
+		return CanonicalizeFloat32(f), nil
 	case types.Float64:
 		i, err := LoadUInt64(cx, ptr)
 		if err != nil {
 			return nil, err
 		}
-		return math.Float64frombits(i), nil
+		f := math.Float64frombits(i)
+		return CanonicalizeFloat64(f), nil
 	}
 	return nil, fmt.Errorf("LoadFloat: invalid float type %T", t)
 }

@@ -208,7 +208,7 @@ func LiftFlatFloat32(vi values.ValueIterator) (float32, error) {
 	if !ok {
 		return 0, types.NewCastError(f, "float32")
 	}
-	return f32, nil
+	return CanonicalizeFloat32(f32), nil
 }
 
 func LiftFlatFloat64(vi values.ValueIterator) (float64, error) {
@@ -220,7 +220,7 @@ func LiftFlatFloat64(vi values.ValueIterator) (float64, error) {
 	if !ok {
 		return 0, types.NewCastError(f, "float64")
 	}
-	return f64, nil
+	return CanonicalizeFloat64(f64), nil
 }
 
 func LiftFlatChar(vi values.ValueIterator) (rune, error) {

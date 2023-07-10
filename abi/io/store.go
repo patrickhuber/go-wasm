@@ -100,10 +100,12 @@ func StoreValidate(c *types.CallContext, t types.ValType, ptr uint32) error {
 func StoreFloat(c *types.CallContext, val any, ptr uint32, nbytes uint32) error {
 	if nbytes == SizeOfFloat32 {
 		f := val.(float32)
+		f = CanonicalizeFloat32(f)
 		i := math.Float32bits(f)
 		return StoreInt(c, i, ptr, nbytes, false)
 	} else {
 		f := val.(float64)
+		f = CanonicalizeFloat64(f)
 		i := math.Float64bits(f)
 		return StoreInt(c, i, ptr, nbytes, false)
 	}

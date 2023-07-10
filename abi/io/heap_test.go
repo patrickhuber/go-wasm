@@ -8,7 +8,6 @@ import (
 
 	"github.com/patrickhuber/go-wasm/abi/io"
 	"github.com/patrickhuber/go-wasm/abi/types"
-	"github.com/patrickhuber/go-wasm/encoding"
 	"github.com/stretchr/testify/require"
 )
 
@@ -117,7 +116,7 @@ func testHeap(t *testing.T, vt types.ValType, expect any, args []any, bytes []by
 	heap := NewHeap(len(bytes))
 	copy(heap.Memory.Bytes(), bytes)
 
-	cx := NewContext(heap.Memory, encoding.UTF8, nil, nil)
+	cx := Context(CanonicalOptions(Memory(heap.Memory)))
 	err := test(vt, args, expect, cx, cx.Options.StringEncoding, nil, nil)
 
 	require.Nil(t, err)

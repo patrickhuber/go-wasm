@@ -99,6 +99,8 @@ func testStringInternal(srcEncoding encoding.Encoding, dstEncoding encoding.Enco
 	heap := NewHeap(len(encoded))
 	buf := heap.Memory.Bytes()
 	copy(buf, encoded)
-	cx := NewContext(heap.Memory, srcEncoding, heap.ReAllocate, nil)
+	cx := Context(
+		CanonicalOptions(
+			Memory(heap.Memory), Encoding(srcEncoding), Realloc(heap.ReAllocate)))
 	return test(String(), []any{uint32(0), uint32(taggedCodeUnits)}, s, cx, dstEncoding, nil, nil)
 }

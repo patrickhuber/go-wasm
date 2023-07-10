@@ -142,6 +142,7 @@ func LowerFloat32(v any) ([]values.Value, error) {
 	if !ok {
 		return nil, types.NewCastError(v, "float32")
 	}
+	f32 = CanonicalizeFloat32(f32)
 	f := values.Float32(f32)
 	return slice(f), nil
 }
@@ -151,6 +152,7 @@ func LowerFloat64(v any) ([]values.Value, error) {
 	if !ok {
 		return nil, types.NewCastError(v, "float64")
 	}
+	f64 = CanonicalizeFloat64(f64)
 	f := values.Float64(f64)
 	return slice(f), nil
 }
