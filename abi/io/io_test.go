@@ -279,6 +279,14 @@ func FuncType(params []types.ValType, results []types.ValType) types.FuncType {
 	return types.NewFuncType(toParameters(params), toParameters(results))
 }
 
+func Own(rt types.ResourceType) types.Own {
+	return types.NewOwn(rt)
+}
+
+func Borrow(rt types.ResourceType) types.Borrow {
+	return types.NewBorrow(rt)
+}
+
 func Range(low int, high int) []int {
 	var result []int
 	for i := low; i < high; i++ {
