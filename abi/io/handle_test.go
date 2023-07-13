@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/patrickhuber/go-wasm/abi/io"
+	"github.com/patrickhuber/go-wasm/abi/kind"
 	"github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/abi/values"
 	"github.com/stretchr/testify/require"
@@ -72,20 +73,26 @@ func TestHandles(t *testing.T) {
 			[]types.ValType{
 				Own(rt),
 			})
-		vt := make([]types.ValType, len(args))
-		for i := 0; i < len(args); i++ {
-			var ok bool
-			vt[0], ok = args[i].(types.ValType)
-			if !ok {
-				return nil, types.NewCastError(args[i], "types.ValType")
-			}
+		args = []any{
+			values.U32(0),
+			values.U32(2),
 		}
 		results, err := io.CanonLower(opts, inst, hostImport, true, hostFunctionType, args, MaxFlatParams, MaxFlatResults)
 		if err != nil {
 			return nil, err
 		}
 		require.Equal(t, 1, len(results))
-		require.True(t, results[0])
+		result0, ok := results[0].(values.Value)
+		require.True(t, ok)
+		require.Equal(t, kind.U32, result0.Kind())
+		require.Equal(t, 3, result0.Value())
+		rep, err := io.CanonResourceRep(inst, rt, 3)
+		require.Nil(t, err)
+		require.Equal(t, rep, 45)
+
+		dtorValue = 0
+		io.CanonResourceDrop(inst, rt, 0)
+
 		return nil, nil
 	}
 
