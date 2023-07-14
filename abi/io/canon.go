@@ -2,7 +2,7 @@ package io
 
 import "github.com/patrickhuber/go-wasm/abi/types"
 
-func CanonResourceNew(inst *types.ComponentInstance, rt types.ResourceType, rep int) (any, error) {
+func CanonResourceNew(inst *types.ComponentInstance, rt types.ResourceType, rep uint32) (any, error) {
 	h := &types.HandleElem{
 		Rep: rep,
 		Own: true,
@@ -26,7 +26,7 @@ func CanonResourceDrop(inst *types.ComponentInstance, rt types.ResourceType, i u
 	if !h.Own {
 		return nil
 	}
-	if inst != rt.Impl() {
+	if inst != rt.Impl() && !rt.Impl().MayEnter {
 		return types.TrapWith("ComponentInstance != ResourceType.Impl and ResourceType.Impl.MayEnter == false")
 	}
 	if rt.DTor() != nil {

@@ -39,14 +39,14 @@ func RoundTripTest(t *testing.T, typ types.ValType, v any) {
 
 	calleeHeap := NewHeap(1000)
 	calleeOpts := Options(Memory(calleeHeap.Memory), Realloc(calleeHeap.ReAllocate))
-	calleeInst := &types.ComponentInstance{MayEnter: true, MayLeave: true}
+	calleeInst := Instance()
 	liftedCallee := func(args []any) ([]any, types.PostReturnFunc, error) {
 		return io.CanonLift(calleeOpts, calleeInst, callee, ft, args, MaxFlatParams, MaxFlatResults)
 	}
 
 	callerHeap := NewHeap(1000)
 	callerOpts := Options(Memory(callerHeap.Memory), Realloc(callerHeap.ReAllocate))
-	callerInst := &types.ComponentInstance{MayEnter: true, MayLeave: true}
+	callerInst := Instance()
 	callerContext := &types.CallContext{Options: callerOpts, Instance: callerInst}
 
 	flatArgs, err := io.LowerFlat(callerContext, v, typ)

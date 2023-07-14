@@ -8,7 +8,7 @@ import (
 	"github.com/patrickhuber/go-wasm/abi/values"
 )
 
-func LiftOwn(cx *types.CallContext, i uint32, own types.Own) (int, error) {
+func LiftOwn(cx *types.CallContext, i uint32, own types.Own) (uint32, error) {
 	h, err := cx.Instance.Handles.Remove(own.ResourceType(), i)
 	if err != nil {
 		return 0, err
@@ -16,7 +16,7 @@ func LiftOwn(cx *types.CallContext, i uint32, own types.Own) (int, error) {
 	return h.Rep, nil
 }
 
-func LiftBorrow(cx *types.CallContext, i uint32, borrow types.Borrow) (int, error) {
+func LiftBorrow(cx *types.CallContext, i uint32, borrow types.Borrow) (uint32, error) {
 	h, err := cx.Instance.Handles.Get(borrow.ResourceType(), i)
 	if err != nil {
 		return 0, err

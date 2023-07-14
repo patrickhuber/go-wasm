@@ -133,7 +133,7 @@ func ComponentInstance(options ...ComponentInstanceOption) ContextOption {
 			return
 		}
 		if cc.Instance == nil && len(options) > 0 {
-			cc.Instance = &types.ComponentInstance{}
+			cc.Instance = Instance()
 		}
 		for _, op := range options {
 			op(cc.Instance)

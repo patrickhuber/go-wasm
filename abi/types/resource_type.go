@@ -7,7 +7,7 @@ type ResourceType interface {
 	Impl() *ComponentInstance
 }
 
-type DTorFunc func(int)
+type DTorFunc func(uint32)
 
 type ResourceTypeImpl struct {
 	TypeImpl

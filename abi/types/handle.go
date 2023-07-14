@@ -7,7 +7,7 @@ import (
 )
 
 type HandleElem struct {
-	Rep       int
+	Rep       uint32
 	LendCount int
 	Own       bool
 	Scope     *CallContext // always null for OwnHandle

@@ -16,8 +16,8 @@ func TestHandles(t *testing.T) {
 		MaxFlatResults = 16
 		MaxFlatParams  = 16
 	)
-	var dtorValue int
-	dtor := func(x int) {
+	var dtorValue uint32
+	dtor := func(x uint32) {
 		dtorValue = x
 	}
 	inst := Instance()
@@ -26,8 +26,8 @@ func TestHandles(t *testing.T) {
 	opts := Options()
 	hostImport := func(args []any) ([]any, types.PostReturnFunc, error) {
 		require.Equal(t, 2, len(args), "args")
-		require.Equal(t, 42, args[0])
-		require.Equal(t, 44, args[1])
+		require.Equal(t, uint32(42), args[0])
+		require.Equal(t, uint32(44), args[1])
 		return []any{uint32(45)}, func() {}, nil
 	}
 	coreWasm := func(val any) (any, error) {
@@ -85,17 +85,17 @@ func TestHandles(t *testing.T) {
 		result0, ok := results[0].(values.Value)
 		require.True(t, ok)
 		require.Equal(t, kind.U32, result0.Kind())
-		require.Equal(t, 3, result0.Value())
+		require.Equal(t, uint32(3), result0.Value())
 		rep, err := io.CanonResourceRep(inst, rt, 3)
 		require.Nil(t, err)
-		require.Equal(t, rep, 45)
+		require.Equal(t, rep, uint32(45))
 
 		dtorValue = 0
 		err = io.CanonResourceDrop(inst, rt, 0)
 		if err != nil {
 			return nil, err
 		}
-		require.Equal(t, 42, dtor)
+		require.Equal(t, uint32(42), dtorValue)
 		require.Equal(t, 4, len(inst.Handles.Table(rt).Array))
 		require.Nil(t, inst.Handles.Table(rt).Array[0])
 		require.Equal(t, 1, len(inst.Handles.Table(rt).Free))
@@ -104,7 +104,7 @@ func TestHandles(t *testing.T) {
 		if err != nil {
 			return nil, err
 		}
-		require.Equal(t, 0, h)
+		require.Equal(t, uint32(0), h)
 		require.Equal(t, 4, len(inst.Handles.Table(rt).Array))
 		require.Nil(t, inst.Handles.Table(rt).Array[0])
 		require.Equal(t, 0, len(inst.Handles.Table(rt).Free))
@@ -132,7 +132,7 @@ func TestHandles(t *testing.T) {
 			Own(rt),
 			Own(rt),
 			Own(rt)})
-	args := []any{42, 43, 44, 13}
+	args := []any{uint32(42), uint32(43), uint32(44), uint32(13)}
 	got, _, err := io.CanonLift(opts, inst, coreWasm, ft, args, MaxFlatParams, MaxFlatResults)
 	require.Nil(t, err)
 

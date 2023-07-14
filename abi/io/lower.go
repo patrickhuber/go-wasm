@@ -242,9 +242,9 @@ func LowerFlatFlags(cx *types.CallContext, v any, f types.Flags) ([]values.Value
 }
 
 func LowerOwn(cx *types.CallContext, rep any, t types.Own) (uint32, error) {
-	r, ok := rep.(int)
+	r, ok := rep.(uint32)
 	if !ok {
-		return 0, types.NewCastError(rep, "int")
+		return 0, types.NewCastError(rep, "uint32")
 	}
 	h := &types.HandleElem{
 		Rep: r,
@@ -254,9 +254,9 @@ func LowerOwn(cx *types.CallContext, rep any, t types.Own) (uint32, error) {
 }
 
 func LowerBorrow(cx *types.CallContext, rep any, t types.Borrow) (uint32, error) {
-	r, ok := rep.(int)
+	r, ok := rep.(uint32)
 	if !ok {
-		return 0, types.NewCastError(rep, "int")
+		return 0, types.NewCastError(rep, "uint32")
 	}
 	if cx.Instance == t.ResourceType().Impl() {
 		return uint32(r), nil
