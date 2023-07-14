@@ -7,7 +7,7 @@ func CanonResourceNew(inst *types.ComponentInstance, rt types.ResourceType, rep 
 		Rep: rep,
 		Own: true,
 	}
-	return inst.Handles.Add(h, rt)
+	return inst.Handles.Add(rt, h)
 }
 
 func CanonResourceRep(inst *types.ComponentInstance, rt types.ResourceType, rep uint32) (uint32, error) {
@@ -16,4 +16,21 @@ func CanonResourceRep(inst *types.ComponentInstance, rt types.ResourceType, rep 
 		return 0, err
 	}
 	return uint32(h.Rep), nil
+}
+
+func CanonResourceDrop(inst *types.ComponentInstance, rt types.ResourceType, i uint32) error {
+	h, err := inst.Handles.Remove(rt, i)
+	if err != nil {
+		return err
+	}
+	if !h.Own {
+		return nil
+	}
+	if inst != rt.Impl() {
+		return types.TrapWith("ComponentInstance != ResourceType.Impl and ResourceType.Impl.MayEnter == false")
+	}
+	if rt.DTor() != nil {
+		rt.DTor()(h.Rep)
+	}
+	return nil
 }

@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/patrickhuber/go-wasm/internal/collections/stack"
 )
 
@@ -16,16 +18,22 @@ type HandleTable struct {
 	Free  []uint32
 }
 
-func (ht *HandleTable) Add(handle *HandleElem) uint32 {
+func (ht *HandleTable) Add(handle *HandleElem) (uint32, error) {
 	free, i, ok := stack.Pop(ht.Free)
 	ht.Free = free
 	if ok {
+		if ht.Array[i] != nil {
+			return 0, fmt.Errorf("expected handle table array[%d] to be nil", i)
+		}
 		ht.Array[i] = handle
 	} else {
-		ht.Free = stack.Push(ht.Free, uint32(len(ht.Free)))
+		i = uint32(len(ht.Array))
 		ht.Array = append(ht.Array, handle)
 	}
-	return i
+	if handle.Scope != nil {
+		handle.Scope.AddBorrowCountToTable()
+	}
+	return i, nil
 }
 
 func (ht *HandleTable) Get(i uint32) (*HandleElem, error) {
@@ -71,8 +79,8 @@ func (ht *HandleTables) Table(rt ResourceType) *HandleTable {
 	return t
 }
 
-func (ht *HandleTables) Add(handle *HandleElem, rt ResourceType) (uint32, error) {
-	return ht.Table(rt).Add(handle), nil
+func (ht *HandleTables) Add(rt ResourceType, handle *HandleElem) (uint32, error) {
+	return ht.Table(rt).Add(handle)
 }
 
 func (ht *HandleTables) Get(rt ResourceType, i uint32) (*HandleElem, error) {

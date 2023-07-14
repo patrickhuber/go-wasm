@@ -191,7 +191,13 @@ func Options(options ...CanonicalOptionsOption) *types.CanonicalOptions {
 }
 
 func Instance(options ...ComponentInstanceOption) *types.ComponentInstance {
-	inst := &types.ComponentInstance{}
+	inst := &types.ComponentInstance{
+		MayEnter: true,
+		MayLeave: true,
+		Handles: types.HandleTables{
+			ResourceTypeToTable: map[types.ResourceType]*types.HandleTable{},
+		},
+	}
 	for _, op := range options {
 		op(inst)
 	}
