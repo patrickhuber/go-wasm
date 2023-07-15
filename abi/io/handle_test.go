@@ -106,7 +106,7 @@ func TestHandles(t *testing.T) {
 		}
 		require.Equal(t, uint32(0), h)
 		require.Equal(t, 4, len(inst.Handles.Table(rt).Array))
-		require.Nil(t, inst.Handles.Table(rt).Array[0])
+		require.NotNil(t, inst.Handles.Table(rt).Array[0])
 		require.Equal(t, 0, len(inst.Handles.Table(rt).Free))
 
 		dtorValue = 0
@@ -114,12 +114,12 @@ func TestHandles(t *testing.T) {
 		if err != nil {
 			return nil, err
 		}
-		require.Equal(t, 0, dtorValue)
+		require.Equal(t, uint32(0), dtorValue)
 		require.Equal(t, 4, len(inst.Handles.Table(rt).Array))
 		require.Nil(t, inst.Handles.Table(rt).Array[2])
 		require.Equal(t, 1, len(inst.Handles.Table(rt).Free))
 
-		return []values.Value{values.U32(0), values.U32(1), values.U32(3)}, nil
+		return []any{values.U32(0), values.U32(1), values.U32(3)}, nil
 	}
 
 	ft := FuncType(
@@ -137,9 +137,9 @@ func TestHandles(t *testing.T) {
 	require.Nil(t, err)
 
 	require.Equal(t, 3, len(got))
-	require.Equal(t, 46, got[0])
-	require.Equal(t, 43, got[1])
-	require.Equal(t, 45, got[2])
+	for i, u32 := range []uint32{46, 43, 45} {
+		require.Equal(t, u32, got[i])
+	}
 	require.Equal(t, 4, len(inst.Handles.Table(rt).Array))
 	for _, handle := range inst.Handles.Table(rt).Array {
 		require.Nil(t, handle)
