@@ -8,22 +8,21 @@ import (
 	"github.com/patrickhuber/go-wasm/abi/values"
 )
 
-func LiftOwn(cx *types.CallContext, i uint32, t types.Own) (*types.HandleElem, error) {
-	return cx.Instance.Handles.Remove(i, t)
+func LiftOwn(cx *types.CallContext, i uint32, own types.Own) (uint32, error) {
+	h, err := cx.Instance.Handles.Remove(own.ResourceType(), i)
+	if err != nil {
+		return 0, err
+	}
+	return h.Rep, nil
 }
 
-func LiftBorrow(cx *types.CallContext, i uint32, t types.Borrow) (*types.HandleElem, error) {
-	h, err := cx.Instance.Handles.Get(i, t.ResourceType())
+func LiftBorrow(cx *types.CallContext, i uint32, borrow types.Borrow) (uint32, error) {
+	h, err := cx.Instance.Handles.Get(borrow.ResourceType(), i)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	h.LendCount += 1
-	cx.Lenders = append(cx.Lenders, h)
-	return &types.HandleElem{
-		Rep:       h.Rep,
-		LendCount: 0,
-		Context:   nil,
-	}, nil
+	cx.LiftBorrowFrom(h)
+	return h.Rep, nil
 }
 
 func LiftFlat(cx *types.CallContext, vi values.ValueIterator, t types.ValType) (any, error) {

@@ -133,7 +133,7 @@ func ComponentInstance(options ...ComponentInstanceOption) ContextOption {
 			return
 		}
 		if cc.Instance == nil && len(options) > 0 {
-			cc.Instance = &types.ComponentInstance{}
+			cc.Instance = Instance()
 		}
 		for _, op := range options {
 			op(cc.Instance)
@@ -191,7 +191,13 @@ func Options(options ...CanonicalOptionsOption) *types.CanonicalOptions {
 }
 
 func Instance(options ...ComponentInstanceOption) *types.ComponentInstance {
-	inst := &types.ComponentInstance{}
+	inst := &types.ComponentInstance{
+		MayEnter: true,
+		MayLeave: true,
+		Handles: types.HandleTables{
+			ResourceTypeToTable: map[types.ResourceType]*types.HandleTable{},
+		},
+	}
 	for _, op := range options {
 		op(inst)
 	}
@@ -277,6 +283,14 @@ func FuncType(params []types.ValType, results []types.ValType) types.FuncType {
 		return parameters
 	}
 	return types.NewFuncType(toParameters(params), toParameters(results))
+}
+
+func Own(rt types.ResourceType) types.Own {
+	return types.NewOwn(rt)
+}
+
+func Borrow(rt types.ResourceType) types.Borrow {
+	return types.NewBorrow(rt)
 }
 
 func Range(low int, high int) []int {

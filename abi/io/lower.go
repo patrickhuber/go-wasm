@@ -47,6 +47,18 @@ func LowerFlat(cx *types.CallContext, v any, t types.ValType) ([]values.Value, e
 		return LowerFlatFlags(cx, v, vt)
 	case types.Variant:
 		return LowerFlatVariant(cx, v, vt)
+	case types.Own:
+		own, err := LowerOwn(cx, v, vt)
+		if err != nil {
+			return nil, err
+		}
+		return []values.Value{values.U32(own)}, nil
+	case types.Borrow:
+		borrow, err := LowerBorrow(cx, v, vt)
+		if err != nil {
+			return nil, err
+		}
+		return []values.Value{values.U32(borrow)}, nil
 	}
 	return nil, fmt.Errorf("LowerFlat: unable to match type %T", t)
 }
@@ -227,6 +239,34 @@ func LowerFlatFlags(cx *types.CallContext, v any, f types.Flags) ([]values.Value
 		return nil, fmt.Errorf("invalid flag value")
 	}
 	return flat, nil
+}
+
+func LowerOwn(cx *types.CallContext, rep any, t types.Own) (uint32, error) {
+	r, ok := rep.(uint32)
+	if !ok {
+		return 0, types.NewCastError(rep, "uint32")
+	}
+	h := &types.HandleElem{
+		Rep: r,
+		Own: true,
+	}
+	return cx.Instance.Handles.Add(t.ResourceType(), h)
+}
+
+func LowerBorrow(cx *types.CallContext, rep any, t types.Borrow) (uint32, error) {
+	r, ok := rep.(uint32)
+	if !ok {
+		return 0, types.NewCastError(rep, "uint32")
+	}
+	if cx.Instance == t.ResourceType().Impl() {
+		return uint32(r), nil
+	}
+	h := &types.HandleElem{
+		Rep:   r,
+		Scope: cx,
+		Own:   false,
+	}
+	return cx.Instance.Handles.Add(t.ResourceType(), h)
 }
 
 func LowerFlatVariant(cx *types.CallContext, v any, variant types.Variant) ([]values.Value, error) {
