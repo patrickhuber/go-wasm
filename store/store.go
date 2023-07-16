@@ -2,6 +2,10 @@ package store
 
 import "github.com/patrickhuber/go-wasm/wasm"
 
+func New() *Store {
+	return &Store{}
+}
+
 type Store struct {
 	Functions []FunctionInstance
 	Tables    []TableInstance
