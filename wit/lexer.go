@@ -1,35 +1,20 @@
 package wit
 
-import "bufio"
+import (
+	"bufio"
 
-type TokenType string
-
-const (
-	None        TokenType = "nil"
-	OpenParen   TokenType = "("
-	CloseParen  TokenType = ")"
-	String      TokenType = "\\w+"
-	Whitespace  TokenType = "\\s+"
-	EndOfStream TokenType = "EOF"
+	"github.com/patrickhuber/go-wasm/wit/token"
 )
 
 type Lexer interface {
-	Next() (*Token, error)
-	Peek() (*Token, error)
+	Next() (*token.Token, error)
+	Peek() (*token.Token, error)
 }
 
 type lexer struct {
 	reader   *bufio.Reader
-	peek     *Token
+	peek     *token.Token
 	position int
 	line     int
 	column   int
-}
-
-type Token struct {
-	Type     TokenType
-	Position int
-	Column   int
-	Line     int
-	Capture  string
 }
