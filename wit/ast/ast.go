@@ -51,25 +51,51 @@ id        ::= \w+
 */
 package ast
 
-type File interface {
-	PackageDeclaration() PackageDeclaration
-	TopLevelItems() []TopLevelItem
+import "github.com/patrickhuber/go-types"
+
+type Node interface {
+	node()
 }
 
-type PackageDeclaration interface {
+type Ast interface {
+	Node
+	PackageName() types.Option[PackageName]
+	Items() []AstItem
+}
+
+type PackageName interface {
 	Namespace() Id
-	Id() Id
-	Version() Version
+	Name() Id
+	Version() types.Option[Version]
 }
 
-type TopLevelItem interface {
-	toplevelitem()
+type AstItem interface {
+	astItem()
+}
+
+type AstItemUse interface {
+	AstItem
+	Use() TopLevelUse
 }
 
 type TopLevelUse interface {
-	TopLevelItem
-	Use() Interface
-	As() Id
+	Item() UsePath
+	As() types.Option[Id]
+}
+
+type UsePath interface {
+	usePath()
+}
+
+type UsePathId interface {
+	UsePath
+	Id() Id
+}
+
+type UsePathPackage interface {
+	UsePath
+	Id() PackageName
+	Name() Id
 }
 
 type Interface interface {
@@ -84,61 +110,61 @@ type InterfaceFullName interface {
 	Version() Version
 }
 
-type TopLevelIterface interface {
-	TopLevelItem
+type AstItemInterface interface {
+	AstItem
 	Interface() Interface
 }
 
-type TopLeveWorld interface {
-	TopLevelItem
-	WorldItem() WorldItem
+type AstItemWorld interface {
+	AstItem
+	World() World
+}
+
+type World interface {
+	Name() Id
+	Items() []WorldItem
 }
 
 type WorldItem interface {
-	World() Id
-	Items() []WorldItems
+	worldItem()
 }
 
-type WorldItems interface {
-	worlditems()
+type WorldItemExport interface {
+	WorldItem
+	Export() Export
 }
 
-type WorldItemExportItem interface {
-	WorldItems
-	ExportItem() ExportItem
+type Export interface {
+	exportItem()
 }
 
-type ExportItem interface {
-	exportitem()
-}
-
-type ExportItemInterface interface {
-	ExportItem
+type ExportInterface interface {
+	Export
 	Interface() Interface
 }
 
-type ExportItemExternType interface {
-	ExportItem
+type ExportExternType interface {
+	Export
 	Id() Id
 	ExternType() ExternType
 }
 
-type WorldItemImportItem interface {
-	WorldItems
-	ImportItem() ImportItem
+type WorldItemImport interface {
+	WorldItem
+	Import() Import
 }
 
-type ImportItem interface {
+type Import interface {
 	importitem()
 }
 
-type ImportItemInterface interface {
-	ImportItem
+type ImportInterface interface {
+	Import
 	Interface() Interface
 }
 
-type ImportItemExternType interface {
-	ExportItem
+type ImportExternType interface {
+	Import
 	Id() Id
 	ExternType() ExternType
 }
@@ -151,17 +177,231 @@ type ExternType interface {
 type FuncType interface{}
 type InterfaceItems interface{}
 
-type WorldItemUseItem interface {
-	WorldItems
+type WorldItemUse interface {
+	WorldItem
 }
 
-type WorldItemTypeDefItem interface {
-	WorldItems
+type WorldItemTypeDef interface {
+	WorldItem
 }
 
-type WorldItemIncludeItem interface {
-	WorldItems
+type TypeDef interface {
+	Name() Id
+	Type() Type
 }
+
+type WorldItemInclude interface {
+	WorldItem
+}
+
+type Use interface {
+	From() UsePath
+	Names() []UseName
+}
+
+type UseName interface {
+	Name() Id
+	As() types.Option[Id]
+}
+
+type Type interface {
+	ty()
+}
+
+type BoolType interface {
+	Type
+}
+
+type U8Type interface {
+	Type
+}
+
+type U16Type interface {
+	Type
+}
+
+type U32Type interface {
+	Type
+}
+
+type U64Type interface {
+	Type
+}
+
+type S8Type interface {
+	Type
+}
+
+type S16Type interface {
+	Type
+}
+
+type S32Type interface {
+	Type
+}
+
+type S64Type interface {
+	Type
+}
+
+type Float32Type interface {
+	Type
+}
+
+type Float64Type interface {
+	Type
+}
+
+type CharType interface {
+	Type
+}
+
+type StringType interface {
+	Type
+}
+
+type NameType interface {
+	Type
+	Id() Id
+}
+
+type ListType interface {
+	Type
+	Types() []Type
+}
+
+type HandleType interface {
+	Type
+	Handle() Handle
+}
+
+type Handle interface {
+	handle()
+}
+
+type HandleOwn interface {
+	Handle
+	Id() Id
+}
+
+type HandleBorrow interface {
+	Handle
+	Id() Id
+}
+
+type ResourceType interface {
+	Type
+	Resource() Resource
+}
+
+type Resource interface {
+	Functions() []ResourceFunc
+}
+
+type ResourceFunc interface {
+	resourceFunc()
+}
+
+type ResourceFuncMethod interface {
+	ResourceFunc
+	NamedFunc() NamedFunc
+}
+
+type ResourceFuncStatic interface {
+	ResourceFunc
+	NamedFunc() NamedFunc
+}
+
+type ResourceFuncConstructor interface {
+	ResourceFunc
+	NamedFunc() NamedFunc
+}
+
+type NamedFunc interface {
+	Id() Id
+	Func() Func
+}
+
+type Func interface {
+	Params() []Param
+	Results() ResultList
+}
+
+type Param interface {
+	Id() Id
+	Type() Type
+}
+
+type ResultList interface {
+	Named() []Param
+	Anon() Type
+}
+
+type RecordType interface {
+	Type
+	Record() Record
+}
+
+type Record interface{}
+
+type FlagsType interface {
+	Type
+	Flags() Flags
+}
+
+type Flags interface{}
+
+type VariantType interface {
+	Type
+	Variant() Variant
+}
+
+type Variant interface{}
+
+type TupleType interface {
+	Type
+	Tuple() Tuple
+}
+
+type Tuple interface{}
+
+type EnumType interface {
+	Type
+	Enum() Enum
+}
+
+type Enum interface{}
+
+type OptionType interface {
+	Type
+	Types() Type
+}
+
+type ResultType interface {
+	Type
+	Result() Result
+}
+
+type Result interface{}
+
+type FutureType interface {
+	Type
+	Types() []types.Option[Type]
+}
+
+type StreamType interface {
+	Type
+	Stream() Stream
+}
+
+type Stream interface{}
+
+type UnionType interface {
+	Type
+	Union() Union
+}
+
+type Union interface{}
 
 type Id interface{}
 type Version interface{}

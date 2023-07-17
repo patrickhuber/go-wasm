@@ -1,14 +1,45 @@
-wit_document = 
-    { document_item };
+// item: file
+file =
+  [package_declaration] (toplevel_use_item | interface_item | world_item)*;
 
-document_item =
-    interface_item
-    | world ; 
+package_declaration =
+  'package' id ':' id ('@' valid_semver)?;
 
-world = 'world' id '{' '}';
+// item: toplevel-use
+toplevel_use_item =
+  'use' interface ('as' id)?;
 
+interface = 
+  id 
+  | id ':' id '/' id ('@' valid-semver)?;
+
+// item: world
+world_item = 
+  'world' id '{' world_items '}';
+
+world_items = 
+  export_item
+  | import_item
+  | use_item
+  | typedef_item
+  | include_item;
+
+export_item = 
+  'export' id ':' extern_type
+  | 'export' interface;
+
+import_item = 
+  'import' id ':' extern_type
+  | 'import' interface; 
+
+extern_type =
+  func_type 
+  | 'interface' '{' interface_items * '}';
+
+
+// item: interface
 interface_item = 
-    'interface' id [ strlit ] '{' { interface_items } '}';
+    'interface' id  '{' { interface_items* } '}';
 
 interface_items = 
     resource_item

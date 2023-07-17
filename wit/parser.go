@@ -8,6 +8,12 @@ import (
 	"github.com/patrickhuber/go-wasm/wit/ast"
 )
 
-func Parse(reader io.Reader) (ast.File, error) {
-	return &ast.FileNode{}, nil
+func Parse(reader io.Reader) (ast.Ast, error) {
+	lexer := NewLexer(reader)
+	return parseAst(lexer)
+}
+
+func parseAst(lexer Lexer) (ast.Ast, error) {
+
+	return &ast.AstNode{}, nil
 }
