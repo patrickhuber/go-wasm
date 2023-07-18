@@ -66,7 +66,6 @@ func TestLexer(t *testing.T) {
 
 			lex := wit.NewLexer(strings.NewReader(test.str))
 			for i, tok := range test.tokens {
-
 				actual, err := lex.Next()
 				require.Nil(t, err)
 				require.Equal(t, i, i) // needed for conditional breakpoint

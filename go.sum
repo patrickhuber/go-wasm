@@ -2,8 +2,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/patrickhuber/go-collections v0.0.8 h1:5uX6XyeE3SXPj1r5qh5vC5u+ir9p2c7g6xxD623NgOI=
 github.com/patrickhuber/go-collections v0.0.8/go.mod h1:toiYTs3YVa62MXZnnQeCOXeMB2YxGyitTgMYCCXCC7g=
-github.com/patrickhuber/go-types v0.2.5 h1:YQwKuqTpLKpD53YNbtmAS9rJfYcmpdMhd1H2E4n6CjY=
-github.com/patrickhuber/go-types v0.2.5/go.mod h1:fkCDj9+Mfd2t7x0vb8EQywoa1vhBp+G8AW7M5kz7rnc=
+github.com/patrickhuber/go-types v0.3.0 h1:DbwM55wp4bYFJcJXey+OcoQevjIuFLvrdO5TeZP+34c=
+github.com/patrickhuber/go-types v0.3.0/go.mod h1:fkCDj9+Mfd2t7x0vb8EQywoa1vhBp+G8AW7M5kz7rnc=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=

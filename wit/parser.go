@@ -6,36 +6,31 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/patrickhuber/go-types"
+	"github.com/patrickhuber/go-types/handle"
 	"github.com/patrickhuber/go-types/option"
-	"github.com/patrickhuber/go-wasm/abi/types"
+	"github.com/patrickhuber/go-types/result"
+	abi "github.com/patrickhuber/go-wasm/abi/types"
 	"github.com/patrickhuber/go-wasm/wit/ast"
 	"github.com/patrickhuber/go-wasm/wit/token"
 )
 
 func Parse(reader io.Reader) (*ast.Ast, error) {
 	lexer := NewLexer(reader)
-	return parseAst(lexer)
+	return parseAst(lexer).Deconstruct()
 }
 
-func parseAst(lexer Lexer) (*ast.Ast, error) {
-	tok, err := next(lexer)
-	if err != nil {
-		return nil, err
-	}
+func parseAst(lexer Lexer) (res types.Result[*ast.Ast]) {
+	defer handle.Error(&res)
 
+	tok := next(lexer).Unwrap()
 	n := &ast.Ast{}
 
 	switch tok.Capture {
 	case "package":
-		packageName, err := parsePackageName(lexer)
-		if err != nil {
-			return nil, err
-		}
+		packageName := parsePackageName(lexer).Unwrap()
 		n.PackageName = option.Some(*packageName)
-		tok, err = next(lexer)
-		if err != nil {
-			return nil, err
-		}
+		tok = next(lexer).Unwrap()
 	default:
 		n.PackageName = option.None[ast.PackageName]()
 	}
@@ -44,140 +39,89 @@ func parseAst(lexer Lexer) (*ast.Ast, error) {
 		item := &ast.AstItem{}
 		switch tok.Capture {
 		case "use":
-			topLevelUse, err := parseTopLevelUse(lexer)
-			if err != nil {
-				return nil, err
-			}
-			item.Use = topLevelUse
+			item.Use = parseTopLevelUse(lexer).Unwrap()
 		case "world":
-			world, err := parseWorld(lexer)
-			if err != nil {
-				return nil, err
-			}
-			item.World = world
+			item.World = parseWorld(lexer).Unwrap()
 		case "interface":
-			inter, err := parseInterface(lexer)
-			if err != nil {
-				return nil, err
-			}
-			item.Interface = inter
+			item.Interface = parseInterface(lexer).Unwrap()
 		}
 		n.Items = append(n.Items, *item)
-		tok, err = next(lexer)
-		if err != nil {
-			return nil, err
-		}
+
+		tok = next(lexer).Unwrap()
 		if tok.Type == token.EndOfStream {
 			break
 		}
 	}
-	return n, nil
+	return result.Ok(n)
 }
 
-func parsePackageName(lexer Lexer) (*ast.PackageName, error) {
-	packageName := &ast.PackageName{}
-
-	tok, err := next(lexer)
-	if err != nil {
-		return nil, err
-	}
-	err = expect(tok, token.String)
-	if err != nil {
-		return nil, err
-	}
-	packageName.Namespace = tok.Capture
-
-	tok, err = next(lexer)
-	if err != nil {
-		return nil, err
-	}
-	err = expect(tok, token.Colon)
-	if err != nil {
-		return nil, err
-	}
-
-	tok, err = next(lexer)
-	if err != nil {
-		return nil, err
-	}
-	err = expect(tok, token.String)
-	if err != nil {
-		return nil, err
-	}
-	packageName.Name = tok.Capture
-
-	peek, err := peek(lexer)
-	if err != nil {
-		return nil, err
-	}
-	if !optional(peek, token.At) {
-		packageName.Version = option.None[ast.Version]()
-		return packageName, nil
-	}
-
-	tok, err = next(lexer)
-	if err != nil {
-		return nil, err
-	}
-	err = expect(tok, token.At)
-	if err != nil {
-		return nil, err
-	}
-
-	version, err := parseVersion(lexer)
-	if err != nil {
-		return nil, err
-	}
-	packageName.Version = option.Some(*version)
-	return packageName, nil
-}
-
-func parseVersion(lexer Lexer) (*ast.Version, error) {
-	version := &ast.Version{}
-	return version, nil
-}
-
-func parseTopLevelUse(lexer Lexer) (*ast.TopLevelUse, error) {
-	return nil, nil
-}
-
-func parseInterface(lexer Lexer) (*ast.Interface, error) {
-	inter := &ast.Interface{}
+func parsePackageName(lexer Lexer) (res types.Result[*ast.PackageName]) {
+	defer handle.Error(&res)
 
 	// id
-	tok, err := next(lexer)
-	if err != nil {
-		return nil, err
+	tok := next(lexer).Unwrap()
+	expect(tok, token.String).Unwrap()
+
+	packageName := &ast.PackageName{
+		Namespace: tok.Capture,
 	}
-	err = expect(tok, token.String)
-	if err != nil {
-		return nil, fmt.Errorf("expected id")
+
+	// ':'
+	tok = next(lexer).Unwrap()
+	expect(tok, token.Colon).Unwrap()
+
+	// id
+	tok = next(lexer).Unwrap()
+	expect(tok, token.String).Unwrap()
+	packageName.Name = tok.Capture
+
+	peek := peek(lexer).Unwrap()
+	if !optional(peek, token.At) {
+		packageName.Version = option.None[ast.Version]()
+		return result.Ok(packageName)
 	}
-	inter.Name = tok.Capture
+
+	tok = next(lexer).Unwrap()
+	expect(tok, token.At).Unwrap()
+
+	version := parseVersion(lexer).Unwrap()
+	packageName.Version = option.Some(*version)
+
+	return result.Ok(packageName)
+}
+
+func parseVersion(lexer Lexer) (res types.Result[*ast.Version]) {
+	defer handle.Error(&res)
+	version := &ast.Version{}
+	return result.Ok(version)
+}
+
+func parseTopLevelUse(lexer Lexer) (res types.Result[*ast.TopLevelUse]) {
+	defer handle.Error(&res)
+	topLevelUse := &ast.TopLevelUse{}
+	return result.Ok(topLevelUse)
+}
+
+func parseInterface(lexer Lexer) (res types.Result[*ast.Interface]) {
+
+	defer handle.Error(&res)
+
+	// id
+	tok := next(lexer).Unwrap()
+	expect(tok, token.String).Unwrap()
 
 	// '{'
-	tok, err = next(lexer)
-	if err != nil {
-		return nil, err
-	}
-	err = expect(tok, token.OpenBrace)
-	if err != nil {
-		return nil, err
+	tok = next(lexer).Unwrap()
+	expect(tok, token.OpenBrace).Unwrap()
+
+	inter := &ast.Interface{
+		Name: tok.Capture,
 	}
 
 	for {
+		inter.Items = append(inter.Items, *parseInterfaceItem(lexer).Unwrap())
 
-		interfaceItem, err := parseInterfaceItem(lexer)
-		if err != nil {
-			return nil, err
-		}
-
-		inter.Items = append(inter.Items, *interfaceItem)
-
-		peekTok, err := peek(lexer)
-		if err != nil {
-			return nil, err
-		}
+		peekTok := peek(lexer).Unwrap()
 
 		// exit on '}'
 		if optional(peekTok, token.CloseBrace) {
@@ -185,31 +129,22 @@ func parseInterface(lexer Lexer) (*ast.Interface, error) {
 		}
 	}
 
-	tok, err = next(lexer)
-	if err != nil {
-		return nil, err
-	}
+	tok = next(lexer).Unwrap()
 
 	// '}'
-	err = expect(tok, token.CloseBrace)
-	if err != nil {
-		return nil, err
-	}
+	expect(tok, token.CloseBrace).Unwrap()
 
-	return inter, nil
+	return result.Ok(inter)
 }
 
-func parseInterfaceItem(lexer Lexer) (*ast.InterfaceItem, error) {
+func parseInterfaceItem(lexer Lexer) (res types.Result[*ast.InterfaceItem]) {
+	defer handle.Error(&res)
+
+	tok := next(lexer).Unwrap()
+	expect(tok, token.String).Unwrap()
+
 	item := &ast.InterfaceItem{}
 
-	tok, err := next(lexer)
-	if err != nil {
-		return nil, err
-	}
-	err = expect(tok, token.String)
-	if err != nil {
-		return nil, err
-	}
 	switch tok.Capture {
 	case "use":
 	case "resource":
@@ -222,189 +157,123 @@ func parseInterfaceItem(lexer Lexer) (*ast.InterfaceItem, error) {
 
 	default:
 		// tok == id
-		funcItem, err := parseNamedFunc(tok, lexer)
-		if err != nil {
-			return nil, err
-		}
+		funcItem := parseNamedFunc(tok, lexer).Unwrap()
 		item.Func = funcItem
 	}
-	return item, nil
+	return result.Ok(item)
 }
 
-func parseNamedFunc(name *token.Token, lexer Lexer) (*ast.NamedFunc, error) {
+func parseNamedFunc(name *token.Token, lexer Lexer) (res types.Result[*ast.NamedFunc]) {
+
+	defer handle.Error(&res)
+
 	named := &ast.NamedFunc{
 		Name: name.Capture,
 	}
 
-	tok, err := lexer.Next()
-	if err != nil {
-		return nil, err
-	}
+	tok := next(lexer).Unwrap()
+	expect(tok, token.Colon).Unwrap()
 
-	err = expect(tok, token.Colon)
-	if err != nil {
-		return nil, err
-	}
-
-	_func, err := parseFunc(lexer)
-	if err != nil {
-		return nil, err
-	}
+	_func := parseFunc(lexer).Unwrap()
 	named.Func = _func
-	return named, nil
+
+	return result.Ok(named)
 }
 
-func parseFunc(lexer Lexer) (*ast.Func, error) {
+func parseFunc(lexer Lexer) (res types.Result[*ast.Func]) {
+
+	defer handle.Error(&res)
+
+	tok := next(lexer).Unwrap()
+	expectValue(tok, token.String, "func").Unwrap()
+
+	tok = next(lexer).Unwrap()
+	expect(tok, token.OpenParen).Unwrap()
+
 	_func := &ast.Func{}
-
-	tok, err := next(lexer)
-	if err != nil {
-		return nil, err
-	}
-
-	err = expectValue(tok, token.String, "func")
-	if err != nil {
-		return nil, err
-	}
-
-	tok, err = next(lexer)
-	if err != nil {
-		return nil, err
-	}
-
-	err = expect(tok, token.OpenParen)
-	if err != nil {
-		return nil, err
-	}
-
 	for {
 		// name ':' type
-		param, err := parseParameter(lexer)
-		if err != nil {
-			return nil, err
-		}
-
+		param := parseParameter(lexer).Unwrap()
 		_func.Params = append(_func.Params, *param)
 
-		peekTok, err := peek(lexer)
-		if err != nil {
-			return nil, err
-		}
+		peekTok := peek(lexer).Unwrap()
 
 		if peekTok.Type == token.Comma {
-			tok, err = next(lexer)
-			if err != nil {
-				return nil, err
-			}
-			err = expect(tok, token.Comma)
-			if err != nil {
-				return nil, err
-			}
+			tok = next(lexer).Unwrap()
+			expect(tok, token.Comma).Unwrap()
 		} else if peekTok.Type == token.CloseParen {
 			break
 		} else {
-			return nil, fmt.Errorf("%w. expected ',' or ')' but found %s", parseError(peekTok), peekTok.Capture)
+			return result.Errorf[*ast.Func]("%w. expected ',' or ')' but found %s", parseError(peekTok), peekTok.Capture)
 		}
 
-		peekTok, err = peek(lexer)
-		if err != nil {
-			return nil, err
-		}
+		peekTok = peek(lexer).Unwrap()
 		if peekTok.Type == token.CloseParen {
 			break
 		}
 	}
 
-	tok, err = next(lexer)
-	if err != nil {
-		return nil, err
-	}
-	err = expect(tok, token.CloseParen)
-	if err != nil {
-		return nil, err
-	}
+	tok = next(lexer).Unwrap()
+	expect(tok, token.CloseParen).Unwrap()
 
-	return _func, nil
+	return result.Ok(_func)
 }
 
-func parseParameter(lexer Lexer) (*ast.Parameter, error) {
+func parseParameter(lexer Lexer) (res types.Result[*ast.Parameter]) {
+	defer handle.Error(&res)
+
 	parameter := &ast.Parameter{}
 
-	tok, err := next(lexer)
-	if err != nil {
-		return nil, err
-	}
-	err = expect(tok, token.String)
-	if err != nil {
-		return nil, err
-	}
+	tok := next(lexer).Unwrap()
+	expect(tok, token.String).Unwrap()
+
 	parameter.Id = tok.Capture
 
-	tok, err = next(lexer)
-	if err != nil {
-		return nil, err
-	}
+	tok = next(lexer).Unwrap()
+	expect(tok, token.Colon).Unwrap()
 
-	err = expect(tok, token.Colon)
-	if err != nil {
-		return nil, err
-	}
-
-	ty, err := parseType(lexer)
-	if err != nil {
-		return nil, err
-	}
-	parameter.Type = ty
-	return parameter, nil
+	parameter.Type = parseType(lexer).Unwrap()
+	return result.Ok(parameter)
 }
 
-func parseType(lexer Lexer) (types.Type, error) {
-	tok, err := next(lexer)
-	if err != nil {
-		return nil, err
-	}
-	err = expect(tok, token.String)
-	if err != nil {
-		return nil, err
-	}
-	var ty types.Type
+func parseType(lexer Lexer) (res types.Result[abi.Type]) {
+	defer handle.Error(&res)
+	tok := next(lexer).Unwrap()
+	expect(tok, token.String).Unwrap()
+
+	var ty abi.Type
 	switch tok.Capture {
 	case "string":
-		ty = types.NewString()
+		ty = abi.NewString()
 	default:
-		return nil, fmt.Errorf("unrecognized type %s", tok.Capture)
+		return result.Errorf[abi.Type]("unrecognized type %s", tok.Capture)
 	}
-	return ty, nil
+	return result.Ok(ty)
 }
 
-func parseWorld(lexer Lexer) (*ast.World, error) {
-	return nil, nil
+func parseWorld(lexer Lexer) (res types.Result[*ast.World]) {
+	defer handle.Error(&res)
+	return result.Errorf[*ast.World]("not implemented")
 }
 
-func next(lexer Lexer) (*token.Token, error) {
+func next(lexer Lexer) (res types.Result[*token.Token]) {
+	defer handle.Error(&res)
 	for {
-		tok, err := lexer.Next()
-		if err != nil {
-			return nil, err
-		}
+		res = result.New(lexer.Next())
+		tok := res.Unwrap()
 		if tok.Type != token.Whitespace {
-			return tok, nil
+			return
 		}
 	}
 }
 
-func peek(lexer Lexer) (*token.Token, error) {
+func peek(lexer Lexer) (res types.Result[*token.Token]) {
+	defer handle.Error(&res)
 	for {
-		peek, err := lexer.Peek()
-		if err != nil {
-			return nil, err
-		}
-		if peek.Type != token.Whitespace {
-			return peek, nil
-		}
-		_, err = lexer.Next()
-		if err != nil {
-			return nil, err
+		res = result.New(lexer.Next())
+		tok := res.Unwrap()
+		if tok.Type != token.Whitespace {
+			return
 		}
 	}
 }
@@ -417,18 +286,18 @@ func optionalValue(tok *token.Token, tokenType token.TokenType, capture string) 
 	return optional(tok, tokenType) && tok.Capture == capture
 }
 
-func expect(tok *token.Token, tokenType token.TokenType) error {
+func expect(tok *token.Token, tokenType token.TokenType) types.Result[any] {
 	if optional(tok, tokenType) {
-		return nil
+		return result.Ok[any](nil)
 	}
-	return fmt.Errorf("%w. expected %v but found %v", parseError(tok), tokenType, tok.Type)
+	return result.Errorf[any]("%w. expected %v but found %v", parseError(tok), tokenType, tok.Type)
 }
 
-func expectValue(tok *token.Token, tokenType token.TokenType, capture string) error {
+func expectValue(tok *token.Token, tokenType token.TokenType, capture string) types.Result[any] {
 	if optionalValue(tok, tokenType, capture) {
-		return nil
+		return result.Ok[any](nil)
 	}
-	return fmt.Errorf("%w. expected %v but found %v", parseError(tok), tokenType, tok.Type)
+	return result.Errorf[any]("%w. expected %v but found %v", parseError(tok), tokenType, tok.Type)
 }
 
 func parseError(tok *token.Token) error {

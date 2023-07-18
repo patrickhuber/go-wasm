@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/patrickhuber/go-collections v0.0.8
-	github.com/patrickhuber/go-types v0.2.5
+	github.com/patrickhuber/go-types v0.3.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	golang.org/x/text v0.9.0
