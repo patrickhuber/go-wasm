@@ -186,5 +186,5 @@ func (l *lexer) isWhitespace(r rune) bool {
 }
 
 func (l *lexer) isCharacter(r rune) bool {
-	return 'a' <= r && r <= 'z' || 'A' <= r && 'Z' <= r || '0' <= r && r <= '9' || r == '.' || r == '$'
+	return 'a' <= r && r <= 'z' || 'A' <= r && r <= 'Z' || '0' <= r && r <= '9' || r == '.' || r == '$'
 }

@@ -17,8 +17,8 @@ interface console {
 }
 `
 		reader := strings.NewReader(text)
-		witFile, err := wit.Parse(reader)
+		node, err := wit.Parse(reader)
 		require.Nil(t, err)
-		require.NotNil(t, witFile)
+		require.NotNil(t, node)
 	})
 }
