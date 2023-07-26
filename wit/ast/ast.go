@@ -131,6 +131,8 @@ type TypeDef struct {
 	Type Type
 }
 
+func (*TypeDef) worldItem() {}
+
 type Include struct {
 	From  *UsePath
 	Names []IncludeName
@@ -242,3 +244,55 @@ type Constructor struct {
 }
 
 func (*Constructor) resourceFunc() {}
+
+type Record struct {
+	TypeImpl
+	Fields []Field
+}
+
+type Field struct {
+	Name []rune
+	Type Type
+}
+
+type Flags struct {
+	TypeImpl
+	Flags []Flag
+}
+
+type Flag struct {
+	Id []rune
+}
+
+type Variant struct {
+	TypeImpl
+	Cases []Case
+}
+
+type Case struct {
+	Name []rune
+	Type types.Option[Type]
+}
+
+type Union struct {
+	TypeImpl
+	Cases []UnionCase
+}
+
+type UnionCase struct {
+	Type Type
+}
+
+type Enum struct {
+	TypeImpl
+	Cases []EnumCase
+}
+
+type EnumCase struct {
+	Name []rune
+}
+
+type Future struct {
+	TypeImpl
+	Type types.Option[Type]
+}

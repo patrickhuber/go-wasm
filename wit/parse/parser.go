@@ -34,7 +34,7 @@ func parseAst(lexer *lex.Lexer) (res types.Result[*ast.Ast]) {
 		n.PackageName = option.None[ast.PackageName]()
 	}
 
-	for {
+	for tok.Type != token.EndOfStream {
 		item := &ast.AstItem{}
 		switch tok.Type {
 		case token.Use:
@@ -47,9 +47,6 @@ func parseAst(lexer *lex.Lexer) (res types.Result[*ast.Ast]) {
 		n.Items = append(n.Items, *item)
 
 		tok = next(lexer).Unwrap()
-		if tok.Type == token.EndOfStream {
-			break
-		}
 	}
 	return result.Ok(n)
 }
@@ -102,16 +99,18 @@ func parseInterface(lexer *lex.Lexer) (res types.Result[*ast.Interface]) {
 	// '{'
 	expect(lexer, token.OpenBrace).Unwrap()
 
-	for {
-		// exit on '}'
-		if eat(lexer, token.CloseBrace).Unwrap() {
-			break
-		}
-
-		inter.Items = append(inter.Items, *parseInterfaceItem(lexer).Unwrap())
-
-	}
+	// exit on '}'
+	inter.Items = parseInterfaceItems(lexer).Unwrap()
 	return result.Ok(inter)
+}
+
+func parseInterfaceItems(lexer *lex.Lexer) (res types.Result[[]ast.InterfaceItem]) {
+	defer handle.Error(&res)
+	var items []ast.InterfaceItem
+	for !eat(lexer, token.CloseBrace).Unwrap() {
+		items = append(items, *parseInterfaceItem(lexer).Unwrap())
+	}
+	return result.Ok(items)
 }
 
 func parseInterfaceItem(lexer *lex.Lexer) (res types.Result[*ast.InterfaceItem]) {
@@ -125,16 +124,16 @@ func parseInterfaceItem(lexer *lex.Lexer) (res types.Result[*ast.InterfaceItem])
 		item.Use = parseUse(lexer).Unwrap()
 	case token.Resource:
 		item.TypeDef = parseResource(lexer).Unwrap()
-	case token.Variant:
-		fallthrough
 	case token.Record:
-		fallthrough
-	case token.Union:
-		fallthrough
+		item.TypeDef = parseRecord(lexer).Unwrap()
 	case token.Flags:
-		fallthrough
+		item.TypeDef = parseFlags(lexer).Unwrap()
+	case token.Variant:
+		item.TypeDef = parseVariant(lexer).Unwrap()
+	case token.Union:
+		item.TypeDef = parseUnion(lexer).Unwrap()
 	case token.Enum:
-		return result.Errorf[*ast.InterfaceItem]("interface '%s' not implemented", string(itemType.Runes))
+		item.TypeDef = parseEnum(lexer).Unwrap()
 	case token.Type:
 		item.TypeDef = parseTypeDef(lexer).Unwrap()
 
@@ -175,7 +174,7 @@ func parseResource(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
 
 	return result.Ok(&ast.TypeDef{
 		Name: name,
-		Type: &ast.Resource{},
+		Type: resource,
 	})
 }
 
@@ -226,31 +225,49 @@ func parseUse(lexer *lex.Lexer) (res types.Result[*ast.Use]) {
 
 	// .
 	expect(lexer, token.Period).Unwrap()
-	// {
-	expect(lexer, token.OpenBrace).Unwrap()
+	u.Names = parseItemList[ast.UseName](
+		lexer,
+		token.OpenBrace,
+		token.CloseBrace,
+		parseUseName).Unwrap()
 
-	var names []ast.UseName
-	for {
+	return result.Ok(u)
+}
 
-		name := ast.UseName{
-			Name: parseId(lexer).Unwrap(),
-			As:   option.None[[]rune](),
-		}
+func parseUseName(lexer *lex.Lexer) types.Result[ast.UseName] {
+	name := ast.UseName{
+		Name: parseId(lexer).Unwrap(),
+		As:   option.None[[]rune](),
+	}
 
-		// as
-		if eat(lexer, token.As).Unwrap() {
-			name.As = option.Some(parseId(lexer).Unwrap())
-		}
-		names = append(names, name)
-		// ,
+	// as
+	if eat(lexer, token.As).Unwrap() {
+		name.As = option.Some(parseId(lexer).Unwrap())
+	}
+	return result.Ok(name)
+}
+
+func parseItemList[T any](
+	lexer *lex.Lexer,
+	begin token.TokenType,
+	end token.TokenType,
+	parseItem func(l *lex.Lexer) types.Result[T]) (res types.Result[[]T]) {
+
+	defer handle.Error(&res)
+
+	var itemList []T
+	expect(lexer, begin).Unwrap()
+	for !eat(lexer, end).Unwrap() {
+
+		item := parseItem(lexer).Unwrap()
+		itemList = append(itemList, item)
+
 		if !eat(lexer, token.Comma).Unwrap() {
-			// }
-			expect(lexer, token.CloseBrace).Unwrap()
+			expect(lexer, end).Unwrap()
 			break
 		}
 	}
-	u.Names = names
-	return result.Ok(u)
+	return result.Ok(itemList)
 }
 
 func parseUsePath(lexer *lex.Lexer) (res types.Result[*ast.UsePath]) {
@@ -393,6 +410,8 @@ func parseType(lexer *lex.Lexer) (res types.Result[ast.Type]) {
 		ty = &ast.Float64{}
 	case token.Stream:
 		ty = parseStream(lexer).Unwrap()
+	case token.Future:
+		ty = parseFuture(lexer).Unwrap()
 	case token.List:
 		ty = parseList(lexer).Unwrap()
 	case token.Option:
@@ -433,6 +452,7 @@ func parseStream(lexer *lex.Lexer) (res types.Result[*ast.Stream]) {
 	if eat(lexer, token.Less).Unwrap() {
 		if eat(lexer, token.Underscore).Unwrap() {
 			expect(lexer, token.Comma).Unwrap()
+			stream.End = option.Some(parseType(lexer).Unwrap())
 		} else {
 			stream.Element = option.Some(parseType(lexer).Unwrap())
 			if eat(lexer, token.Comma).Unwrap() {
@@ -442,6 +462,17 @@ func parseStream(lexer *lex.Lexer) (res types.Result[*ast.Stream]) {
 		expect(lexer, token.Greater).Unwrap()
 	}
 	return result.Ok(stream)
+}
+
+func parseFuture(lexer *lex.Lexer) (res types.Result[*ast.Future]) {
+	defer handle.Error(&res)
+	future := &ast.Future{}
+	if eat(lexer, token.Less).Unwrap() {
+		ty := parseType(lexer).Unwrap()
+		future.Type = option.Some(ty)
+		expect(lexer, token.Greater).Unwrap()
+	}
+	return result.Ok(future)
 }
 
 func parseList(lexer *lex.Lexer) (res types.Result[*ast.List]) {
@@ -466,24 +497,10 @@ func parseOption(lexer *lex.Lexer) (res types.Result[*ast.Option]) {
 
 func parseTuple(lexer *lex.Lexer) (res types.Result[*ast.Tuple]) {
 	defer handle.Error(&res)
-	var types []ast.Type
-	expect(lexer, token.Less).Unwrap()
-	for {
-		if eat(lexer, token.Greater).Unwrap() {
-			break
-		}
-
-		ty := parseType(lexer).Unwrap()
-		types = append(types, ty)
-
-		if !eat(lexer, token.Comma).Unwrap() {
-			expect(lexer, token.Greater).Unwrap()
-			break
-		}
+	tuple := &ast.Tuple{
+		Types: parseItemList[ast.Type](lexer, token.Less, token.Greater, parseType).Unwrap(),
 	}
-	return result.Ok(&ast.Tuple{
-		Types: types,
-	})
+	return result.Ok(tuple)
 }
 
 // result<T, E>
@@ -499,6 +516,7 @@ func parseResult(lexer *lex.Lexer) (res types.Result[*ast.Result]) {
 	if eat(lexer, token.Less).Unwrap() {
 		if eat(lexer, token.Underscore).Unwrap() {
 			expect(lexer, token.Comma).Unwrap()
+			r.Error = option.Some(parseType(lexer).Unwrap())
 		} else {
 			r.Ok = option.Some(parseType(lexer).Unwrap())
 			if eat(lexer, token.Comma).Unwrap() {
@@ -528,11 +546,7 @@ func parseWorld(lexer *lex.Lexer) (res types.Result[*ast.World]) {
 func parseWorldItems(lexer *lex.Lexer) (res types.Result[[]ast.WorldItem]) {
 	defer handle.Error(&res)
 	var worldItems []ast.WorldItem
-	for {
-		if eat(lexer, token.CloseBrace).Unwrap() {
-			break
-		}
-
+	for !eat(lexer, token.CloseBrace).Unwrap() {
 		worldItems = append(worldItems, parseWorldItem(lexer).Unwrap())
 	}
 	return result.Ok(worldItems)
@@ -547,12 +561,21 @@ func parseWorldItem(lexer *lex.Lexer) (res types.Result[ast.WorldItem]) {
 		return parseExport(lexer)
 	case token.Import:
 		return parseImport(lexer)
+	case token.Resource:
+		return result.Ok[ast.WorldItem](
+			parseResource(lexer).Unwrap(),
+		)
 	case token.Use:
+
 	case token.Type:
+
 	case token.Include:
 		return parseInclude(lexer)
 	}
-	return result.Errorf[ast.WorldItem]("unrecognized world item %s", string(itemType.Runes))
+	return result.Errorf[ast.WorldItem]("%w : Unrecognized world item '%s'. Expected (export, import, resource, use, type, include). Found token.%v",
+		parseErrorFromLexer(lexer),
+		string(itemType.Runes),
+		itemType.Type)
 }
 
 func parseExport(lexer *lex.Lexer) (res types.Result[ast.WorldItem]) {
@@ -584,10 +607,7 @@ func parseInclude(lexer *lex.Lexer) (res types.Result[ast.WorldItem]) {
 	}
 	if eat(lexer, token.With).Unwrap() {
 		expect(lexer, token.OpenBrace).Unwrap()
-		for {
-			if eat(lexer, token.CloseBrace).Unwrap() {
-				break
-			}
+		for !eat(lexer, token.CloseBrace).Unwrap() {
 			id := parseId(lexer).Unwrap()
 			expect(lexer, token.As).Unwrap()
 			as := parseId(lexer).Unwrap()
@@ -612,7 +632,10 @@ func parseExternType(lexer *lex.Lexer, id []rune) (res types.Result[*ast.ExternT
 		} else if eat(lexer, token.Interface).Unwrap() {
 			// import foo: interface{...}
 			//                      ^
-			et.Interface = parseInterface(lexer).Unwrap()
+			expect(lexer, token.OpenBrace).Unwrap()
+			et.Interface = &ast.Interface{
+				Items: parseInterfaceItems(lexer).Unwrap(),
+			}
 		}
 	} else {
 		// import foo
@@ -624,14 +647,120 @@ func parseExternType(lexer *lex.Lexer, id []rune) (res types.Result[*ast.ExternT
 	return result.Ok(et)
 }
 
+// record ::= id '{' fields '}'
+// fields ::= field | field ',' fields | λ
+// field  ::= id ':' ty
+func parseRecord(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
+	defer handle.Error(&res)
+
+	name := parseId(lexer).Unwrap()
+	record := &ast.Record{
+		Fields: parseItemList(lexer, token.OpenBrace, token.CloseBrace,
+			func(l *lex.Lexer) types.Result[ast.Field] {
+				id := parseId(lexer).Unwrap()
+				expect(lexer, token.Colon).Unwrap()
+				ty := parseType(lexer).Unwrap()
+				return result.Ok(ast.Field{Name: id, Type: ty})
+			}).Unwrap(),
+	}
+
+	return result.Ok(&ast.TypeDef{
+		Name: name,
+		Type: record,
+	})
+}
+
+func parseFlags(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
+	defer handle.Error(&res)
+
+	name := parseId(lexer).Unwrap()
+	flags := &ast.Flags{
+		Flags: parseItemList(lexer, token.OpenBrace, token.CloseBrace, func(l *lex.Lexer) types.Result[ast.Flag] {
+			id := parseId(lexer).Unwrap()
+			return result.Ok(ast.Flag{
+				Id: id,
+			})
+		}).Unwrap(),
+	}
+	return result.Ok(&ast.TypeDef{
+		Name: name,
+		Type: flags,
+	})
+}
+
+func parseVariant(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
+	defer handle.Error(&res)
+
+	name := parseId(lexer).Unwrap()
+
+	cases := parseItemList(lexer, token.OpenBrace, token.CloseBrace, func(l *lex.Lexer) types.Result[ast.Case] {
+		name := parseId(lexer).Unwrap()
+		c := &ast.Case{
+			Name: name,
+			Type: option.None[ast.Type](),
+		}
+		if eat(lexer, token.OpenParen).Unwrap() {
+			ty := parseType(lexer).Unwrap()
+			expect(lexer, token.CloseParen)
+			c.Type = option.Some(ty)
+		}
+		return result.Ok(*c)
+	}).Unwrap()
+	return result.Ok(&ast.TypeDef{
+		Name: name,
+		Type: &ast.Variant{
+			Cases: cases,
+		},
+	})
+}
+
+func parseUnion(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
+	defer handle.Error(&res)
+	id := parseId(lexer).Unwrap()
+	cases := parseItemList(lexer, token.OpenBrace, token.CloseBrace, func(l *lex.Lexer) types.Result[ast.UnionCase] {
+		ty := parseType(lexer).Unwrap()
+		return result.Ok(ast.UnionCase{
+			Type: ty,
+		})
+	}).Unwrap()
+	union := &ast.Union{
+		Cases: cases,
+	}
+	return result.Ok(&ast.TypeDef{
+		Name: id,
+		Type: union,
+	})
+}
+
+func parseEnum(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
+	defer handle.Error(&res)
+	id := parseId(lexer).Unwrap()
+	cases := parseItemList(lexer, token.OpenBrace, token.CloseBrace,
+		func(l *lex.Lexer) types.Result[ast.EnumCase] {
+			id := parseId(lexer).Unwrap()
+			return result.Ok(ast.EnumCase{
+				Name: id,
+			})
+		}).Unwrap()
+	enum := &ast.Enum{
+		Cases: cases,
+	}
+	return result.Ok(&ast.TypeDef{
+		Name: id,
+		Type: enum,
+	})
+}
+
 func parseId(lexer *lex.Lexer) (res types.Result[[]rune]) {
 	defer handle.Error(&res)
 	tok := next(lexer).Unwrap()
 	switch tok.Type {
 	case token.Id:
 		return result.Ok(tok.Runes)
+	case token.ExplicitId:
+		return result.Ok(tok.Runes)
 	default:
-		return result.Errorf[[]rune]("%w : found value '%s', type '%v' but expected token.String", parseError(tok), string(tok.Runes), tok.Type)
+		return result.Errorf[[]rune]("%w : found value '%s', type '%v' but expected (id, explicit_id)", parseError(tok), string(tok.Runes), tok.Type)
 	}
 }
 
@@ -701,4 +830,13 @@ func parseError(tok *token.Token) error {
 		line,
 		col,
 		tok.Position)
+}
+
+func parseErrorFromLexer(lexer *lex.Lexer) error {
+	line := lexer.Line() + 1
+	col := lexer.Column() + 1
+	return fmt.Errorf(
+		"error parsing at line %d, column %d",
+		line,
+		col)
 }

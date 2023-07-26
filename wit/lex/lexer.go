@@ -21,6 +21,14 @@ type Lexer struct {
 	peekToken *token.Token
 }
 
+func (l *Lexer) Line() int {
+	return l.line
+}
+
+func (l *Lexer) Column() int {
+	return l.column
+}
+
 func New(input []rune) *Lexer {
 	return &Lexer{
 		input:    input,
