@@ -103,12 +103,13 @@ func parseInterface(lexer *lex.Lexer) (res types.Result[*ast.Interface]) {
 	expect(lexer, token.OpenBrace).Unwrap()
 
 	for {
-		inter.Items = append(inter.Items, *parseInterfaceItem(lexer).Unwrap())
-
 		// exit on '}'
 		if eat(lexer, token.CloseBrace).Unwrap() {
 			break
 		}
+
+		inter.Items = append(inter.Items, *parseInterfaceItem(lexer).Unwrap())
+
 	}
 	return result.Ok(inter)
 }
@@ -123,7 +124,7 @@ func parseInterfaceItem(lexer *lex.Lexer) (res types.Result[*ast.InterfaceItem])
 	case token.Use:
 		item.Use = parseUse(lexer).Unwrap()
 	case token.Resource:
-		fallthrough
+		item.TypeDef = parseResource(lexer).Unwrap()
 	case token.Variant:
 		fallthrough
 	case token.Record:
@@ -145,6 +146,8 @@ func parseInterfaceItem(lexer *lex.Lexer) (res types.Result[*ast.InterfaceItem])
 }
 
 func parseTypeDef(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
+	defer handle.Error(&res)
+
 	name := parseId(lexer).Unwrap()
 	expect(lexer, token.Equal).Unwrap()
 	ty := parseType(lexer).Unwrap()
@@ -153,6 +156,66 @@ func parseTypeDef(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
 			Name: name,
 			Type: ty,
 		})
+}
+
+func parseResource(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
+	defer handle.Error(&res)
+
+	name := parseId(lexer).Unwrap()
+	resource := &ast.Resource{}
+	if eat(lexer, token.OpenBrace).Unwrap() {
+		for {
+			if eat(lexer, token.CloseBrace).Unwrap() {
+				break
+			}
+			resourceFunc := parseResourceFunc(lexer).Unwrap()
+			resource.Functions = append(resource.Functions, resourceFunc)
+		}
+	}
+
+	return result.Ok(&ast.TypeDef{
+		Name: name,
+		Type: &ast.Resource{},
+	})
+}
+
+/*
+resource-method ::= func-item
+| id ':' 'static' func-type
+| id ':' func-type
+| 'constructor' param-list
+*/
+func parseResourceFunc(lexer *lex.Lexer) (res types.Result[ast.ResourceFunc]) {
+	defer handle.Error(&res)
+
+	namedFunc := &ast.NamedFunc{
+		Func: &ast.Func{},
+	}
+	if eat(lexer, token.Constructor).Unwrap() {
+		expect(lexer, token.OpenParen).Unwrap()
+		namedFunc.Func.Params = parseParameters(lexer).Unwrap()
+		namedFunc.Name = []rune("constructor")
+		return result.Ok[ast.ResourceFunc](&ast.Constructor{
+			NamedFunc: namedFunc,
+		})
+	}
+
+	namedFunc.Name = parseId(lexer).Unwrap()
+	expect(lexer, token.Colon).Unwrap()
+
+	static := eat(lexer, token.Static).Unwrap()
+
+	expect(lexer, token.Func).Unwrap()
+	namedFunc.Func = parseFunc(lexer).Unwrap()
+
+	if static {
+		return result.Ok[ast.ResourceFunc](&ast.Static{
+			NamedFunc: namedFunc,
+		})
+	}
+	return result.Ok[ast.ResourceFunc](&ast.Method{
+		NamedFunc: namedFunc,
+	})
 }
 
 func parseUse(lexer *lex.Lexer) (res types.Result[*ast.Use]) {
@@ -338,6 +401,18 @@ func parseType(lexer *lex.Lexer) (res types.Result[ast.Type]) {
 		ty = parseResult(lexer).Unwrap()
 	case token.Tuple:
 		ty = parseTuple(lexer).Unwrap()
+	case token.Own:
+		expect(lexer, token.Less).Unwrap()
+		ty = &ast.Own{
+			Id: parseId(lexer).Unwrap(),
+		}
+		expect(lexer, token.Greater).Unwrap()
+	case token.Borrow:
+		expect(lexer, token.Less).Unwrap()
+		ty = &ast.Borrow{
+			Id: parseId(lexer).Unwrap(),
+		}
+		expect(lexer, token.Greater).Unwrap()
 	default:
 		ty = &ast.Id{Value: name.Runes}
 	}
@@ -475,6 +550,7 @@ func parseWorldItem(lexer *lex.Lexer) (res types.Result[ast.WorldItem]) {
 	case token.Use:
 	case token.Type:
 	case token.Include:
+		return parseInclude(lexer)
 	}
 	return result.Errorf[ast.WorldItem]("unrecognized world item %s", string(itemType.Runes))
 }
@@ -499,6 +575,29 @@ func parseImport(lexer *lex.Lexer) (res types.Result[ast.WorldItem]) {
 	return result.Ok[ast.WorldItem](&ast.ImportExternType{
 		ExternType: parseExternType(lexer, id).Unwrap(),
 	})
+}
+
+func parseInclude(lexer *lex.Lexer) (res types.Result[ast.WorldItem]) {
+	defer handle.Error(&res)
+	include := &ast.Include{
+		From: parseUsePath(lexer).Unwrap(),
+	}
+	if eat(lexer, token.With).Unwrap() {
+		expect(lexer, token.OpenBrace).Unwrap()
+		for {
+			if eat(lexer, token.CloseBrace).Unwrap() {
+				break
+			}
+			id := parseId(lexer).Unwrap()
+			expect(lexer, token.As).Unwrap()
+			as := parseId(lexer).Unwrap()
+			include.Names = append(include.Names, ast.IncludeName{
+				Name: id,
+				As:   as,
+			})
+		}
+	}
+	return result.Ok[ast.WorldItem](include)
 }
 
 func parseExternType(lexer *lex.Lexer, id []rune) (res types.Result[*ast.ExternType]) {

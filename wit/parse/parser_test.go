@@ -14,7 +14,7 @@ import (
 )
 
 func TestParser(t *testing.T) {
-	dir := "../fixtures"
+	dir := "../../submodules/github.com/bytecodealliance/wasm-tools/crates/wit-parser/tests/ui"
 	files, err := os.ReadDir(dir)
 	require.NoError(t, err)
 	require.NotNil(t, files)

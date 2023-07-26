@@ -131,7 +131,17 @@ type TypeDef struct {
 	Type Type
 }
 
-type Include struct{}
+type Include struct {
+	From  *UsePath
+	Names []IncludeName
+}
+
+func (*Include) worldItem() {}
+
+type IncludeName struct {
+	Name []rune
+	As   []rune
+}
 
 type TopLevelUse struct{}
 
@@ -177,7 +187,23 @@ type Result struct {
 	Error types.Option[Type]
 }
 
-type Handle struct{ TypeImpl }
+type Handle interface {
+	handle()
+}
+
+type Own struct {
+	TypeImpl
+	Id []rune
+}
+
+func (Own) handle() {}
+
+type Borrow struct {
+	TypeImpl
+	Id []rune
+}
+
+func (Borrow) handle() {}
 
 type Id struct {
 	TypeImpl
@@ -189,3 +215,30 @@ type Stream struct {
 	Element types.Option[Type]
 	End     types.Option[Type]
 }
+
+type Resource struct {
+	TypeImpl
+	Functions []ResourceFunc
+}
+
+type ResourceFunc interface {
+	resourceFunc()
+}
+
+type Method struct {
+	NamedFunc *NamedFunc
+}
+
+func (*Method) resourceFunc() {}
+
+type Static struct {
+	NamedFunc *NamedFunc
+}
+
+func (*Static) resourceFunc() {}
+
+type Constructor struct {
+	NamedFunc *NamedFunc
+}
+
+func (*Constructor) resourceFunc() {}
