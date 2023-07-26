@@ -4,6 +4,14 @@ github.com/patrickhuber/go-collections v0.0.8 h1:5uX6XyeE3SXPj1r5qh5vC5u+ir9p2c7
 github.com/patrickhuber/go-collections v0.0.8/go.mod h1:toiYTs3YVa62MXZnnQeCOXeMB2YxGyitTgMYCCXCC7g=
 github.com/patrickhuber/go-types v0.3.0 h1:DbwM55wp4bYFJcJXey+OcoQevjIuFLvrdO5TeZP+34c=
 github.com/patrickhuber/go-types v0.3.0/go.mod h1:fkCDj9+Mfd2t7x0vb8EQywoa1vhBp+G8AW7M5kz7rnc=
+github.com/patrickhuber/go-types v0.4.0 h1:mo8H3xSjT37AuZ2RoUwJ0WtSmEpG0LnEp6Va8605VF0=
+github.com/patrickhuber/go-types v0.4.0/go.mod h1:fkCDj9+Mfd2t7x0vb8EQywoa1vhBp+G8AW7M5kz7rnc=
+github.com/patrickhuber/go-types v0.4.1 h1:Et+IJTy5PuMdyilXf4R11nQPIiNOCOu+HUXyx+V1kSI=
+github.com/patrickhuber/go-types v0.4.1/go.mod h1:fkCDj9+Mfd2t7x0vb8EQywoa1vhBp+G8AW7M5kz7rnc=
+github.com/patrickhuber/go-types v0.4.2 h1:0ycoTBB6n+hzUcjiEb8DB8ExkOrmlzdbuy8q1iJ0WXE=
+github.com/patrickhuber/go-types v0.4.2/go.mod h1:fkCDj9+Mfd2t7x0vb8EQywoa1vhBp+G8AW7M5kz7rnc=
+github.com/patrickhuber/go-types v0.4.4 h1:RhnwtL10ejAlp8Xj3ytYCS8ge+0JVsGxnQ2Rb2ZTxhM=
+github.com/patrickhuber/go-types v0.4.4/go.mod h1:fkCDj9+Mfd2t7x0vb8EQywoa1vhBp+G8AW7M5kz7rnc=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=

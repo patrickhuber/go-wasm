@@ -132,7 +132,7 @@ func TestCanParse(t *testing.T) {
 
 func CanParse(t *testing.T, input string, expected *wat.Module) {
 	result, err := wat.ParseString(input)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, result)
 	require.Equal(t, result, expected)
 }
