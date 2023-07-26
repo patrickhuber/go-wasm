@@ -1,0 +1,3 @@
+[submodule "submodules/github.com/bytecodealliance/wasm-tools"]
+	path = submodules/github.com/bytecodealliance/wasm-tools
+	url = git@github.com:bytecodealliance/wasm-tools.git
