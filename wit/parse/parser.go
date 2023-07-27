@@ -561,14 +561,26 @@ func parseWorldItem(lexer *lex.Lexer) (res types.Result[ast.WorldItem]) {
 		return parseExport(lexer)
 	case token.Import:
 		return parseImport(lexer)
+	case token.Use:
+		return result.Ok[ast.WorldItem](
+			parseUse(lexer).Unwrap(),
+		)
+	case token.Type:
+		return result.Ok[ast.WorldItem](
+			parseTypeDef(lexer).Unwrap(),
+		)
+	case token.Record:
+		return result.Ok[ast.WorldItem](
+			parseRecord(lexer).Unwrap(),
+		)
+	case token.Variant:
+		return result.Ok[ast.WorldItem](
+			parseVariant(lexer).Unwrap(),
+		)
 	case token.Resource:
 		return result.Ok[ast.WorldItem](
 			parseResource(lexer).Unwrap(),
 		)
-	case token.Use:
-
-	case token.Type:
-
 	case token.Include:
 		return parseInclude(lexer)
 	}

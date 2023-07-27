@@ -113,6 +113,8 @@ type Use struct {
 	Names []UseName
 }
 
+func (imp *Use) worldItem() {}
+
 type UsePath struct {
 	Id      []rune
 	Package struct {
