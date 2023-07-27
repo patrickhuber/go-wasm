@@ -84,7 +84,15 @@ func parseVersion(lexer *lex.Lexer) (res types.Result[*ast.Version]) {
 
 func parseTopLevelUse(lexer *lex.Lexer) (res types.Result[*ast.TopLevelUse]) {
 	defer handle.Error(&res)
-	topLevelUse := &ast.TopLevelUse{}
+
+	topLevelUse := &ast.TopLevelUse{
+		Item: parseUsePath(lexer).Unwrap(),
+	}
+	if eat(lexer, token.As).Unwrap() {
+		topLevelUse.As = option.Some(parseId(lexer).Unwrap())
+	} else {
+		topLevelUse.As = option.None[[]rune]()
+	}
 	return result.Ok(topLevelUse)
 }
 

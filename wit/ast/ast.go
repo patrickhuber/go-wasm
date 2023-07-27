@@ -147,7 +147,10 @@ type IncludeName struct {
 	As   []rune
 }
 
-type TopLevelUse struct{}
+type TopLevelUse struct {
+	Item *UsePath
+	As   types.Option[[]rune]
+}
 
 type Type interface {
 	ty()
