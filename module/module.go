@@ -1,4 +1,4 @@
-package modules
+package module
 
 import (
 	"github.com/patrickhuber/go-wasm/indicies"

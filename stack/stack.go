@@ -1,7 +1,7 @@
 package stack
 
 import (
-	"github.com/patrickhuber/go-wasm/instances"
+	"github.com/patrickhuber/go-wasm/instance"
 	"github.com/patrickhuber/go-wasm/instructions"
 	"github.com/patrickhuber/go-wasm/values"
 )
@@ -22,7 +22,7 @@ func (*Value) item() {}
 
 type Frame struct {
 	Locals values.Value
-	Module instances.Module
+	Module instance.Module
 }
 
 func (*Frame) item() {}

@@ -1,4 +1,4 @@
-package instances
+package instance
 
 type Data struct {
 	Data []byte

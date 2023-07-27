@@ -1,4 +1,4 @@
-package instances
+package instance
 
 import "github.com/patrickhuber/go-wasm/address"
 

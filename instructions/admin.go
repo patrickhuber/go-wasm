@@ -2,7 +2,7 @@ package instructions
 
 import (
 	"github.com/patrickhuber/go-wasm/address"
-	"github.com/patrickhuber/go-wasm/instances"
+	"github.com/patrickhuber/go-wasm/instance"
 	"github.com/patrickhuber/go-wasm/values"
 )
 
@@ -34,5 +34,5 @@ func (*Frame) instruction() {}
 
 type InnerFrame struct {
 	Locals []values.Value
-	Module instances.Module
+	Module instance.Module
 }
