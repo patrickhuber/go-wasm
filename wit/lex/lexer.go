@@ -163,7 +163,7 @@ func (l *Lexer) next() (res types.Result[*token.Token]) {
 		return l.token(token.Integer)
 	}
 
-	return nil
+	return result.Errorf[*token.Token]("%w : unrecognized character %c", l.lexerError(), r)
 }
 
 var keywordMap = map[string]token.TokenType{
@@ -304,14 +304,6 @@ func (l *Lexer) readRune() (res types.Option[rune]) {
 	r := l.input[l.position]
 	l.position++
 	return option.Some(r)
-}
-
-func (l *Lexer) unreadRune() (res types.Result[any]) {
-	if l.position == 0 {
-		return result.Errorf[any]("unable to read prior to index 0")
-	}
-	l.position--
-	return result.Ok[any](nil)
 }
 
 func (l *Lexer) lexerError() error {

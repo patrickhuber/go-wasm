@@ -45,13 +45,6 @@ type Result struct {
 
 type Type string
 
-const (
-	I32 = "i32"
-	I64 = "i64"
-	F32 = "f32"
-	F64 = "f64"
-)
-
 type Instruction struct {
 	Block *Block
 	Plain *Plain
