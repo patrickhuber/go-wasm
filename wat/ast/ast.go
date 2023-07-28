@@ -1,9 +1,20 @@
-package wat
+package ast
+
+type Ast interface {
+	ast()
+}
+
+type Component struct {
+}
+
+func (*Component) ast() {}
 
 type Module struct {
 	Functions []Section
 	Memory    []Section
 }
+
+func (*Module) ast() {}
 
 type Section struct {
 	Function *Function
