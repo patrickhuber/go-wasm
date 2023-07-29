@@ -113,7 +113,7 @@ func TestLexer(t *testing.T) {
 }
 
 func CanTokenize(t *testing.T, input string, sequence ...token.Type) {
-	lexer := lex.New2([]rune(input))
+	lexer := lex.New([]rune(input))
 	for i, item := range sequence {
 		tok, err := lexer.Next()
 		require.Nil(t, err)

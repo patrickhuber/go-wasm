@@ -29,7 +29,10 @@ var runeMap = map[rune]token.Type{
 	')': token.CloseParen,
 }
 
-func New2(input []rune) *Lexer {
+func New(input []rune) *Lexer {
+	// order matters here
+	// two rules could match the same input of the same length
+	// if that happens the one listed first wins
 	rules := []Rule{
 		whitespace(),
 		lineComment(),
