@@ -112,7 +112,8 @@ func MaxCaseAlignment(cases []types.Case) (uint32, error) {
 
 func DiscriminantType(cases []types.Case) (types.ValType, error) {
 	n := len(cases)
-	if n > (1 << 32) {
+	// n must be positive integer
+	if !(0 < n && n < (1<<32)) {
 		return nil, fmt.Errorf("case length %d exceeds max %d", n, (1 << 32))
 	}
 	switch uint64(math.Ceil(math.Log2(float64(n)) / 8)) {
