@@ -401,8 +401,8 @@ func StoreListIntoRange(cx *types.CallContext, v any, elementType types.ValType)
 	}
 
 	byteLengthInt := len(slice) * int(size)
-	if byteLengthInt >= (1 << 32) {
-		return 0, 0, types.TrapWith("byte length %d exceeds max of %d", byteLengthInt, (1 << 32))
+	if byteLengthInt >= math.MaxInt {
+		return 0, 0, types.TrapWith("byte length %d exceeds max of %d", byteLengthInt, math.MaxInt)
 	}
 	byteLength := uint32(byteLengthInt)
 
