@@ -11,7 +11,11 @@ import (
 	"github.com/patrickhuber/go-wasm/wat/token"
 )
 
+// Lexer consists of rules that are enumerated during a prefix search.
+// Rules are greedy so they are matched until they can no longer match.
+// At that point, a token is emitted
 type Lexer struct {
+	Rules     []Rule
 	input     []rune
 	offset    int
 	position  int
@@ -20,9 +24,30 @@ type Lexer struct {
 	peekToken *token.Token
 }
 
-func New(input []rune) *Lexer {
+var runeMap = map[rune]token.Type{
+	'(': token.OpenParen,
+	')': token.CloseParen,
+}
+
+func New2(input []rune) *Lexer {
+	rules := []Rule{
+		whitespace(),
+		lineComment(),
+		blockComment(),
+		str(),
+		integer(),
+		identifier(),
+		reserved(),
+	}
+	for r, ty := range runeMap {
+		rules = append(rules, &RuneSliceRule{
+			Runes:     []rune{r},
+			TokenType: ty,
+		})
+	}
 	return &Lexer{
 		input: input,
+		Rules: rules,
 	}
 }
 
@@ -57,67 +82,57 @@ func (l *Lexer) next() (res types.Result[*token.Token]) {
 		return l.token(token.EndOfStream)
 	}
 
-	switch {
-	case unicode.IsSpace(r):
-		for l.eatIf(unicode.IsSpace).Unwrap() {
+	var lexemes []Lexeme
+	// find any matching rules
+	for _, rule := range l.Rules {
+		if rule.Check(r) {
+			factory := registry[rule.RuleType()]
+			lexeme := factory.Lexeme(rule)
+			lexeme.Eat(r)
+			lexemes = append(lexemes, lexeme)
 		}
-		return l.token(token.Whitespace)
-	case r == '(':
-		if l.eat(';').Unwrap() {
-			depth := 1
-			for depth > 0 {
-				r, ok := l.readRune().Deconstruct()
-				if !ok {
-					return result.Error[*token.Token](l.lexerError())
-				}
-				switch r {
-				case '(':
-					if l.eat(';').Unwrap() {
-						depth++
-					}
-				case ';':
-					if l.eat(')').Unwrap() {
-						depth--
-					}
-				}
-			}
-			return l.token(token.BlockComment)
-		}
-		return l.token(token.OpenParen)
-	case r == ')':
-		return l.token(token.CloseParen)
-	case r == '"':
-		// does go handle the translation of escapes?
-		for !l.eat('"').Unwrap() {
-		}
-		return l.token(token.String)
-	case r == ';':
-		if l.eat(';').Unwrap() {
-			// line comment
-			// ;; ... \n
-			for l.eatIf(func(r rune) bool { return r != '\n' }).Unwrap() {
-			}
-			return l.token(token.LineComment)
-		}
-		return l.token(token.Reserved)
-	case r == ',' || r == '[' || r == ']' || r == '{' || r == '}':
-		return l.token(token.Reserved)
-	case r == '$':
-		for l.eatIf(isIdChar).Unwrap() {
-		}
-		return l.token(token.Id)
-	case unicode.IsDigit(r):
-		for l.eatIf(unicode.IsDigit).Unwrap() {
-
-		}
-		return l.token(token.Integer)
-	case isIdChar(r) || r == '"':
-		for l.eatIf(isIdChar).Unwrap() || l.eat('"').Unwrap() {
-		}
-		return l.token(token.Reserved)
 	}
 
-	return result.Errorf[*token.Token]("%w : unrecognized character '%c'", l.lexerError(), r)
+	if len(lexemes) == 0 {
+		return result.Error[*token.Token](l.lexerError())
+	}
+
+	for {
+		r, ok := l.peekRune().Deconstruct()
+		if !ok {
+			for _, lexeme := range lexemes {
+				// emit any accepted state
+				if lexeme.Accepted() {
+					return l.token(lexeme.Rule().Type())
+				}
+			}
+
+			// process any lexemes in an accepted state and emit a token
+			return l.token(token.EndOfStream) // returned if nothing is matched
+		}
+
+		var matched []Lexeme
+		for _, lexeme := range lexemes {
+			if lexeme.Eat(r) {
+				matched = append(matched, lexeme)
+			}
+		}
+
+		if len(matched) == 0 {
+			for _, lexeme := range lexemes {
+				// emit any accepted state
+				if lexeme.Accepted() {
+					return l.token(lexeme.Rule().Type())
+				}
+			}
+			return result.Error[*token.Token](l.lexerError())
+		}
+
+		_ = l.readRune().Unwrap()
+
+		// move only winners
+		lexemes = matched
+	}
 }
 
 func (l *Lexer) token(ty token.Type) types.Result[*token.Token] {
@@ -137,6 +152,8 @@ func (l *Lexer) token(ty token.Type) types.Result[*token.Token] {
 		if ch == '\n' {
 			l.line++
 			l.column = 0
+		} else {
+			l.column++
 		}
 	}
 
@@ -144,6 +161,243 @@ func (l *Lexer) token(ty token.Type) types.Result[*token.Token] {
 	l.offset = l.position
 
 	return result.Ok(tok)
+}
+
+func (l *Lexer) peekRune() (op types.Option[rune]) {
+	if l.position >= len(l.input) {
+		return option.None[rune]()
+	}
+	r := l.input[l.position]
+	return option.Some(r)
+}
+
+func (l *Lexer) readRune() types.Option[rune] {
+	if l.position >= len(l.input) {
+		return option.None[rune]()
+	}
+	r := l.input[l.position]
+	l.position++
+	return option.Some(r)
+}
+
+func whitespace() Rule {
+	start := &Node{}
+	end := &Node{
+		Final: true,
+	}
+	start.Edges = append(start.Edges, &FuncEdge{
+		Func: unicode.IsSpace,
+		Node: end,
+	})
+	end.Edges = append(end.Edges, &FuncEdge{
+		Func: unicode.IsSpace,
+		Node: end,
+	})
+	return &DfaRule{
+		Dfa: &Dfa{
+			Start: start,
+		},
+		TokenType: token.Whitespace,
+	}
+}
+
+func lineComment() Rule {
+	start := &Node{}
+	semi := &Node{}
+	semi2 := &Node{}
+	newLine := &Node{
+		Final: true,
+	}
+	start.Edges = append(start.Edges, &RuneEdge{
+		Rune: ';',
+		Node: semi,
+	})
+	semi.Edges = append(semi.Edges, &RuneEdge{
+		Rune: ';',
+		Node: semi2,
+	})
+	semi2.Edges = append(semi2.Edges, &RuneEdge{
+		Rune: '\n',
+		Node: newLine,
+	})
+	semi2.Edges = append(semi2.Edges, &FuncEdge{
+		Func: not('\n'),
+		Node: semi2,
+	})
+	return &DfaRule{
+		Dfa: &Dfa{
+			Start: start,
+		},
+		TokenType: token.LineComment,
+	}
+}
+
+func blockComment() Rule {
+	start := &Node{}
+	openParen := &Node{}
+	semi := &Node{}
+	semiEnd := &Node{}
+	closeParen := &Node{Final: true}
+
+	start.Edges = append(start.Edges, &RuneEdge{
+		Rune: '(',
+		Node: openParen,
+	})
+	openParen.Edges = append(openParen.Edges, &RuneEdge{
+		Rune: ';',
+		Node: semi,
+	})
+	semi.Edges = append(semi.Edges, &RuneEdge{
+		Rune: ';',
+		Node: semiEnd,
+	}, &FuncEdge{
+		Func: not(';'),
+		Node: semi,
+	})
+	semiEnd.Edges = append(semiEnd.Edges, &RuneEdge{
+		Rune: ')',
+		Node: closeParen,
+	}, &RuneEdge{
+		Rune: ';',
+		Node: semiEnd,
+	}, &FuncEdge{
+		Func: not(')', ';'),
+		Node: semi,
+	})
+
+	return &DfaRule{
+		Dfa: &Dfa{
+			Start: start,
+		},
+		TokenType: token.BlockComment,
+	}
+}
+
+func str() Rule {
+	start := &Node{}
+	doubleQuote := &Node{}
+	end := &Node{Final: true}
+	start.Edges = append(start.Edges, &RuneEdge{
+		Rune: '"',
+		Node: doubleQuote,
+	})
+	doubleQuote.Edges = append(doubleQuote.Edges, &RuneEdge{
+		Rune: '"',
+		Node: end,
+	}, &FuncEdge{
+		Func: not('"'),
+		Node: doubleQuote,
+	})
+	return &DfaRule{
+		Dfa: &Dfa{
+			Start: start,
+		},
+		TokenType: token.String,
+	}
+}
+
+func reserved() Rule {
+	start := &Node{}
+	idchar := &Node{Final: true}
+	start.Edges = []Edge{
+		&FuncEdge{Func: isIdChar, Node: idchar},
+	}
+	idchar.Edges = []Edge{
+		&FuncEdge{Func: isIdChar, Node: idchar},
+	}
+	return &DfaRule{
+		Dfa: &Dfa{
+			Start: start,
+		},
+		TokenType: token.Reserved,
+	}
+}
+
+// integer ~ [+-]?[0-9](_*[0-9])*
+func integer() Rule {
+	start := &Node{}
+	plusOrMinus := &Node{}
+	firstNumber := &Node{Final: true}
+	underscore := &Node{}
+	lastNumber := &Node{}
+
+	// ( start ) -- [+|-] --> ( plusOrMinus )
+	// ( start ) -- [0-9] --> ( firstNumber )
+	start.Edges = append(start.Edges, &RuneEdge{
+		Rune: '+',
+		Node: plusOrMinus,
+	}, &RuneEdge{
+		Rune: '-',
+		Node: plusOrMinus,
+	}, &FuncEdge{
+		Func: unicode.IsDigit,
+		Node: firstNumber,
+	})
+	// ( plusOrMinus ) -- [0-9] --> ( firstNumber )
+	plusOrMinus.Edges = append(plusOrMinus.Edges, &FuncEdge{
+		Func: unicode.IsDigit,
+		Node: firstNumber,
+	})
+	// ( firstNumber ) -- [0-9] --> ( lastNumber )
+	// ( firstNumber ) -- _ --> ( underscore )
+	firstNumber.Edges = append(firstNumber.Edges, &FuncEdge{
+		Func: unicode.IsDigit,
+		Node: lastNumber,
+	}, &RuneEdge{
+		Rune: '_',
+		Node: underscore,
+	})
+	// ( underscore ) -- _ --> ( underscore )
+	// ( underscore ) -- [0-9] --> ( lastNumber )
+	underscore.Edges = append(underscore.Edges, &RuneEdge{
+		Rune: '_',
+		Node: underscore,
+	}, &FuncEdge{
+		Func: unicode.IsDigit,
+		Node: lastNumber,
+	})
+	// ( lastNumber ) -- _ --> ( underscore )
+	// ( lastNumber ) -- [0-9] --> ( lastNumber )
+	lastNumber.Edges = append(lastNumber.Edges, &RuneEdge{
+		Rune: '_',
+		Node: underscore,
+	}, &FuncEdge{
+		Func: unicode.IsDigit,
+		Node: lastNumber,
+	})
+	return &DfaRule{
+		Dfa: &Dfa{
+			Start: start,
+		},
+		TokenType: token.Integer,
+	}
+}
+
+// identifier ~ $([\w]|[^ ",;\[\]])+
+func identifier() Rule {
+	start := &Node{}
+	dollar := &Node{}
+	idchar := &Node{Final: true}
+	start.Edges = []Edge{
+		&RuneEdge{Rune: '$', Node: dollar},
+	}
+	dollar.Edges = []Edge{
+		&FuncEdge{Func: isIdChar, Node: idchar},
+	}
+	idchar.Edges = []Edge{
+		&FuncEdge{Func: isIdChar, Node: idchar},
+	}
+	return &DfaRule{
+		Dfa: &Dfa{
+			Start: start,
+		},
+		TokenType: token.Id,
+	}
+}
+
+// hex ~ [+-]?0x[a-fA-F](_*[a-fA-F])*
+func hex() Rule {
+	return nil
 }
 
 var idCharMap = map[rune]struct{}{
@@ -190,71 +444,17 @@ func isIdChar(ch rune) bool {
 	return false
 }
 
-func (l *Lexer) eat(ch rune) (res types.Result[bool]) {
-	defer handle.Error(&res)
-
-	p, ok := l.peekRune().Deconstruct()
-	if !ok {
-		return result.Ok(false)
+func not(chars ...rune) func(ch rune) bool {
+	return func(ch rune) bool {
+		for _, r := range chars {
+			if ch == r {
+				return false
+			}
+		}
+		return true
 	}
-	if p != ch {
-		return result.Ok(false)
-	}
-	l.expect(ch).Unwrap()
-	return result.Ok(true)
-}
-
-func (l *Lexer) eatIf(f func(ch rune) bool) (res types.Result[bool]) {
-	defer handle.Error(&res)
-
-	p, ok := l.peekRune().Deconstruct()
-	if !ok {
-		return result.Ok(false)
-	}
-	if !f(p) {
-		return result.Ok(false)
-	}
-	l.expectIf(f).Unwrap()
-	return result.Ok(true)
-}
-
-func (l *Lexer) expect(ch rune) (res types.Result[any]) {
-	defer handle.Error(&res)
-
-	r := l.readRune().Unwrap()
-	if r != ch {
-		return result.Errorf[any]("expected '%c' but found '%c'", ch, r)
-	}
-	return result.Ok[any](nil)
-}
-
-func (l *Lexer) expectIf(f func(ch rune) bool) (res types.Result[any]) {
-	defer handle.Error(&res)
-
-	r := l.readRune().Unwrap()
-	if !f(r) {
-		return result.Errorf[any]("expected '%c' but found '%c'", l.input[l.position-1], r)
-	}
-	return result.Ok[any](nil)
-}
-
-func (l *Lexer) peekRune() (op types.Option[rune]) {
-	if l.position >= len(l.input) {
-		return option.None[rune]()
-	}
-	r := l.input[l.position]
-	return option.Some(r)
-}
-
-func (l *Lexer) readRune() types.Option[rune] {
-	if l.position >= len(l.input) {
-		return option.None[rune]()
-	}
-	r := l.input[l.position]
-	l.position++
-	return option.Some(r)
 }
 
 func (l *Lexer) lexerError() error {
-	return fmt.Errorf("error parsing at line: %d column: %d position: %d", l.line, l.column, l.position)
+	return fmt.Errorf("error parsing at line: %d column: %d position: %d, '%s'", l.line, l.column, l.position, string(l.input[l.offset:l.position]))
 }

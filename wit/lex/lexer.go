@@ -228,6 +228,8 @@ func (l *Lexer) token(ty token.TokenType) types.Result[*token.Token] {
 		if ch == '\n' {
 			l.line++
 			l.column = 0
+		} else {
+			l.column++
 		}
 	}
 
