@@ -1,3 +1,6 @@
 [submodule "submodules/github.com/bytecodealliance/wasm-tools"]
 	path = submodules/github.com/bytecodealliance/wasm-tools
 	url = git@github.com:bytecodealliance/wasm-tools.git
+[submodule "submodules/github.com/WebAssembly/testsuite"]
+	path = submodules/github.com/WebAssembly/testsuite
+	url = https://github.com/WebAssembly/testsuite
