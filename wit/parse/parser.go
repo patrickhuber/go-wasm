@@ -784,6 +784,40 @@ func parseId(lexer *lex.Lexer) (res types.Result[[]rune]) {
 	}
 }
 
+func eat(lexer *lex.Lexer, tokenType token.TokenType) (res types.Result[bool]) {
+	defer handle.Error(&res)
+
+	tok := peek(lexer).Unwrap()
+	if !is(tok, tokenType) {
+		return result.Ok(false)
+	}
+
+	expect(lexer, tokenType).Unwrap()
+	return result.Ok(true)
+}
+
+func expect(lexer *lex.Lexer, tokenType token.TokenType) (res types.Result[any]) {
+	defer handle.Error(&res)
+	tok := next(lexer).Unwrap()
+	if tok.Type == tokenType {
+		return result.Ok[any](nil)
+	}
+	return result.Errorf[any]("%w. expected '%v' but found '%v'", parseError(tok), tokenType, tok.Type)
+}
+
+func peek(lexer *lex.Lexer) (res types.Result[*token.Token]) {
+	defer handle.Error(&res)
+	for {
+		p := result.New(lexer.Peek())
+		r := p.Unwrap()
+		if r.Type != token.Whitespace {
+			return p
+		}
+		// consume whitespace
+		_ = result.New(lexer.Next()).Unwrap()
+	}
+}
+
 func next(lexer *lex.Lexer) (res types.Result[*token.Token]) {
 	defer handle.Error(&res)
 	for {
@@ -804,42 +838,8 @@ func next(lexer *lex.Lexer) (res types.Result[*token.Token]) {
 	}
 }
 
-func peek(lexer *lex.Lexer) (res types.Result[*token.Token]) {
-	defer handle.Error(&res)
-	for {
-		p := result.New(lexer.Peek())
-		r := p.Unwrap()
-		if r.Type != token.Whitespace {
-			return p
-		}
-		// consume whitespace
-		_ = result.New(lexer.Next()).Unwrap()
-	}
-}
-
-func eat(lexer *lex.Lexer, tokenType token.TokenType) (res types.Result[bool]) {
-	defer handle.Error(&res)
-
-	tok := peek(lexer).Unwrap()
-	if !is(tok, tokenType) {
-		return result.Ok(false)
-	}
-
-	expect(lexer, tokenType).Unwrap()
-	return result.Ok(true)
-}
-
 func is(tok *token.Token, tokenType token.TokenType) bool {
 	return tok.Type == tokenType
-}
-
-func expect(lexer *lex.Lexer, tokenType token.TokenType) (res types.Result[any]) {
-	defer handle.Error(&res)
-	tok := next(lexer).Unwrap()
-	if tok.Type == tokenType {
-		return result.Ok[any](nil)
-	}
-	return result.Errorf[any]("%w. expected '%v' but found '%v'", parseError(tok), tokenType, tok.Type)
 }
 
 func parseError(tok *token.Token) error {
