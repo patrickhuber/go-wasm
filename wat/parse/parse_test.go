@@ -1,6 +1,7 @@
 package parse_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/patrickhuber/go-wasm/wat/ast"
@@ -25,5 +26,14 @@ func TestParse(t *testing.T) {
 		require.NotNil(t, n)
 		_, ok := n.(*ast.Component)
 		require.True(t, ok)
+	})
+	t.Run("add", func(t *testing.T) {
+		file := "../../fixtures/add/add.wat"
+		content, err := os.ReadFile(file)
+		require.NoError(t, err)
+		lexer := lex.New(string(content))
+		n, err := parse.Parse(lexer)
+		require.NoError(t, err)
+		require.NotNil(t, n)
 	})
 }

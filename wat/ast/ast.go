@@ -1,5 +1,7 @@
 package ast
 
+import "github.com/patrickhuber/go-types"
+
 type Ast interface {
 	ast()
 }
@@ -16,20 +18,21 @@ type Module struct {
 
 func (*Module) ast() {}
 
-type Section struct {
-	Function *Function
-	Memory   *Memory
+type Section interface {
+	section()
 }
 
 type Function struct {
-	ID           *Identifier
+	ID           types.Option[string]
 	Parameters   []Parameter
 	Results      []Result
 	Instructions []Instruction
 }
 
+func (f *Function) section() {}
+
 type Memory struct {
-	ID     *Identifier
+	ID     string
 	Limits Limits
 }
 
@@ -39,10 +42,8 @@ type Limits struct {
 	Max    uint32
 }
 
-type Identifier string
-
 type Parameter struct {
-	ID   *Identifier
+	ID   types.Option[string]
 	Type Type
 }
 
@@ -54,41 +55,52 @@ type Result struct {
 	Type Type
 }
 
-type Type string
-
-type Instruction struct {
-	Block *Block
-	Plain *Plain
+type Type interface {
+	ty()
 }
 
-type Block struct{}
-type Plain struct {
-	Local *LocalInstruction
-	I32   *I32Instruction
+type I32 struct{}
+
+func (I32) ty() {}
+
+type I64 struct{}
+
+func (I64) ty() {}
+
+type F32 struct{}
+
+func (F32) ty() {}
+
+type F64 struct{}
+
+func (F64) ty() {}
+
+type Instruction interface {
+	inst()
 }
 
-type LocalOperation string
+type I32Add struct{}
 
-const (
-	LocalGet LocalOperation = "get"
-	LocalSet LocalOperation = "set"
-	LocalTee LocalOperation = "tee"
-)
+func (I32Add) inst() {}
 
-type LocalInstruction struct {
-	Operation LocalOperation
-	ID        *Identifier
-	Index     *int
+type LocalGet struct {
+	Index Index
 }
 
-type I32Instruction struct {
-	Operation BinaryOperation
+func (LocalGet) inst() {}
+
+type Index interface {
+	index()
 }
 
-type BinaryOperation string
+type IDIndex struct {
+	ID string
+}
 
-const (
-	BinaryOperationAdd BinaryOperation = "add"
-	BinaryOperationSub BinaryOperation = "sub"
-	BinaryOperationMul BinaryOperation = "mul"
-)
+func (IDIndex) index() {}
+
+type RawIndex struct {
+	Index uint32
+}
+
+func (RawIndex) index() {}
