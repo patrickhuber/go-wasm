@@ -22,5 +22,5 @@ type Token struct {
 	Position int
 	Column   int
 	Line     int
-	Runes    []rune
+	Capture  string
 }

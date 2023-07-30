@@ -2,7 +2,6 @@ package lex
 
 import (
 	"fmt"
-	"unicode"
 
 	"github.com/patrickhuber/go-types"
 	"github.com/patrickhuber/go-types/handle"
@@ -16,7 +15,7 @@ import (
 // At that point, a token is emitted
 type Lexer struct {
 	Rules     []Rule
-	input     []rune
+	input     string
 	offset    int
 	position  int
 	column    int
@@ -24,12 +23,12 @@ type Lexer struct {
 	peekToken *token.Token
 }
 
-var runeMap = map[rune]token.Type{
+var runeMap = map[byte]token.Type{
 	'(': token.OpenParen,
 	')': token.CloseParen,
 }
 
-func New(input []rune) *Lexer {
+func New(input string) *Lexer {
 	// order matters here
 	// two rules could match the same input of the same length
 	// if that happens the one listed first wins
@@ -43,8 +42,8 @@ func New(input []rune) *Lexer {
 		reserved(),
 	}
 	for r, ty := range runeMap {
-		rules = append(rules, &RuneSliceRule{
-			Runes:     []rune{r},
+		rules = append(rules, &StringRule{
+			String:    string(r),
 			TokenType: ty,
 		})
 	}
@@ -146,7 +145,7 @@ func (l *Lexer) token(ty token.Type) types.Result[*token.Token] {
 		Position: l.offset,
 		Column:   l.column,
 		Line:     l.line,
-		Runes:    l.input[l.offset:l.position],
+		Capture:  l.input[l.offset:l.position],
 	}
 
 	// fast forward updating metrics
@@ -166,17 +165,17 @@ func (l *Lexer) token(ty token.Type) types.Result[*token.Token] {
 	return result.Ok(tok)
 }
 
-func (l *Lexer) peekRune() (op types.Option[rune]) {
+func (l *Lexer) peekRune() (op types.Option[byte]) {
 	if l.position >= len(l.input) {
-		return option.None[rune]()
+		return option.None[byte]()
 	}
 	r := l.input[l.position]
 	return option.Some(r)
 }
 
-func (l *Lexer) readRune() types.Option[rune] {
+func (l *Lexer) readRune() types.Option[byte] {
 	if l.position >= len(l.input) {
-		return option.None[rune]()
+		return option.None[byte]()
 	}
 	r := l.input[l.position]
 	l.position++
@@ -189,11 +188,11 @@ func whitespace() Rule {
 		Final: true,
 	}
 	start.Edges = append(start.Edges, &FuncEdge{
-		Func: unicode.IsSpace,
+		Func: isSpace,
 		Node: end,
 	})
 	end.Edges = append(end.Edges, &FuncEdge{
-		Func: unicode.IsSpace,
+		Func: isSpace,
 		Node: end,
 	})
 	return &DfaRule{
@@ -211,16 +210,16 @@ func lineComment() Rule {
 	newLine := &Node{
 		Final: true,
 	}
-	start.Edges = append(start.Edges, &RuneEdge{
-		Rune: ';',
+	start.Edges = append(start.Edges, &ByteEdge{
+		Byte: ';',
 		Node: semi,
 	})
-	semi.Edges = append(semi.Edges, &RuneEdge{
-		Rune: ';',
+	semi.Edges = append(semi.Edges, &ByteEdge{
+		Byte: ';',
 		Node: semi2,
 	})
-	semi2.Edges = append(semi2.Edges, &RuneEdge{
-		Rune: '\n',
+	semi2.Edges = append(semi2.Edges, &ByteEdge{
+		Byte: '\n',
 		Node: newLine,
 	})
 	semi2.Edges = append(semi2.Edges, &FuncEdge{
@@ -242,26 +241,26 @@ func blockComment() Rule {
 	semiEnd := &Node{}
 	closeParen := &Node{Final: true}
 
-	start.Edges = append(start.Edges, &RuneEdge{
-		Rune: '(',
+	start.Edges = append(start.Edges, &ByteEdge{
+		Byte: '(',
 		Node: openParen,
 	})
-	openParen.Edges = append(openParen.Edges, &RuneEdge{
-		Rune: ';',
+	openParen.Edges = append(openParen.Edges, &ByteEdge{
+		Byte: ';',
 		Node: semi,
 	})
-	semi.Edges = append(semi.Edges, &RuneEdge{
-		Rune: ';',
+	semi.Edges = append(semi.Edges, &ByteEdge{
+		Byte: ';',
 		Node: semiEnd,
 	}, &FuncEdge{
 		Func: not(';'),
 		Node: semi,
 	})
-	semiEnd.Edges = append(semiEnd.Edges, &RuneEdge{
-		Rune: ')',
+	semiEnd.Edges = append(semiEnd.Edges, &ByteEdge{
+		Byte: ')',
 		Node: closeParen,
-	}, &RuneEdge{
-		Rune: ';',
+	}, &ByteEdge{
+		Byte: ';',
 		Node: semiEnd,
 	}, &FuncEdge{
 		Func: not(')', ';'),
@@ -280,12 +279,12 @@ func str() Rule {
 	start := &Node{}
 	doubleQuote := &Node{}
 	end := &Node{Final: true}
-	start.Edges = append(start.Edges, &RuneEdge{
-		Rune: '"',
+	start.Edges = append(start.Edges, &ByteEdge{
+		Byte: '"',
 		Node: doubleQuote,
 	})
-	doubleQuote.Edges = append(doubleQuote.Edges, &RuneEdge{
-		Rune: '"',
+	doubleQuote.Edges = append(doubleQuote.Edges, &ByteEdge{
+		Byte: '"',
 		Node: end,
 	}, &FuncEdge{
 		Func: not('"'),
@@ -326,46 +325,46 @@ func integer() Rule {
 
 	// ( start ) -- [+|-] --> ( plusOrMinus )
 	// ( start ) -- [0-9] --> ( firstNumber )
-	start.Edges = append(start.Edges, &RuneEdge{
-		Rune: '+',
+	start.Edges = append(start.Edges, &ByteEdge{
+		Byte: '+',
 		Node: plusOrMinus,
-	}, &RuneEdge{
-		Rune: '-',
+	}, &ByteEdge{
+		Byte: '-',
 		Node: plusOrMinus,
 	}, &FuncEdge{
-		Func: unicode.IsDigit,
+		Func: isDigit,
 		Node: firstNumber,
 	})
 	// ( plusOrMinus ) -- [0-9] --> ( firstNumber )
 	plusOrMinus.Edges = append(plusOrMinus.Edges, &FuncEdge{
-		Func: unicode.IsDigit,
+		Func: isDigit,
 		Node: firstNumber,
 	})
 	// ( firstNumber ) -- [0-9] --> ( lastNumber )
 	// ( firstNumber ) -- _ --> ( underscore )
 	firstNumber.Edges = append(firstNumber.Edges, &FuncEdge{
-		Func: unicode.IsDigit,
+		Func: isDigit,
 		Node: lastNumber,
-	}, &RuneEdge{
-		Rune: '_',
+	}, &ByteEdge{
+		Byte: '_',
 		Node: underscore,
 	})
 	// ( underscore ) -- _ --> ( underscore )
 	// ( underscore ) -- [0-9] --> ( lastNumber )
-	underscore.Edges = append(underscore.Edges, &RuneEdge{
-		Rune: '_',
+	underscore.Edges = append(underscore.Edges, &ByteEdge{
+		Byte: '_',
 		Node: underscore,
 	}, &FuncEdge{
-		Func: unicode.IsDigit,
+		Func: isDigit,
 		Node: lastNumber,
 	})
 	// ( lastNumber ) -- _ --> ( underscore )
 	// ( lastNumber ) -- [0-9] --> ( lastNumber )
-	lastNumber.Edges = append(lastNumber.Edges, &RuneEdge{
-		Rune: '_',
+	lastNumber.Edges = append(lastNumber.Edges, &ByteEdge{
+		Byte: '_',
 		Node: underscore,
 	}, &FuncEdge{
-		Func: unicode.IsDigit,
+		Func: isDigit,
 		Node: lastNumber,
 	})
 	return &DfaRule{
@@ -382,7 +381,7 @@ func identifier() Rule {
 	dollar := &Node{}
 	idchar := &Node{Final: true}
 	start.Edges = []Edge{
-		&RuneEdge{Rune: '$', Node: dollar},
+		&ByteEdge{Byte: '$', Node: dollar},
 	}
 	dollar.Edges = []Edge{
 		&FuncEdge{Func: isIdChar, Node: idchar},
@@ -403,7 +402,7 @@ func hex() Rule {
 	return nil
 }
 
-var idCharMap = map[rune]struct{}{
+var idCharMap = map[byte]struct{}{
 	'!':  {},
 	'#':  {},
 	'$':  {},
@@ -429,13 +428,13 @@ var idCharMap = map[rune]struct{}{
 	'~':  {},
 }
 
-func isIdChar(ch rune) bool {
+func isIdChar(ch byte) bool {
 	_, ok := idCharMap[ch]
 	if ok {
 		return true
 	}
 	switch {
-	case unicode.IsSpace(ch):
+	case isSpace(ch):
 		return false
 	case '0' <= ch && ch <= '9':
 		return true
@@ -447,8 +446,26 @@ func isIdChar(ch rune) bool {
 	return false
 }
 
-func not(chars ...rune) func(ch rune) bool {
-	return func(ch rune) bool {
+func isSpace(ch byte) bool {
+	switch ch {
+	case ' ':
+	case '\t':
+	case '\n':
+	case '\f':
+	case '\r':
+	case '\v':
+	default:
+		return false
+	}
+	return true
+}
+
+func isDigit(ch byte) bool {
+	return '0' <= ch && ch <= '9'
+}
+
+func not(chars ...byte) func(ch byte) bool {
+	return func(ch byte) bool {
 		for _, r := range chars {
 			if ch == r {
 				return false

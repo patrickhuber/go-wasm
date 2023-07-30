@@ -5,29 +5,29 @@ import "github.com/patrickhuber/go-wasm/wat/token"
 const DfaRuleType RuleType = 1
 
 type Edge interface {
-	Check(ch rune) bool
+	Check(ch byte) bool
 	Next() *Node
 }
 
-type RuneEdge struct {
-	Rune rune
+type ByteEdge struct {
+	Byte byte
 	Node *Node
 }
 
-func (r *RuneEdge) Check(ch rune) bool {
-	return r.Rune == ch
+func (r *ByteEdge) Check(ch byte) bool {
+	return r.Byte == ch
 }
 
-func (r *RuneEdge) Next() *Node {
+func (r *ByteEdge) Next() *Node {
 	return r.Node
 }
 
 type FuncEdge struct {
-	Func func(ch rune) bool
+	Func func(ch byte) bool
 	Node *Node
 }
 
-func (f *FuncEdge) Check(ch rune) bool {
+func (f *FuncEdge) Check(ch byte) bool {
 	return f.Func(ch)
 }
 
@@ -53,7 +53,7 @@ func (r *DfaRule) Type() token.Type {
 	return r.TokenType
 }
 
-func (r *DfaRule) Check(ch rune) bool {
+func (r *DfaRule) Check(ch byte) bool {
 	for _, edge := range r.Dfa.Start.Edges {
 		if edge.Check(ch) {
 			return true
@@ -75,7 +75,7 @@ func (l *DfaLexeme) Rule() Rule {
 	return l.rule
 }
 
-func (d *DfaLexeme) Eat(ch rune) bool {
+func (d *DfaLexeme) Eat(ch byte) bool {
 	if d.current == nil {
 		d.current = d.rule.Dfa.Start
 	}

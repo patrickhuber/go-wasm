@@ -23,9 +23,8 @@ func parse(lexer *lex.Lexer) (res types.Result[ast.Ast]) {
 	if tok.Type != token.Reserved {
 		return result.Errorf[ast.Ast]("%w : unrecognized token", parseError(tok))
 	}
-	str := string(tok.Runes)
 	var root ast.Ast
-	switch str {
+	switch tok.Capture {
 	case "module":
 		root = parseModule(lexer).Unwrap()
 	case "component":
@@ -33,7 +32,7 @@ func parse(lexer *lex.Lexer) (res types.Result[ast.Ast]) {
 	default:
 		return result.Errorf[ast.Ast](
 			"%w : expected module, component but found '%s'",
-			parseError(tok), str)
+			parseError(tok), tok.Capture)
 	}
 	expect(lexer, token.CloseParen).Unwrap()
 	return result.Ok(root)

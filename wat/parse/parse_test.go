@@ -11,7 +11,7 @@ import (
 
 func TestParse(t *testing.T) {
 	t.Run("empty_module", func(t *testing.T) {
-		lexer := lex.New([]rune("(module)"))
+		lexer := lex.New("(module)")
 		n, err := parse.Parse(lexer)
 		require.NoError(t, err)
 		require.NotNil(t, n)
@@ -19,7 +19,7 @@ func TestParse(t *testing.T) {
 		require.True(t, ok)
 	})
 	t.Run("empty_component", func(t *testing.T) {
-		lexer := lex.New([]rune("(component)"))
+		lexer := lex.New("(component)")
 		n, err := parse.Parse(lexer)
 		require.NoError(t, err)
 		require.NotNil(t, n)
