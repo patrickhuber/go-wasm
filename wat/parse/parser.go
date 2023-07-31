@@ -50,7 +50,7 @@ func parseModule(lexer *lex.Lexer) (res types.Result[*ast.Module]) {
 		switch tok.Capture {
 		case "func":
 			f := parseFunc(lexer).Unwrap()
-			m.Functions = append(m.Functions, f)
+			m.Functions = append(m.Functions, *f)
 		}
 		expect(lexer, token.CloseParen).Unwrap()
 	}

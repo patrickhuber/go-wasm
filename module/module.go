@@ -7,7 +7,7 @@ import (
 )
 
 type Module struct {
-	Types     []types.Function
+	Types     []FuncType
 	Functions []Function
 	Memories  []Memory
 	Globals   []Global
@@ -15,6 +15,11 @@ type Module struct {
 	Start     Start
 	Imports   []Import
 	Exports   []Export
+}
+
+type FuncType struct {
+	Parameters []types.Value
+	Results    []types.Value
 }
 
 type Function struct {

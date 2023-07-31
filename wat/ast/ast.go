@@ -12,8 +12,8 @@ type Component struct {
 func (*Component) ast() {}
 
 type Module struct {
-	Functions []Section
-	Memory    []Section
+	Functions []Function
+	Memory    []Function
 }
 
 func (*Module) ast() {}
