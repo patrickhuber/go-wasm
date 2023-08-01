@@ -154,47 +154,28 @@ func TestLexer(t *testing.T) {
 			token.OpenParen, token.Reserved, token.Whitespace, token.Integer, token.CloseParen, token.CloseParen,
 		)
 	})
+}
 
-	t.Run("wast_f32", func(t *testing.T) {
-		content := `
-;; Test all the f32 operators on major boundary values and all special
-;; values (except comparison and bitwise operators, which are tested in
-;; f32_bitwise.wast and f32_cmp.wast).
-
-(module
-	(func (export "add") (param $x f32) (param $y f32) (result f32) (f32.add (local.get $x) (local.get $y)))
-)
-(assert_return (invoke "add" (f32.const 0x0p+0) (f32.const -0x0p+0)) (f32.const 0x0p+0))
-(assert_return (invoke "add" (f32.const -0x0p+0) (f32.const -inf)) (f32.const -inf))
-(assert_return (invoke "add" (f32.const -0x0p+0) (f32.const -nan)) (f32.const nan:canonical))`
-		CanTokenize(t, string(content),
-			token.Whitespace,
-			// ;; Test all the f32 operators on major boundary values and all special
-			token.LineComment,
-			// ;; values (except comparison and bitwise operators, which are tested in
-			token.LineComment,
-			// ;; f32_bitwise.wast and f32_cmp.wast).
-			token.LineComment, token.Whitespace,
-			// (module
-			token.OpenParen, token.Reserved, token.Whitespace,
-			// (func
-			token.OpenParen, token.Reserved, token.Whitespace,
-			// (export "add")
-			token.OpenParen, token.Reserved, token.Whitespace, token.String, token.CloseParen, token.Whitespace,
-			// (param $x f32)
-			token.OpenParen, token.Reserved, token.Whitespace, token.Id, token.Whitespace, token.Reserved, token.CloseParen, token.Whitespace,
-			// (param $y f32)
-			token.OpenParen, token.Reserved, token.Whitespace, token.Id, token.Whitespace, token.Reserved, token.CloseParen, token.Whitespace,
-			// (result i32)
-			token.OpenParen, token.Reserved, token.Whitespace, token.Reserved, token.CloseParen, token.Whitespace,
-			// (f32.add
-			token.OpenParen, token.Reserved, token.Whitespace,
-			// (local.get $x)
-			token.OpenParen, token.Reserved, token.Whitespace, token.Id, token.CloseParen, token.Whitespace,
-			// (local.get $y)))
-			token.OpenParen, token.Reserved, token.Whitespace, token.Id, token.CloseParen, token.CloseParen, token.CloseParen, token.Whitespace,
-		)
-	})
+func TestFloat(t *testing.T) {
+	cases := []string{
+		"-0x0p+0",
+		"0x0p+0",
+		"-0x1p-149",
+		"0x1p-149",
+		"-0x1.921fb6p+2",
+		"0x1.921fb6p+2",
+		"inf",
+		"-inf",
+		"nan",
+		"nan:canonical",
+		"nan:arithmetic",
+		"-nan:0x200000",
+		"nan:0x200000"}
+	for _, c := range cases {
+		t.Run(c, func(t *testing.T) {
+			CanTokenize(t, c, token.Float)
+		})
+	}
 }
 
 func CanTokenize(t *testing.T, input string, sequence ...token.Type) {

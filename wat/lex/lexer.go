@@ -2,6 +2,7 @@ package lex
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/patrickhuber/go-types"
 	"github.com/patrickhuber/go-types/handle"
@@ -146,6 +147,10 @@ func (l *Lexer) token(ty token.Type) types.Result[*token.Token] {
 		Column:   l.column,
 		Line:     l.line,
 		Capture:  l.input[l.offset:l.position],
+	}
+
+	if tok.Type == token.Reserved && isFloat(tok.Capture) {
+		tok.Type = token.Float
 	}
 
 	// fast forward updating metrics
@@ -375,6 +380,238 @@ func integer() Rule {
 	}
 }
 
+func sign(s string, i int) (int, bool) {
+	if i >= len(s) {
+		return i, false
+	}
+	if s[i] == '+' || s[i] == '-' {
+		return i + 1, true
+	}
+	return i, false
+}
+
+func num(s string, i int) (int, bool) {
+	if i >= len(s) {
+		return i, false
+	}
+	if !isDigit(s[i]) {
+		return i, false
+	}
+
+	for ; i < len(s); i++ {
+		if s[i] == '_' {
+			continue
+		}
+		if isDigit(s[i]) {
+			continue
+		}
+		return i, true
+	}
+	return i, true
+}
+
+func hexnum(s string, i int) (int, bool) {
+	if i >= len(s) {
+		return i, false
+	}
+	if !isHex(s[i]) {
+		return i, false
+	}
+	for ; i < len(s); i++ {
+		if s[i] == '_' {
+			continue
+		}
+		if isHex(s[i]) {
+			continue
+		}
+		return i, true
+	}
+	return i, true
+}
+
+func frac(s string, i int) (int, bool) {
+	if i >= len(s) {
+		return i, false
+	}
+	if !isDigit(s[i]) {
+		return i, false
+	}
+	for ; i < len(s); i++ {
+		if s[i] == '_' {
+			continue
+		}
+		if isDigit(s[i]) {
+			continue
+		}
+		return i, true
+	}
+	return i, true
+}
+
+func hexfrac(s string, i int) (int, bool) {
+	if i >= len(s) {
+		return i, false
+	}
+	if !isHex(s[i]) {
+		return i, false
+	}
+	for ; i < len(s); i++ {
+		if s[i] == '_' {
+			continue
+		}
+		if isHex(s[i]) {
+			continue
+		}
+		return i, true
+	}
+	return i, true
+}
+
+func float(s string, i int) (int, bool) {
+	n, ok := num(s, i)
+	if !ok {
+		return i, false
+	}
+	if n == len(s) {
+		return n, ok
+	}
+	i = n
+	// p:num '.'?
+	if s[i] == '.' && i == len(s)-1 {
+		return i + 1, true
+	}
+	// p:num '.'?('E'|'e')('+'|'-')e:num
+	if (s[i] == '.' && (s[i+1] == 'E' || s[i+1] == 'e')) ||
+		(s[i] == 'e' || s[i] == 'E') {
+		if s[i] == '.' {
+			i++ // '.'
+		}
+		i++ // 'E' | 'e'
+		n, ok = sign(s, i)
+		if !ok {
+			return i, false
+		}
+		i = n
+		n, ok = num(s, i)
+		if !ok {
+			return i, false
+		}
+		return n, true
+	}
+	// p:num '.' q:frac
+	n, ok = frac(s, i)
+	if !ok {
+		return i, false
+	}
+	i = n
+	if i == len(s) {
+		return i, true
+	}
+	// p:num '.' q:frac ('E'|'e')('+'|'-')e:num
+	if s[i] != 'e' && s[i] != 'E' {
+		return i, false
+	}
+	i++
+	n, ok = sign(s, i)
+	if !ok {
+		return i, false
+	}
+	i = n
+	return num(s, i)
+}
+
+func hexfloat(s string, i int) (int, bool) {
+	if !strings.HasPrefix(s, "0x") {
+		return i, false
+	}
+	i += 2
+	n, ok := hexnum(s, i)
+	if !ok {
+		return i, false
+	}
+	if n == len(s) {
+		return n, ok
+	}
+	i = n
+	// p:hexnum '.'?
+	if s[i] == '.' && i == len(s)-1 {
+		return i + 1, true
+	}
+	// p:hexnum '.'?('P'|'p')('+'|'-')e:num
+	if (s[i] == '.' && (s[i+1] == 'P' || s[i+1] == 'p')) ||
+		(s[i] == 'p' || s[i] == 'P') {
+		if s[i] == '.' {
+			i++ // '.'
+		}
+		i++ // 'P' | 'p'
+		n, ok = sign(s, i)
+		if !ok {
+			return i, false
+		}
+		i = n
+		n, ok = num(s, i)
+		if !ok {
+			return i, false
+		}
+		return n, true
+	}
+	i++ // '.'
+	// p:hexnum '.' q:hexfrac
+	n, ok = hexfrac(s, i)
+	if !ok {
+		return i, false
+	}
+	i = n
+	if i == len(s) {
+		return i, true
+	}
+	// p:num '.' q:frac ('P'|'p')('+'|'-')e:num
+	if s[i] != 'p' && s[i] != 'P' {
+		return i, false
+	}
+	i++
+	n, ok = sign(s, i)
+	if !ok {
+		return i, false
+	}
+	i = n
+	return num(s, i)
+}
+
+func isFloat(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	//negative := s[0] == '-'
+	if s[0] == '+' || s[0] == '-' {
+		s = s[1:]
+	}
+	if s == "inf" {
+		return true
+	}
+	if s == "nan" {
+		return true
+	}
+	if s == "nan:arithmetic" {
+		return true
+	}
+	if s == "nan:canonical" {
+		return true
+	}
+	if strings.HasPrefix(s, "nan:0x") {
+		s = strings.TrimPrefix(s, "nan:0x")
+		_, ok := hexnum(s, 0)
+		return ok
+	}
+	if _, ok := float(s, 0); ok {
+		return true
+	}
+	if _, ok := hexfloat(s, 0); ok {
+		return true
+	}
+	return false
+}
+
 // identifier ~ $([\w]|[^ ",;\[\]])+
 func identifier() Rule {
 	start := &Node{}
@@ -395,11 +632,6 @@ func identifier() Rule {
 		},
 		TokenType: token.Id,
 	}
-}
-
-// hex ~ [+-]?0x[a-fA-F](_*[a-fA-F])*
-func hex() Rule {
-	return nil
 }
 
 var idCharMap = map[byte]struct{}{
@@ -454,6 +686,17 @@ func isSpace(ch byte) bool {
 	case '\f':
 	case '\r':
 	case '\v':
+	default:
+		return false
+	}
+	return true
+}
+
+func isHex(ch byte) bool {
+	switch {
+	case isDigit(ch):
+	case 'a' <= ch && ch <= 'f':
+	case 'A' <= ch && ch <= 'F':
 	default:
 		return false
 	}

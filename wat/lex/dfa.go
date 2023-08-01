@@ -103,3 +103,17 @@ func (f *DfaFactory) Lexeme(r Rule) Lexeme {
 		rule: rule,
 	}
 }
+
+func FromString(str string) (*Node, *Node) {
+	start := &Node{}
+	current := start
+	for i := 0; i < len(str); i++ {
+		next := &Node{}
+		current.Edges = append(current.Edges, &ByteEdge{
+			Byte: str[i],
+			Node: next,
+		})
+		current = next
+	}
+	return start, current
+}
