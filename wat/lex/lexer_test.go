@@ -178,6 +178,28 @@ func TestFloat(t *testing.T) {
 	}
 }
 
+func TestI32(t *testing.T) {
+	cases := []string{
+		"1",
+		"-1",
+		"0",
+		"0x7fffffff",
+		"0x80000000",
+		"0x40000000",
+		"0x10000000",
+		"-0x80",
+		"4096",
+		"0xff05",
+		"0xffdf3b65",
+		"0x012345_00",
+	}
+	for _, c := range cases {
+		t.Run(c, func(t *testing.T) {
+			CanTokenize(t, c, token.Integer)
+		})
+	}
+}
+
 func CanTokenize(t *testing.T, input string, sequence ...token.Type) {
 	lexer := lex.New(input)
 	for i, item := range sequence {

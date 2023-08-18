@@ -38,7 +38,6 @@ func New(input string) *Lexer {
 		lineComment(),
 		blockComment(),
 		str(),
-		integer(),
 		identifier(),
 		reserved(),
 	}
@@ -149,8 +148,12 @@ func (l *Lexer) token(ty token.Type) types.Result[*token.Token] {
 		Capture:  l.input[l.offset:l.position],
 	}
 
-	if tok.Type == token.Reserved && isFloat(tok.Capture) {
-		tok.Type = token.Float
+	if tok.Type == token.Reserved {
+		if isInteger(tok.Capture) {
+			tok.Type = token.Integer
+		} else if isFloat(tok.Capture) {
+			tok.Type = token.Float
+		}
 	}
 
 	// fast forward updating metrics
@@ -405,7 +408,7 @@ func num(s string, i int) (int, bool) {
 		if isDigit(s[i]) {
 			continue
 		}
-		return i, true
+		return i, false
 	}
 	return i, true
 }
@@ -443,7 +446,7 @@ func frac(s string, i int) (int, bool) {
 		if isDigit(s[i]) {
 			continue
 		}
-		return i, true
+		return i, false
 	}
 	return i, true
 }
@@ -608,6 +611,27 @@ func isFloat(s string) bool {
 	}
 	if _, ok := hexfloat(s, 0); ok {
 		return true
+	}
+	return false
+}
+
+func isInteger(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	// negative := s[0] == '-'
+	if s[0] == '+' || s[0] == '-' {
+		s = s[1:]
+	}
+	if _, ok := num(s, 0); ok {
+		return true
+	}
+	if strings.HasPrefix(s, "0x") {
+		s = strings.TrimPrefix(s, "0x")
+		if i, ok := hexnum(s, 0); ok {
+			// if we reached the end of the string this is an integer
+			return i == len(s)
+		}
 	}
 	return false
 }
