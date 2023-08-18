@@ -323,66 +323,6 @@ func reserved() Rule {
 	}
 }
 
-// integer ~ [+-]?[0-9](_*[0-9])*
-func integer() Rule {
-	start := &Node{}
-	plusOrMinus := &Node{}
-	firstNumber := &Node{Final: true}
-	underscore := &Node{}
-	lastNumber := &Node{}
-
-	// ( start ) -- [+|-] --> ( plusOrMinus )
-	// ( start ) -- [0-9] --> ( firstNumber )
-	start.Edges = append(start.Edges, &ByteEdge{
-		Byte: '+',
-		Node: plusOrMinus,
-	}, &ByteEdge{
-		Byte: '-',
-		Node: plusOrMinus,
-	}, &FuncEdge{
-		Func: isDigit,
-		Node: firstNumber,
-	})
-	// ( plusOrMinus ) -- [0-9] --> ( firstNumber )
-	plusOrMinus.Edges = append(plusOrMinus.Edges, &FuncEdge{
-		Func: isDigit,
-		Node: firstNumber,
-	})
-	// ( firstNumber ) -- [0-9] --> ( lastNumber )
-	// ( firstNumber ) -- _ --> ( underscore )
-	firstNumber.Edges = append(firstNumber.Edges, &FuncEdge{
-		Func: isDigit,
-		Node: lastNumber,
-	}, &ByteEdge{
-		Byte: '_',
-		Node: underscore,
-	})
-	// ( underscore ) -- _ --> ( underscore )
-	// ( underscore ) -- [0-9] --> ( lastNumber )
-	underscore.Edges = append(underscore.Edges, &ByteEdge{
-		Byte: '_',
-		Node: underscore,
-	}, &FuncEdge{
-		Func: isDigit,
-		Node: lastNumber,
-	})
-	// ( lastNumber ) -- _ --> ( underscore )
-	// ( lastNumber ) -- [0-9] --> ( lastNumber )
-	lastNumber.Edges = append(lastNumber.Edges, &ByteEdge{
-		Byte: '_',
-		Node: underscore,
-	}, &FuncEdge{
-		Func: isDigit,
-		Node: lastNumber,
-	})
-	return &DfaRule{
-		Dfa: &Dfa{
-			Start: start,
-		},
-		TokenType: token.Integer,
-	}
-}
-
 func sign(s string, i int) (int, bool) {
 	if i >= len(s) {
 		return i, false
