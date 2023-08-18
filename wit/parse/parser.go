@@ -14,7 +14,7 @@ import (
 	"github.com/patrickhuber/go-wasm/wit/token"
 )
 
-func Parse(input []rune) (*ast.Ast, error) {
+func Parse(input string) (*ast.Ast, error) {
 	lexer := lex.New(input)
 	return parseAst(lexer).Deconstruct()
 }
@@ -56,7 +56,7 @@ func parsePackageName(lexer *lex.Lexer) (res types.Result[*ast.PackageName]) {
 
 	// id
 	packageName := &ast.PackageName{}
-	packageName.Name = next(lexer).Unwrap().Runes
+	packageName.Name = next(lexer).Unwrap().Capture
 
 	// ':'
 	expect(lexer, token.Colon).Unwrap()
@@ -91,7 +91,7 @@ func parseTopLevelUse(lexer *lex.Lexer) (res types.Result[*ast.TopLevelUse]) {
 	if eat(lexer, token.As).Unwrap() {
 		topLevelUse.As = option.Some(parseId(lexer).Unwrap())
 	} else {
-		topLevelUse.As = option.None[[]rune]()
+		topLevelUse.As = option.None[string]()
 	}
 	return result.Ok(topLevelUse)
 }
@@ -201,7 +201,7 @@ func parseResourceFunc(lexer *lex.Lexer) (res types.Result[ast.ResourceFunc]) {
 	if eat(lexer, token.Constructor).Unwrap() {
 		expect(lexer, token.OpenParen).Unwrap()
 		namedFunc.Func.Params = parseParameters(lexer).Unwrap()
-		namedFunc.Name = []rune("constructor")
+		namedFunc.Name = "constructor"
 		return result.Ok[ast.ResourceFunc](&ast.Constructor{
 			NamedFunc: namedFunc,
 		})
@@ -245,7 +245,7 @@ func parseUse(lexer *lex.Lexer) (res types.Result[*ast.Use]) {
 func parseUseName(lexer *lex.Lexer) types.Result[ast.UseName] {
 	name := ast.UseName{
 		Name: parseId(lexer).Unwrap(),
-		As:   option.None[[]rune](),
+		As:   option.None[string](),
 	}
 
 	// as
@@ -293,7 +293,7 @@ func parseUsePath(lexer *lex.Lexer) (res types.Result[*ast.UsePath]) {
 	return parsePath(lexer, id)
 }
 
-func parsePath(lexer *lex.Lexer, namespace []rune) (res types.Result[*ast.UsePath]) {
+func parsePath(lexer *lex.Lexer, namespace string) (res types.Result[*ast.UsePath]) {
 	defer handle.Error(&res)
 
 	pkgName := parseId(lexer).Unwrap()
@@ -303,7 +303,7 @@ func parsePath(lexer *lex.Lexer, namespace []rune) (res types.Result[*ast.UsePat
 	return result.Ok(&ast.UsePath{
 		Package: struct {
 			Id   *ast.PackageName
-			Name []rune
+			Name string
 		}{
 			Id: &ast.PackageName{
 				Namespace: namespace,
@@ -324,7 +324,7 @@ func parseNamedFunc(name *token.Token, lexer *lex.Lexer) (res types.Result[*ast.
 	defer handle.Error(&res)
 
 	named := &ast.NamedFunc{
-		Name: name.Runes,
+		Name: name.Capture,
 	}
 
 	expect(lexer, token.Colon).Unwrap()
@@ -382,7 +382,7 @@ func parseParameters(lexer *lex.Lexer) (res types.Result[[]ast.Parameter]) {
 			expect(lexer, token.CloseParen).Unwrap()
 			break
 		} else {
-			return result.Errorf[[]ast.Parameter]("%w. expected ',' or ')' but found %s", parseError(peekTok), string(peekTok.Runes))
+			return result.Errorf[[]ast.Parameter]("%w. expected ',' or ')' but found %s", parseError(peekTok), peekTok.Capture)
 		}
 	}
 	return result.Ok(parameters)
@@ -441,7 +441,7 @@ func parseType(lexer *lex.Lexer) (res types.Result[ast.Type]) {
 		}
 		expect(lexer, token.Greater).Unwrap()
 	default:
-		ty = &ast.Id{Value: name.Runes}
+		ty = &ast.Id{Value: name.Capture}
 	}
 
 	return result.Ok(ty)
@@ -594,7 +594,7 @@ func parseWorldItem(lexer *lex.Lexer) (res types.Result[ast.WorldItem]) {
 	}
 	return result.Errorf[ast.WorldItem]("%w : Unrecognized world item '%s'. Expected (export, import, resource, use, type, include). Found token.%v",
 		parseErrorFromLexer(lexer),
-		string(itemType.Runes),
+		itemType.Capture,
 		itemType.Type)
 }
 
@@ -640,7 +640,7 @@ func parseInclude(lexer *lex.Lexer) (res types.Result[ast.WorldItem]) {
 	return result.Ok[ast.WorldItem](include)
 }
 
-func parseExternType(lexer *lex.Lexer, id []rune) (res types.Result[*ast.ExternType]) {
+func parseExternType(lexer *lex.Lexer, id string) (res types.Result[*ast.ExternType]) {
 	defer handle.Error(&res)
 
 	et := &ast.ExternType{}
@@ -771,16 +771,16 @@ func parseEnum(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
 	})
 }
 
-func parseId(lexer *lex.Lexer) (res types.Result[[]rune]) {
+func parseId(lexer *lex.Lexer) (res types.Result[string]) {
 	defer handle.Error(&res)
 	tok := next(lexer).Unwrap()
 	switch tok.Type {
 	case token.Id:
-		return result.Ok(tok.Runes)
+		return result.Ok(tok.Capture)
 	case token.ExplicitId:
-		return result.Ok(tok.Runes)
+		return result.Ok(tok.Capture)
 	default:
-		return result.Errorf[[]rune]("%w : found value '%s', type '%v' but expected (id, explicit_id)", parseError(tok), string(tok.Runes), tok.Type)
+		return result.Errorf[string]("%w : found value '%s', type '%v' but expected (id, explicit_id)", parseError(tok), tok.Capture, tok.Type)
 	}
 }
 

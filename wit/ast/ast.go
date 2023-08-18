@@ -10,8 +10,8 @@ type Ast struct {
 }
 
 type PackageName struct {
-	Namespace []rune
-	Name      []rune
+	Namespace string
+	Name      string
 	Version   types.Option[Version]
 }
 
@@ -19,8 +19,8 @@ type Version struct {
 	Major uint64
 	Minor uint64
 	Patch uint64
-	Pre   []rune
-	Build []rune
+	Pre   string
+	Build string
 }
 
 type AstItem struct {
@@ -30,7 +30,7 @@ type AstItem struct {
 }
 
 type Interface struct {
-	Name  []rune
+	Name  string
 	Items []InterfaceItem
 }
 
@@ -41,7 +41,7 @@ type InterfaceItem struct {
 }
 
 type NamedFunc struct {
-	Name []rune
+	Name string
 	Func *Func
 }
 
@@ -56,12 +56,12 @@ type ResultList struct {
 }
 
 type Parameter struct {
-	Id   []rune
+	Id   string
 	Type Type
 }
 
 type World struct {
-	Id    []rune
+	Id    string
 	Items []WorldItem
 }
 
@@ -75,7 +75,7 @@ type Export interface {
 }
 
 type ExportExternType struct {
-	Id         []rune
+	Id         string
 	ExternType *ExternType
 }
 
@@ -95,7 +95,7 @@ func (imp *ImportInterface) imp()       {}
 func (imp *ImportInterface) worldItem() {}
 
 type ImportExternType struct {
-	Id         []rune
+	Id         string
 	ExternType *ExternType
 }
 
@@ -116,20 +116,20 @@ type Use struct {
 func (imp *Use) worldItem() {}
 
 type UsePath struct {
-	Id      []rune
+	Id      string
 	Package struct {
 		Id   *PackageName
-		Name []rune
+		Name string
 	}
 }
 
 type UseName struct {
-	Name []rune
-	As   types.Option[[]rune]
+	Name string
+	As   types.Option[string]
 }
 
 type TypeDef struct {
-	Name []rune
+	Name string
 	Type Type
 }
 
@@ -143,13 +143,13 @@ type Include struct {
 func (*Include) worldItem() {}
 
 type IncludeName struct {
-	Name []rune
-	As   []rune
+	Name string
+	As   string
 }
 
 type TopLevelUse struct {
 	Item *UsePath
-	As   types.Option[[]rune]
+	As   types.Option[string]
 }
 
 type Type interface {
@@ -200,21 +200,21 @@ type Handle interface {
 
 type Own struct {
 	TypeImpl
-	Id []rune
+	Id string
 }
 
 func (Own) handle() {}
 
 type Borrow struct {
 	TypeImpl
-	Id []rune
+	Id string
 }
 
 func (Borrow) handle() {}
 
 type Id struct {
 	TypeImpl
-	Value []rune
+	Value string
 }
 
 type Stream struct {
@@ -256,7 +256,7 @@ type Record struct {
 }
 
 type Field struct {
-	Name []rune
+	Name string
 	Type Type
 }
 
@@ -266,7 +266,7 @@ type Flags struct {
 }
 
 type Flag struct {
-	Id []rune
+	Id string
 }
 
 type Variant struct {
@@ -275,7 +275,7 @@ type Variant struct {
 }
 
 type Case struct {
-	Name []rune
+	Name string
 	Type types.Option[Type]
 }
 
@@ -294,7 +294,7 @@ type Enum struct {
 }
 
 type EnumCase struct {
-	Name []rune
+	Name string
 }
 
 type Future struct {

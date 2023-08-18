@@ -3,6 +3,7 @@ package lex
 import (
 	"fmt"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/patrickhuber/go-wasm/wit/token"
 
@@ -13,7 +14,7 @@ import (
 )
 
 type Lexer struct {
-	input     []rune
+	input     string
 	offset    int
 	position  int
 	column    int
@@ -29,7 +30,7 @@ func (l *Lexer) Column() int {
 	return l.column
 }
 
-func New(input []rune) *Lexer {
+func New(input string) *Lexer {
 	return &Lexer{
 		input:    input,
 		position: 0,
@@ -219,7 +220,7 @@ func (l *Lexer) token(ty token.TokenType) types.Result[*token.Token] {
 		Position: l.offset,
 		Column:   l.column,
 		Line:     l.line,
-		Runes:    l.input[l.offset:l.position],
+		Capture:  l.input[l.offset:l.position],
 	}
 
 	// fast forward updating metrics
@@ -239,7 +240,7 @@ func (l *Lexer) token(ty token.TokenType) types.Result[*token.Token] {
 	return result.Ok(tok)
 }
 
-func (l *Lexer) capture() []rune {
+func (l *Lexer) capture() string {
 	return l.input[l.offset:l.position]
 }
 
@@ -295,7 +296,7 @@ func (l *Lexer) peekRune() (res types.Option[rune]) {
 	if l.position >= len(l.input) {
 		return option.None[rune]()
 	}
-	r := l.input[l.position]
+	r, _ := utf8.DecodeRuneInString(l.input[l.position:])
 	return option.Some(r)
 }
 
@@ -303,8 +304,8 @@ func (l *Lexer) readRune() (res types.Option[rune]) {
 	if l.position >= len(l.input) {
 		return option.None[rune]()
 	}
-	r := l.input[l.position]
-	l.position++
+	r, width := utf8.DecodeRuneInString(l.input[l.position:])
+	l.position += width
 	return option.Some(r)
 }
 

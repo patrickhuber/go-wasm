@@ -1,9 +1,6 @@
 package wit_test
 
 import (
-	"bufio"
-	"errors"
-	"io"
 	"os"
 	"path"
 	"regexp"
@@ -29,22 +26,10 @@ func TestParser(t *testing.T) {
 		}
 		t.Run(file.Name(), func(t *testing.T) {
 			full := path.Join(dir, file.Name())
-
-			file, err := os.OpenFile(full, os.O_RDONLY, 0666)
+			bytes, err := os.ReadFile(full)
 			require.NoError(t, err)
-			reader := bufio.NewReader(file)
 
-			var runes []rune
-			for {
-				r, _, err := reader.ReadRune()
-				if errors.Is(err, io.EOF) {
-					break
-				}
-				require.NoError(t, err)
-				runes = append(runes, r)
-			}
-
-			node, err := wit.Parse(runes)
+			node, err := wit.Parse(string(bytes))
 			require.NoError(t, err)
 			require.NotNil(t, node)
 		})
@@ -67,22 +52,9 @@ func TestParseFail(t *testing.T) {
 		}
 		t.Run(file.Name(), func(t *testing.T) {
 			full := path.Join(dir, file.Name())
-
-			file, err := os.OpenFile(full, os.O_RDONLY, 0666)
+			bytes, err := os.ReadFile(full)
 			require.NoError(t, err)
-			reader := bufio.NewReader(file)
-
-			var runes []rune
-			for {
-				r, _, err := reader.ReadRune()
-				if errors.Is(err, io.EOF) {
-					break
-				}
-				require.NoError(t, err)
-				runes = append(runes, r)
-			}
-
-			_, err = wit.Parse(runes)
+			_, err = wit.Parse(string(bytes))
 			require.Error(t, err)
 		})
 	}
