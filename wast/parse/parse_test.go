@@ -27,12 +27,15 @@ func TestParse(t *testing.T) {
 			continue
 		}
 		t.Run(file.Name(), func(t *testing.T) {
+
 			full := path.Join(dir, file.Name())
 			file, err := os.OpenFile(full, os.O_RDONLY, 0666)
 			require.NoError(t, err)
+
 			reader := bufio.NewReader(file)
 			bytes, err := io.ReadAll(reader)
 			require.NoError(t, err)
+
 			input := string(bytes)
 			parse.Parse(input)
 		})

@@ -18,6 +18,10 @@ func Parse(lexer *lex.Lexer) (ast.Ast, error) {
 	return parse(lexer).Deconstruct()
 }
 
+func Peek(lexer *lex.Lexer) (*token.Token, error) {
+	return peek(lexer).Deconstruct()
+}
+
 func parse(lexer *lex.Lexer) (res types.Result[ast.Ast]) {
 	defer handle.Error(&res)
 	expect(lexer, token.OpenParen).Unwrap()
