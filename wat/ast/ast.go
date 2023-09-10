@@ -24,6 +24,7 @@ type Section interface {
 
 type Function struct {
 	ID           types.Option[string]
+	Exports      []InlineExport
 	Parameters   []Parameter
 	Results      []Result
 	Instructions []Instruction
@@ -105,10 +106,11 @@ type RawIndex struct {
 
 func (RawIndex) index() {}
 
-type Export struct {
+type InlineExport struct {
 	Name string
 }
-type Import struct {
-	Name  string
-	Alias string
+
+type InlineImport struct {
+	Module string
+	Field  string
 }

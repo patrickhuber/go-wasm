@@ -11,22 +11,25 @@ import (
 )
 
 func TestParse(t *testing.T) {
-	t.Run("empty_module", func(t *testing.T) {
-		lexer := lex.New("(module)")
-		n, err := parse.Parse(lexer)
-		require.NoError(t, err)
-		require.NotNil(t, n)
-		_, ok := n.(*ast.Module)
-		require.True(t, ok)
-	})
-	t.Run("empty_component", func(t *testing.T) {
-		lexer := lex.New("(component)")
-		n, err := parse.Parse(lexer)
-		require.NoError(t, err)
-		require.NotNil(t, n)
-		_, ok := n.(*ast.Component)
-		require.True(t, ok)
-	})
+	type test struct {
+		name     string
+		text     string
+		expected ast.Ast
+	}
+	tests := []test{
+		{"empty_module", "(module)", &ast.Module{}},
+		{"empty_component", "(component)", &ast.Component{}},
+		{"export_function", `(module (func (export "add")))`, &ast.Module{Functions: []ast.Function{{Exports: []ast.InlineExport{{Name: `"add"`}}}}}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			lexer := lex.New(test.text)
+			n, err := parse.Parse(lexer)
+			require.NoError(t, err)
+			require.NotNil(t, n)
+			require.EqualValues(t, test.expected, n)
+		})
+	}
 	t.Run("add", func(t *testing.T) {
 		file := "../../fixtures/add/add.wat"
 		content, err := os.ReadFile(file)

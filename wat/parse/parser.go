@@ -90,7 +90,8 @@ func parseFunc(lexer *lex.Lexer) (res types.Result[*ast.Function]) {
 			result := parseResult(lexer).Unwrap()
 			function.Results = append(function.Results, *result)
 		case "export":
-			_ = parseExport(lexer).Unwrap()
+			export := parseExport(lexer).Unwrap()
+			function.Exports = append(function.Exports, export)
 		case "import":
 			_ = parseImport(lexer).Unwrap()
 		}
@@ -134,23 +135,23 @@ func parseResult(lexer *lex.Lexer) (res types.Result[*ast.Result]) {
 	})
 }
 
-func parseExport(lexer *lex.Lexer) (res types.Result[ast.Export]) {
+func parseExport(lexer *lex.Lexer) (res types.Result[ast.InlineExport]) {
 	defer handle.Error(&res)
 	expectValue(lexer, token.Reserved, "export").Unwrap()
 	name := parseString(lexer).Unwrap()
-	return result.Ok(ast.Export{
+	return result.Ok(ast.InlineExport{
 		Name: name,
 	})
 }
 
-func parseImport(lexer *lex.Lexer) (res types.Result[ast.Import]) {
+func parseImport(lexer *lex.Lexer) (res types.Result[ast.InlineImport]) {
 	defer handle.Error(&res)
 	expectValue(lexer, token.Reserved, "import").Unwrap()
 	name := parseString(lexer).Unwrap()
 	alias := parseString(lexer).Unwrap()
-	return result.Ok(ast.Import{
-		Name:  name,
-		Alias: alias,
+	return result.Ok(ast.InlineImport{
+		Module: name,
+		Field:  alias,
 	})
 }
 
