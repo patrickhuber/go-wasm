@@ -37,7 +37,9 @@ func TestParse(t *testing.T) {
 			require.NoError(t, err)
 
 			input := string(bytes)
-			parse.Parse(input)
+			directives, err := parse.Parse(input)
+			require.NoError(t, err)
+			require.Greater(t, 0, len(directives))
 		})
 	}
 }

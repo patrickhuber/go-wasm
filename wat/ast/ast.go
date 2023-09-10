@@ -104,3 +104,11 @@ type RawIndex struct {
 }
 
 func (RawIndex) index() {}
+
+type Export struct {
+	Name string
+}
+type Import struct {
+	Name  string
+	Alias string
+}

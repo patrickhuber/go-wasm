@@ -89,6 +89,10 @@ func parseFunc(lexer *lex.Lexer) (res types.Result[*ast.Function]) {
 		case "result":
 			result := parseResult(lexer).Unwrap()
 			function.Results = append(function.Results, *result)
+		case "export":
+			_ = parseExport(lexer).Unwrap()
+		case "import":
+			_ = parseImport(lexer).Unwrap()
 		}
 		expect(lexer, token.CloseParen).Unwrap()
 	}
@@ -127,6 +131,26 @@ func parseResult(lexer *lex.Lexer) (res types.Result[*ast.Result]) {
 
 	return result.Ok(&ast.Result{
 		Type: parseType(lexer).Unwrap(),
+	})
+}
+
+func parseExport(lexer *lex.Lexer) (res types.Result[ast.Export]) {
+	defer handle.Error(&res)
+	expectValue(lexer, token.Reserved, "export").Unwrap()
+	name := parseString(lexer).Unwrap()
+	return result.Ok(ast.Export{
+		Name: name,
+	})
+}
+
+func parseImport(lexer *lex.Lexer) (res types.Result[ast.Import]) {
+	defer handle.Error(&res)
+	expectValue(lexer, token.Reserved, "import").Unwrap()
+	name := parseString(lexer).Unwrap()
+	alias := parseString(lexer).Unwrap()
+	return result.Ok(ast.Import{
+		Name:  name,
+		Alias: alias,
 	})
 }
 
@@ -200,6 +224,14 @@ func parseId(lexer *lex.Lexer) (res types.Result[string]) {
 	return result.Ok(tok.Capture)
 }
 
+func parseString(lexer *lex.Lexer) (res types.Result[string]) {
+	tok := next(lexer).Unwrap()
+	if tok.Type != token.String {
+		return result.Errorf[string]("%w", parseError(tok))
+	}
+	return result.Ok(tok.Capture)
+}
+
 func eat(lexer *lex.Lexer, ty token.Type) (res types.Result[bool]) {
 	defer handle.Error(&res)
 
@@ -259,10 +291,14 @@ func peek(lexer *lex.Lexer) (res types.Result[*token.Token]) {
 	for {
 		p := result.New(lexer.Peek())
 		r := p.Unwrap()
-		if r.Type != token.Whitespace {
+		switch r.Type {
+		case token.Whitespace:
+		case token.BlockComment:
+		case token.LineComment:
+		default:
 			return p
 		}
-		// consume whitespace
+		// consume whitespace, block comment and line comment
 		_ = result.New(lexer.Next()).Unwrap()
 	}
 }

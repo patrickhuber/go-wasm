@@ -53,6 +53,18 @@ func New(input string) *Lexer {
 	}
 }
 
+func (l *Lexer) Clone() *Lexer {
+	return &Lexer{
+		input:     l.input,
+		offset:    l.offset,
+		position:  l.position,
+		column:    l.column,
+		line:      l.line,
+		peekToken: l.peekToken,
+		Rules:     l.Rules,
+	}
+}
+
 func (l *Lexer) Peek() (*token.Token, error) {
 	// always return the peek token if it exists
 	if l.peekToken != nil {

@@ -21,54 +21,52 @@ func parse(input string) (res types.Result[[]ast.Directive]) {
 
 	var directives []ast.Directive
 	lexer := lex.New(input)
-
-	tok, err := watparse.Peek(lexer)
-	if err != nil {
-		return result.Errorf[[]ast.Directive]("unable to parse wast: %w", err)
-	}
-
-	if tok.Type != token.Reserved {
-		return result.Errorf[[]ast.Directive]("expected token.Reserved but found %v '%s'", tok.Type, tok.Capture)
-	}
-
-	// try to parse inline module
-	wat, err := watparse.Parse(lexer)
-	if err == nil {
-		directives = append(directives, ast.Wat{
-			Wat: wat,
-		})
-	} else {
-		// if the parse failed, reset the lexer
-		lexer = lex.New(input)
-	}
-
 	for {
-		// try to parse as wast
-		directive := parseDirective(lex.New(input)).Unwrap()
+		peek := result.New(lexer.Peek()).Unwrap()
+		if peek.Type == token.EndOfStream {
+			break
+		}
+		directive := parseDirective(lexer).Unwrap()
 		directives = append(directives, directive)
-		break
 	}
+
 	return result.Ok(directives)
 }
 
 func parseDirective(lexer *lex.Lexer) (res types.Result[ast.Directive]) {
 	defer handle.Error(&res)
 
-	var dir ast.Directive
-	expect(lexer, token.OpenParen).Unwrap()
+	// create a clone of the lexer to check if this is a wat directive or a wast directive
+	// revert to the original lexer if wat
+	// use the clone if wast
+	clone := lexer.Clone()
 
-	tok := peek(lexer).Unwrap()
-	if tok.Type != token.Reserved {
-		switch tok.Capture {
-		case "assert_return":
-			return parseAssertReturn(lexer)
-		case "assert_invalid":
-			return parseAssertInvalid(lexer)
-		case "assert_malformed":
-			return parseAssertMalformed(lexer)
-		case "assert_trap":
-			return parseAssertTrap(lexer)
+	var dir ast.Directive
+	expect(clone, token.OpenParen).Unwrap()
+
+	tok := peek(clone).Unwrap()
+
+	switch tok.Capture {
+	case "module":
+		fallthrough
+	case "component":
+		dir = ast.Wat{
+			Wat: result.New(watparse.Parse(lexer)).Unwrap(),
 		}
+	case "assert_return":
+		lexer = clone
+		dir = parseAssertReturn(lexer).Unwrap()
+	case "assert_invalid":
+		lexer = clone
+		dir = parseAssertInvalid(lexer).Unwrap()
+	case "assert_malformed":
+		lexer = clone
+		dir = parseAssertMalformed(lexer).Unwrap()
+	case "assert_trap":
+		lexer = clone
+		dir = parseAssertTrap(lexer).Unwrap()
+	default:
+		return result.Error[ast.Directive](parseError(tok))
 	}
 
 	expect(lexer, token.CloseParen).Unwrap()
