@@ -84,6 +84,13 @@ type I32Add struct{}
 
 func (I32Add) inst() {}
 
+type Folded struct {
+	Instruction Instruction
+	Parameters  []Instruction
+}
+
+func (Folded) inst() {}
+
 type LocalGet struct {
 	Index Index
 }

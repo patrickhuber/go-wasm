@@ -94,6 +94,9 @@ func parseFunc(lexer *lex.Lexer) (res types.Result[*ast.Function]) {
 			function.Exports = append(function.Exports, export)
 		case "import":
 			_ = parseImport(lexer).Unwrap()
+		default:
+			inst := parseInstruction(lexer).Unwrap()
+			function.Instructions = append(function.Instructions, inst)
 		}
 		expect(lexer, token.CloseParen).Unwrap()
 	}
@@ -172,7 +175,19 @@ func parseInstruction(lexer *lex.Lexer) (res types.Result[ast.Instruction]) {
 	default:
 		return result.Errorf[ast.Instruction]("%w : error parsing instruction. Unrecognized instruction %v : %s", parseError(tok), tok.Type, tok.Capture)
 	}
-	return result.Ok(inst)
+	peekTok := peek(lexer).Unwrap()
+	if peekTok.Type != token.OpenParen {
+		return result.Ok(inst)
+	}
+	folded := ast.Folded{
+		Instruction: inst,
+	}
+	for eat(lexer, token.OpenParen).Unwrap() {
+		inst = parseInstruction(lexer).Unwrap()
+		folded.Parameters = append(folded.Parameters, inst)
+		expect(lexer, token.CloseParen).Unwrap()
+	}
+	return result.Ok[ast.Instruction](folded)
 }
 
 func parseIndex(lexer *lex.Lexer) (res types.Result[ast.Index]) {
