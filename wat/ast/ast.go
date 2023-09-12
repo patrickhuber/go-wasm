@@ -84,6 +84,22 @@ type I32Add struct{}
 
 func (I32Add) inst() {}
 
+type I32Sub struct{}
+
+func (I32Sub) inst() {}
+
+type I32Mul struct{}
+
+func (I32Mul) inst() {}
+
+type I32DivS struct{}
+
+func (I32DivS) inst() {}
+
+type I32DivU struct{}
+
+func (I32DivU) inst() {}
+
 type Folded struct {
 	Instruction Instruction
 	Parameters  []Instruction
