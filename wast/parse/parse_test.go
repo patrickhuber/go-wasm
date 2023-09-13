@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParse(t *testing.T) {
+func TestIntegration(t *testing.T) {
 	dir := "../../submodules/github.com/WebAssembly/testsuite"
 	files, err := os.ReadDir(dir)
 	require.NoError(t, err)
@@ -38,6 +38,24 @@ func TestParse(t *testing.T) {
 
 			input := string(bytes)
 			directives, err := parse.Parse(input)
+			require.NoError(t, err)
+			require.Greater(t, 0, len(directives))
+		})
+	}
+}
+
+func TestParse(t *testing.T) {
+	type test struct {
+		name  string
+		input string
+	}
+	tests := []test{
+		{"assert_return", `(assert_return (invoke "add" (i32.const 1) (i32.const 1)) (i32.const 2))`},
+		{"assert_trap", `(assert_trap (invoke "div_s" (i32.const 1) (i32.const 0)) "integer divide by zero")`},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			directives, err := parse.Parse(test.input)
 			require.NoError(t, err)
 			require.Greater(t, 0, len(directives))
 		})

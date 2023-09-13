@@ -53,6 +53,8 @@ func parseDirective(lexer *lex.Lexer) (res types.Result[ast.Directive]) {
 		dir = ast.Wat{
 			Wat: result.New(watparse.Parse(lexer)).Unwrap(),
 		}
+		// exit early as wat parse will eat the last close paren
+		return result.Ok(dir)
 	case "assert_return":
 		lexer = clone
 		dir = parseAssertReturn(lexer).Unwrap()

@@ -180,6 +180,32 @@ func parseInstruction(lexer *lex.Lexer) (res types.Result[ast.Instruction]) {
 		inst = ast.I32DivS{}
 	case "i32.div_u":
 		inst = ast.I32DivU{}
+	case "i32.rem_s":
+	case "i32.rem_u":
+	case "i32.and":
+	case "i32.or":
+	case "i32.xor":
+	case "i32.shl":
+	case "i32.shr_s":
+	case "i32.shr_u":
+	case "i32.rotl":
+	case "i32.rotr":
+	case "i32.clz":
+	case "i32.ctz":
+	case "i32.popcnt":
+	case "i32.extend8_s":
+	case "i32.extend16_s":
+	case "i32.eqz":
+	case "i32.eq":
+	case "i32.ne":
+	case "i32.lt_s":
+	case "i32.lt_u":
+	case "i32.le_s":
+	case "i32.le_u":
+	case "i32.gt_s":
+	case "i32.gt_u":
+	case "i32.ge_s":
+	case "i32.ge_u":
 	default:
 		return result.Errorf[ast.Instruction]("%w : error parsing instruction. Unrecognized instruction %v : %s", parseError(tok), tok.Type, tok.Capture)
 	}
