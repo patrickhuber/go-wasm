@@ -4,3 +4,6 @@
 [submodule "submodules/github.com/WebAssembly/testsuite"]
 	path = submodules/github.com/WebAssembly/testsuite
 	url = https://github.com/WebAssembly/testsuite
+[submodule "submodules/github.com/WebAssembly/component-model"]
+	path = submodules/github.com/WebAssembly/component-model
+	url = https://github.com/WebAssembly/component-model
