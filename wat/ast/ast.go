@@ -80,6 +80,12 @@ type Instruction interface {
 	inst()
 }
 
+type I32Eqz struct {
+	Value int32
+}
+
+func (I32Eqz) inst() {}
+
 type I32Add struct{}
 
 func (I32Add) inst() {}
@@ -112,6 +118,10 @@ type LocalGet struct {
 }
 
 func (LocalGet) inst() {}
+
+type Drop struct{}
+
+func (Drop) inst() {}
 
 type Index interface {
 	index()

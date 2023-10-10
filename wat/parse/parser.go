@@ -73,7 +73,7 @@ func parseFunc(lexer *lex.Lexer) (res types.Result[*ast.Function]) {
 
 	function := &ast.Function{}
 	if tok := peek(lexer).Unwrap(); tok.Type == token.Id {
-		id := peek(lexer).Unwrap()
+		id := next(lexer).Unwrap()
 		if id.Type == token.Id {
 			function.ID = option.Some(tok.Capture)
 		} else {
@@ -196,6 +196,7 @@ func parseInstruction(lexer *lex.Lexer) (res types.Result[ast.Instruction]) {
 	case "i32.extend8_s":
 	case "i32.extend16_s":
 	case "i32.eqz":
+		inst = ast.I32Eqz{}
 	case "i32.eq":
 	case "i32.ne":
 	case "i32.lt_s":
@@ -206,6 +207,8 @@ func parseInstruction(lexer *lex.Lexer) (res types.Result[ast.Instruction]) {
 	case "i32.gt_u":
 	case "i32.ge_s":
 	case "i32.ge_u":
+	case "drop":
+		inst = ast.Drop{}
 	default:
 		return result.Errorf[ast.Instruction]("%w : error parsing instruction. Unrecognized instruction %v : %s", parseError(tok), tok.Type, tok.Capture)
 	}
