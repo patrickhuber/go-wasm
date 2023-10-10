@@ -80,6 +80,12 @@ type Instruction interface {
 	inst()
 }
 
+type I32Const struct {
+	Value int32
+}
+
+func (I32Const) inst() {}
+
 type I32Eqz struct {
 	Value int32
 }

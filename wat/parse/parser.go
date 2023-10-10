@@ -3,6 +3,7 @@ package parse
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/patrickhuber/go-types"
 	"github.com/patrickhuber/go-types/handle"
@@ -170,6 +171,10 @@ func parseInstruction(lexer *lex.Lexer) (res types.Result[ast.Instruction]) {
 		inst = ast.LocalGet{
 			Index: parseIndex(lexer).Unwrap(),
 		}
+	case "i32.const":
+		inst = ast.I32Const{
+			Value: ParseInt32(lexer).Unwrap(),
+		}
 	case "i32.add":
 		inst = ast.I32Add{}
 	case "i32.sub":
@@ -283,6 +288,19 @@ func parseString(lexer *lex.Lexer) (res types.Result[string]) {
 		return result.Errorf[string]("%w", parseError(tok))
 	}
 	return result.Ok(tok.Capture)
+}
+
+func ParseInt32(lexer *lex.Lexer) (res types.Result[int32]) {
+	tok := next(lexer).Unwrap()
+	if tok.Type != token.Integer {
+		return result.Errorf[int32]("%w", parseError(tok))
+	}
+	if strings.HasPrefix(tok.Capture, "-") {
+		i, err := strconv.ParseInt(tok.Capture, 0, 32)
+		return result.New(int32(i), err)
+	}
+	i, err := strconv.ParseUint(tok.Capture, 0, 32)
+	return result.New(int32(i), err)
 }
 
 func eat(lexer *lex.Lexer, ty token.Type) (res types.Result[bool]) {
