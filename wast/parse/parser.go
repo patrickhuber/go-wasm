@@ -2,8 +2,6 @@ package parse
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/patrickhuber/go-types"
 	"github.com/patrickhuber/go-types/handle"
@@ -185,7 +183,7 @@ func parseInvoke(lexer *lex.Lexer) (res types.Result[ast.Invoke]) {
 		name = option.None[string]()
 	}
 
-	str := parseString(lexer).Unwrap()
+	str := result.New(watparse.ParseString(lexer)).Unwrap()
 
 	consts := parseConsts(lexer).Unwrap()
 
@@ -269,98 +267,12 @@ func parseResults(lexer *lex.Lexer) (res types.Result[[]ast.Result]) {
 	return result.Ok(results)
 }
 
-func parseString(lexer *lex.Lexer) (res types.Result[string]) {
-	defer handle.Error(&res)
-
-	tok := next(lexer).Unwrap()
-	if tok.Type != token.String {
-		return result.Errorf[string]("%w expected string found %s", parseError(tok), tok.Type)
-	}
-	return result.Ok(strings.Trim(tok.Capture, "\""))
-}
-
-func parseInt32(lexer *lex.Lexer) (res types.Result[int32]) {
-	defer handle.Error(&res)
-	tok := next(lexer).Unwrap()
-
-	if tok.Type != token.Integer {
-		return result.Errorf[int32]("%w expected integer found %s", parseError(tok), tok.Type)
-	}
-
-	var v int32
-	// 0x80000000 will overflow if we don't parse it as uint32 so
-	// any negative number will be parsed as a regular int and everything
-	// else is parsed as int
-	if strings.HasPrefix(tok.Capture, "-") {
-		i, err := strconv.ParseInt(tok.Capture, 0, 32)
-		if err != nil {
-			return result.Errorf[int32]("%w", err)
-		}
-		v = int32(i)
-	} else {
-		u, err := strconv.ParseUint(tok.Capture, 0, 32)
-		if err != nil {
-			return result.Errorf[int32]("%w", err)
-		}
-		v = int32(u)
-	}
-	return result.Ok(v)
-}
-
-func parseInt64(lexer *lex.Lexer) (res types.Result[int64]) {
-	defer handle.Error(&res)
-	tok := next(lexer).Unwrap()
-
-	if tok.Type != token.Integer {
-		return result.Errorf[int64]("%w", parseError(tok))
-	}
-
-	var v int64
-	// 0x80000000_00000000 will overflow if we don't parse it as uint64 so
-	// any negative number will be parsed as a regular int and everything
-	// else is parsed as int
-	if strings.HasPrefix(tok.Capture, "-") {
-		f, err := strconv.ParseInt(tok.Capture, 0, 64)
-		if err != nil {
-			return result.Errorf[int64]("%w", err)
-		}
-		v = int64(f)
-	} else {
-		f, err := strconv.ParseUint(tok.Capture, 0, 64)
-		if err != nil {
-			return result.Errorf[int64]("%w", err)
-		}
-		v = int64(f)
-	}
-	return result.Ok(v)
-}
-
 func parseFloat32(lexer *lex.Lexer) (res types.Result[float32]) {
-	defer handle.Error(&res)
-	tok := next(lexer).Unwrap()
-
-	if tok.Type != token.Float {
-		return result.Errorf[float32]("%w", parseError(tok))
-	}
-	f, err := strconv.ParseFloat(tok.Capture, 32)
-	if err != nil {
-		return result.Errorf[float32]("%w", err)
-	}
-	return result.Ok(float32(f))
+	return result.New(watparse.ParseFloat32(lexer))
 }
 
 func parseFloat64(lexer *lex.Lexer) (res types.Result[float64]) {
-	defer handle.Error(&res)
-	tok := next(lexer).Unwrap()
-
-	if tok.Type != token.Float {
-		return result.Errorf[float64]("%w", parseError(tok))
-	}
-	f, err := strconv.ParseFloat(tok.Capture, 64)
-	if err != nil {
-		return result.Errorf[float64]("%w", err)
-	}
-	return result.Ok(f)
+	return result.New(watparse.ParseFloat64(lexer))
 }
 
 func eat(lexer *lex.Lexer, ty token.Type) (res types.Result[bool]) {
@@ -425,4 +337,19 @@ func parseError(tok *token.Token) error {
 		line,
 		col,
 		tok.Position)
+}
+
+func parseString(lexer *lex.Lexer) types.Result[string] {
+	str, err := watparse.ParseString(lexer)
+	return result.New(str, err)
+}
+
+func parseInt32(lexer *lex.Lexer) types.Result[int32] {
+	i, err := watparse.ParseInt32(lexer)
+	return result.New(i, err)
+}
+
+func parseInt64(lexer *lex.Lexer) types.Result[int64] {
+	i, err := watparse.ParseInt64(lexer)
+	return result.New(i, err)
 }

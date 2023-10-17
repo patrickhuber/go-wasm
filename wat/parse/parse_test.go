@@ -19,7 +19,7 @@ func TestParse(t *testing.T) {
 	tests := []test{
 		{"empty_module", "(module)", &ast.Module{}},
 		{"empty_component", "(component)", &ast.Component{}},
-		{"export_function", `(module (func (export "add")))`, &ast.Module{Functions: []ast.Function{{Exports: []ast.InlineExport{{Name: `"add"`}}}}}},
+		{"export_function", `(module (func (export "add")))`, &ast.Module{Functions: []ast.Function{{Exports: []ast.InlineExport{{Name: "add"}}}}}},
 		{"function_instruction", "(module (func ))", &ast.Module{Functions: []ast.Function{{}}}},
 		{"folded_function_instruction", "(module (func (i32.add (local.get $x)(local.get $y))))", &ast.Module{
 			Functions: []ast.Function{

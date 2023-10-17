@@ -56,6 +56,15 @@ func parseModule(lexer *lex.Lexer) (res types.Result[*ast.Module]) {
 		case "func":
 			f := parseFunc(lexer).Unwrap()
 			m.Functions = append(m.Functions, *f)
+		case "type":
+			t := parseType(lexer).Unwrap()
+			m.Types = append(m.Types, t)
+		case "table":
+			t := parseTable(lexer).Unwrap()
+			m.Tables = append(m.Tables, t)
+		case "global":
+			g := parseGlobal(lexer).Unwrap()
+			m.Globals = append(m.Globals, g)
 		}
 		expect(lexer, token.CloseParen).Unwrap()
 	}
@@ -84,6 +93,9 @@ func parseFunc(lexer *lex.Lexer) (res types.Result[*ast.Function]) {
 	for eat(lexer, token.OpenParen).Unwrap() {
 		tok := peek(lexer).Unwrap()
 		switch tok.Capture {
+		case "local":
+			local := parseLocal(lexer).Unwrap()
+			function.Locals = append(function.Locals, local)
 		case "param":
 			param := parseParameter(lexer).Unwrap()
 			function.Parameters = append(function.Parameters, *param)
@@ -112,21 +124,27 @@ func parseFunc(lexer *lex.Lexer) (res types.Result[*ast.Function]) {
 	return result.Ok(function)
 }
 
+func parseLocal(lexer *lex.Lexer) (res types.Result[ast.Local]) {
+	defer handle.Error(&res)
+	expectValue(lexer, token.Reserved, "local").Unwrap()
+	ty := parseValType(lexer).Unwrap()
+	return result.Ok(ast.Local{
+		Type: ty,
+	})
+}
+
 func parseParameter(lexer *lex.Lexer) (res types.Result[*ast.Parameter]) {
 	defer handle.Error(&res)
 
 	expectValue(lexer, token.Reserved, "param").Unwrap()
 
-	parameter := &ast.Parameter{}
-	tok := peek(lexer).Unwrap()
-	if tok.Type == token.Id {
-		id := parseId(lexer).Unwrap()
-		parameter.ID = option.Some(id)
-	} else {
-		parameter.ID = option.None[string]()
-	}
-	parameter.Type = parseType(lexer).Unwrap()
-	return result.Ok(parameter)
+	id := parseOptionalId(lexer).Unwrap()
+	ty := parseValType(lexer).Unwrap()
+
+	return result.Ok(&ast.Parameter{
+		ID:   id,
+		Type: ty,
+	})
 }
 
 func parseResult(lexer *lex.Lexer) (res types.Result[*ast.Result]) {
@@ -134,8 +152,153 @@ func parseResult(lexer *lex.Lexer) (res types.Result[*ast.Result]) {
 
 	expectValue(lexer, token.Reserved, "result").Unwrap()
 
+	ty := parseValType(lexer).Unwrap()
 	return result.Ok(&ast.Result{
-		Type: parseType(lexer).Unwrap(),
+		Types: []ast.ValType{ty},
+	})
+}
+
+func parseType(lexer *lex.Lexer) (res types.Result[ast.Type]) {
+	defer handle.Error(&res)
+	expectValue(lexer, token.Reserved, "type").Unwrap()
+
+	id := parseOptionalId(lexer).Unwrap()
+
+	var funcType ast.FuncType
+	if eat(lexer, token.OpenParen).Unwrap() {
+		funcType = parseFuncType(lexer).Unwrap()
+		expect(lexer, token.CloseParen).Unwrap()
+	}
+
+	return result.Ok(ast.Type{
+		ID:       id,
+		FuncType: funcType,
+	})
+}
+
+func parseFuncType(lexer *lex.Lexer) (res types.Result[ast.FuncType]) {
+	defer handle.Error(&res)
+
+	expectValue(lexer, token.Reserved, "func").Unwrap()
+	var parameters []ast.Parameter
+	var results []ast.Result
+	for eat(lexer, token.OpenParen).Unwrap() {
+		tok := peek(lexer).Unwrap()
+		switch tok.Capture {
+		case "param":
+			parameter := parseParameter(lexer).Unwrap()
+			parameters = append(parameters, *parameter)
+		case "result":
+			result := parseResult(lexer).Unwrap()
+			results = append(results, *result)
+		}
+		expect(lexer, token.CloseParen).Unwrap()
+	}
+
+	return result.Ok(ast.FuncType{
+		Parameters: parameters,
+		Results:    results,
+	})
+}
+
+func parseTable(lexer *lex.Lexer) (res types.Result[ast.Table]) {
+	defer handle.Error(&res)
+	expectValue(lexer, token.Reserved, "table").Unwrap()
+	id := parseOptionalId(lexer).Unwrap()
+	tableType := parseTableType(lexer).Unwrap()
+	var elements []ast.Element
+	for eat(lexer, token.OpenParen).Unwrap() {
+		tok := next(lexer).Unwrap()
+		if tok.Type != token.Reserved {
+			return result.Errorf[ast.Table]("%w", parseError(tok))
+		}
+		switch tok.Capture {
+		case "elem":
+			id := parseId(lexer).Unwrap()
+			elements = append(elements, ast.Element{
+				ID: id,
+			})
+		default:
+			return result.Errorf[ast.Table]("%w", parseError(tok))
+		}
+		expect(lexer, token.CloseParen).Unwrap()
+	}
+	return result.Ok(ast.Table{
+		ID:        id,
+		TableType: tableType,
+		Elements:  elements,
+	})
+}
+
+func parseTableType(lexer *lex.Lexer) (res types.Result[ast.TableType]) {
+	defer handle.Error(&res)
+
+	tok := peek(lexer).Unwrap()
+	var limits ast.Limits
+	if tok.Type == token.Integer {
+		limits = parseLimits(lexer).Unwrap()
+	}
+	tok = next(lexer).Unwrap()
+	if tok.Type != token.Reserved {
+		return result.Errorf[ast.TableType]("expected 'externref' or 'funcref': %w", parseError(tok))
+	}
+	var refType ast.RefType
+	switch tok.Capture {
+	case "externref":
+		refType = ast.ExternRef{}
+	case "funcref":
+		refType = ast.FuncRef{}
+	}
+
+	return result.Ok(ast.TableType{
+		Limits:  limits,
+		RefType: refType,
+	})
+}
+
+func parseGlobal(lexer *lex.Lexer) (res types.Result[ast.Global]) {
+	defer handle.Error(&res)
+	expectValue(lexer, token.Reserved, "global").Unwrap()
+	id := parseOptionalId(lexer).Unwrap()
+	globalType := parseGlobalType(lexer).Unwrap()
+	instructions := parseInstructions(lexer).Unwrap()
+	return result.Ok(ast.Global{
+		ID:           id,
+		Type:         globalType,
+		Instructions: instructions,
+	})
+}
+
+func parseGlobalType(lexer *lex.Lexer) (res types.Result[ast.GlobalType]) {
+	defer handle.Error(&res)
+	var mutable bool
+	var valType ast.ValType
+	if eat(lexer, token.OpenParen).Unwrap() {
+		expectValue(lexer, token.Reserved, "mut").Unwrap()
+		mutable = true
+		valType = parseValType(lexer).Unwrap()
+		expect(lexer, token.CloseParen).Unwrap()
+	} else {
+		valType = parseValType(lexer).Unwrap()
+	}
+	return result.Ok(ast.GlobalType{
+		Type:    valType,
+		Mutable: mutable,
+	})
+}
+
+func parseLimits(lexer *lex.Lexer) (res types.Result[ast.Limits]) {
+	defer handle.Error(&res)
+	min := parseInt32(lexer).Unwrap()
+	max := option.None[uint32]()
+	tok := peek(lexer).Unwrap()
+	if tok.Type == token.Integer {
+		n := parseInt32(lexer).Unwrap()
+		max = option.Some(uint32(n))
+	}
+	return result.Ok(ast.Limits{
+		Min: uint32(min),
+		Max: max,
 	})
 }
 
@@ -159,6 +322,18 @@ func parseImport(lexer *lex.Lexer) (res types.Result[ast.InlineImport]) {
 	})
 }
 
+func parseInstructions(lexer *lex.Lexer) (res types.Result[[]ast.Instruction]) {
+	defer handle.Error(&res)
+
+	var instructions []ast.Instruction
+	for eat(lexer, token.OpenParen).Unwrap() {
+		instruction := parseInstruction(lexer).Unwrap()
+		instructions = append(instructions, instruction)
+		expect(lexer, token.CloseParen).Unwrap()
+	}
+	return result.Ok(instructions)
+}
+
 func parseInstruction(lexer *lex.Lexer) (res types.Result[ast.Instruction]) {
 	defer handle.Error(&res)
 	tok := next(lexer).Unwrap()
@@ -167,13 +342,46 @@ func parseInstruction(lexer *lex.Lexer) (res types.Result[ast.Instruction]) {
 	}
 	var inst ast.Instruction
 	switch tok.Capture {
+	case "br":
+		inst = ast.Br{
+			Index: parseIndex(lexer).Unwrap(),
+		}
+	case "br_if":
+		inst = ast.BrIf{
+			Index: parseIndex(lexer).Unwrap(),
+		}
+	case "br_table":
+		inst = ast.BrTable{
+			Indicies: []ast.Index{
+				parseIndex(lexer).Unwrap(),
+			},
+		}
+	case "return":
+		inst = ast.Return{}
+	case "call":
+		inst = ast.Call{
+			Index: parseIndex(lexer).Unwrap(),
+		}
+
+	case "drop":
+		inst = ast.Drop{}
+	case "select":
+		inst = ast.Select{}
 	case "local.get":
 		inst = ast.LocalGet{
 			Index: parseIndex(lexer).Unwrap(),
 		}
+	case "local.set":
+		inst = ast.LocalSet{
+			Index: parseIndex(lexer).Unwrap(),
+		}
+	case "local.tee":
+		inst = ast.LocalTee{
+			Index: parseIndex(lexer).Unwrap(),
+		}
 	case "i32.const":
 		inst = ast.I32Const{
-			Value: ParseInt32(lexer).Unwrap(),
+			Value: parseInt32(lexer).Unwrap(),
 		}
 	case "i32.add":
 		inst = ast.I32Add{}
@@ -212,8 +420,15 @@ func parseInstruction(lexer *lex.Lexer) (res types.Result[ast.Instruction]) {
 	case "i32.gt_u":
 	case "i32.ge_s":
 	case "i32.ge_u":
-	case "drop":
-		inst = ast.Drop{}
+	case "block":
+		inst = parseBlock(lexer).Unwrap()
+	case "loop":
+		inst = parseLoop(lexer).Unwrap()
+	case "if":
+		inst = parseIf(lexer).Unwrap()
+
+	case "call_indirect":
+		inst = parseCallIndirect(lexer).Unwrap()
 	default:
 		return result.Errorf[ast.Instruction]("%w : error parsing instruction. Unrecognized instruction %v : %s", parseError(tok), tok.Type, tok.Capture)
 	}
@@ -253,11 +468,11 @@ func parseIndex(lexer *lex.Lexer) (res types.Result[ast.Index]) {
 	return result.Ok(index)
 }
 
-func parseType(lexer *lex.Lexer) (res types.Result[ast.Type]) {
+func parseValType(lexer *lex.Lexer) (res types.Result[ast.ValType]) {
 	defer handle.Error(&res)
 	tok := next(lexer).Unwrap()
 
-	var ty ast.Type
+	var ty ast.ValType
 	// todo: enhance the lexer to parse these as tokens
 	switch tok.Capture {
 	case "i32":
@@ -269,9 +484,173 @@ func parseType(lexer *lex.Lexer) (res types.Result[ast.Type]) {
 	case "f64":
 		ty = ast.F64{}
 	default:
-		return result.Errorf[ast.Type]("%w : error parsing type. expected (i32, i64, f32, f64) but found %s", parseError(tok), tok.Capture)
+		return result.Errorf[ast.ValType]("%w : error parsing type. expected (i32, i64, f32, f64) but found %s", parseError(tok), tok.Capture)
 	}
 	return result.Ok(ty)
+}
+
+func parseBlock(lexer *lex.Lexer) (res types.Result[ast.Block]) {
+	defer handle.Error(&res)
+	tok := peek(lexer).Unwrap()
+
+	name := option.None[string]()
+	if tok.Type == token.Id {
+		n := next(lexer).Unwrap().Capture
+		name = option.Some(n)
+	}
+
+	blockType := parseBlockType(lexer).Unwrap()
+	instructions := parseInstructions(lexer).Unwrap()
+
+	return result.Ok(ast.Block{
+		Name:         name,
+		BlockType:    blockType,
+		Instructions: instructions,
+	})
+}
+
+func parseLoop(lexer *lex.Lexer) (res types.Result[ast.Loop]) {
+	defer handle.Error(&res)
+	tok := peek(lexer).Unwrap()
+
+	name := option.None[string]()
+	if tok.Type == token.Id {
+		n := next(lexer).Unwrap().Capture
+		name = option.Some(n)
+	}
+
+	blockType := parseBlockType(lexer).Unwrap()
+	instructions := parseInstructions(lexer).Unwrap()
+
+	return result.Ok(ast.Loop{
+		Name:         name,
+		BlockType:    blockType,
+		Instructions: instructions,
+	})
+}
+
+func parseIf(lexer *lex.Lexer) (res types.Result[ast.If]) {
+	defer handle.Error(&res)
+	tok := peek(lexer).Unwrap()
+
+	name := option.None[string]()
+	if tok.Type == token.Id {
+		n := next(lexer).Unwrap().Capture
+		name = option.Some(n)
+	}
+
+	var results []ast.Result
+	_else := option.None[ast.Else]()
+	var then ast.Then
+
+	for eat(lexer, token.OpenParen).Unwrap() {
+		tok = peek(lexer).Unwrap()
+		switch tok.Capture {
+		case "result":
+			res := parseResult(lexer).Unwrap()
+			results = append(results, *res)
+		case "then":
+			then = parseThen(lexer).Unwrap()
+		case "else":
+			e := parseElse(lexer).Unwrap()
+			_else = option.Some(e)
+		}
+		expect(lexer, token.CloseParen).Unwrap()
+	}
+
+	return result.Ok(ast.If{
+		Name: name,
+		BlockType: ast.BlockType{
+			Results: results,
+		},
+		Then: then,
+		Else: _else,
+	})
+}
+
+func parseElse(lexer *lex.Lexer) (res types.Result[ast.Else]) {
+	defer handle.Error(&res)
+	expectValue(lexer, token.Reserved, "else").Unwrap()
+	return result.Ok(ast.Else{
+		Instructions: parseInstructions(lexer).Unwrap(),
+	})
+}
+
+func parseThen(lexer *lex.Lexer) (res types.Result[ast.Then]) {
+	defer handle.Error(&res)
+	expectValue(lexer, token.Reserved, "then").Unwrap()
+	return result.Ok(ast.Then{
+		Instructions: parseInstructions(lexer).Unwrap(),
+	})
+}
+
+func parseCallIndirect(lexer *lex.Lexer) (res types.Result[ast.CallIndirect]) {
+	defer handle.Error(&res)
+
+	typeUse := parseTypeUse(lexer).Unwrap()
+	return result.Ok(ast.CallIndirect{
+		Type: typeUse,
+	})
+}
+
+func parseTypeUse(lexer *lex.Lexer) (res types.Result[ast.TypeUse]) {
+	defer handle.Error(&res)
+	expect(lexer, token.OpenParen).Unwrap()
+	expectValue(lexer, token.Reserved, "type").Unwrap()
+	index := parseId(lexer).Unwrap()
+	expect(lexer, token.CloseParen).Unwrap()
+	return result.Ok(ast.TypeUse{
+		Index: index,
+	})
+}
+
+func parseBlockType(lexer *lex.Lexer) (res types.Result[ast.BlockType]) {
+	defer handle.Error(&res)
+
+	// create a clone of the lexer to check for any results
+	clone := lexer.Clone()
+
+	// block_type = ( result <val_type>* )*
+	var results []ast.Result
+	for eat(clone, token.OpenParen).Unwrap() {
+		tok := peek(clone).Unwrap()
+
+		// if we are not at a result, this is an instruction so roll back
+		if tok.Capture != "result" {
+			break
+		}
+
+		// merge the lexer back because we know we are parsing a result
+		*lexer = *clone
+
+		expectValue(lexer, token.Reserved, "result").Unwrap()
+
+		var types []ast.ValType
+		for tok := peek(lexer).Unwrap(); tok.Type != token.CloseParen; tok = peek(lexer).Unwrap() {
+			ty := parseValType(lexer).Unwrap()
+			types = append(types, ty)
+		}
+		result := ast.Result{
+			Types: types,
+		}
+		results = append(results, result)
+		expect(lexer, token.CloseParen).Unwrap()
+
+		// create a new clone and continue parsing
+		clone = lexer.Clone()
+	}
+	return result.Ok(ast.BlockType{
+		Results: results,
+	})
+}
+
+func parseOptionalId(lexer *lex.Lexer) (res types.Result[types.Option[string]]) {
+	tok := peek(lexer).Unwrap()
+	if tok.Type == token.Id {
+		id := parseId(lexer).Unwrap()
+		return result.Ok(option.Some(id))
+	}
+	return result.Ok(option.None[string]())
 }
 
 func parseId(lexer *lex.Lexer) (res types.Result[string]) {
@@ -282,18 +661,28 @@ func parseId(lexer *lex.Lexer) (res types.Result[string]) {
 	return result.Ok(tok.Capture)
 }
 
+func ParseString(lexer *lex.Lexer) (string, error) {
+	return parseString(lexer).Deconstruct()
+}
+
 func parseString(lexer *lex.Lexer) (res types.Result[string]) {
 	tok := next(lexer).Unwrap()
 	if tok.Type != token.String {
 		return result.Errorf[string]("%w", parseError(tok))
 	}
-	return result.Ok(tok.Capture)
+	return result.Ok(strings.Trim(tok.Capture, "\""))
 }
 
-func ParseInt32(lexer *lex.Lexer) (res types.Result[int32]) {
+func ParseInt32(lexer *lex.Lexer) (int32, error) {
+	return parseInt32(lexer).Deconstruct()
+}
+
+func parseInt32(lexer *lex.Lexer) (res types.Result[int32]) {
+	defer handle.Error(&res)
+
 	tok := next(lexer).Unwrap()
 	if tok.Type != token.Integer {
-		return result.Errorf[int32]("%w", parseError(tok))
+		return result.Errorf[int32]("expected integer %w", parseError(tok))
 	}
 	if strings.HasPrefix(tok.Capture, "-") {
 		i, err := strconv.ParseInt(tok.Capture, 0, 32)
@@ -301,6 +690,53 @@ func ParseInt32(lexer *lex.Lexer) (res types.Result[int32]) {
 	}
 	i, err := strconv.ParseUint(tok.Capture, 0, 32)
 	return result.New(int32(i), err)
+}
+
+func ParseInt64(lexer *lex.Lexer) (int64, error) {
+	return parseInt64(lexer).Deconstruct()
+}
+
+func parseInt64(lexer *lex.Lexer) (res types.Result[int64]) {
+	defer handle.Error(&res)
+
+	tok := next(lexer).Unwrap()
+	if tok.Type != token.Integer {
+		return result.Errorf[int64]("expected integer %w", parseError(tok))
+	}
+	if strings.HasPrefix(tok.Capture, "-") {
+		i, err := strconv.ParseInt(tok.Capture, 0, 32)
+		return result.New(int64(i), err)
+	}
+	i, err := strconv.ParseUint(tok.Capture, 0, 32)
+	return result.New(int64(i), err)
+}
+
+func ParseFloat32(lexer *lex.Lexer) (float32, error) {
+	return parseFloat32(lexer).Deconstruct()
+}
+
+func parseFloat32(lexer *lex.Lexer) (res types.Result[float32]) {
+	defer handle.Error(&res)
+	tok := next(lexer).Unwrap()
+	if tok.Type != token.Float {
+		return result.Errorf[float32]("expected float %w", parseError(tok))
+	}
+	f, err := strconv.ParseFloat(tok.Capture, 32)
+	return result.New(float32(f), err)
+}
+
+func ParseFloat64(lexer *lex.Lexer) (float64, error) {
+	return parseFloat64(lexer).Deconstruct()
+}
+
+func parseFloat64(lexer *lex.Lexer) (res types.Result[float64]) {
+	defer handle.Error(&res)
+	tok := next(lexer).Unwrap()
+	if tok.Type != token.Float {
+		return result.Errorf[float64]("expected float %w", parseError(tok))
+	}
+	f, err := strconv.ParseFloat(tok.Capture, 32)
+	return result.New(f, err)
 }
 
 func eat(lexer *lex.Lexer, ty token.Type) (res types.Result[bool]) {

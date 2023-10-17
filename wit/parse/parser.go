@@ -721,7 +721,7 @@ func parseVariant(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
 		}
 		if eat(lexer, token.OpenParen).Unwrap() {
 			ty := parseType(lexer).Unwrap()
-			expect(lexer, token.CloseParen)
+			expect(lexer, token.CloseParen).Unwrap()
 			c.Type = option.Some(ty)
 		}
 		return result.Ok(*c)
