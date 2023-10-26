@@ -39,6 +39,19 @@ func New(input string) *Lexer {
 	}
 }
 
+func (l *Lexer) Clone() *Lexer {
+	// it may be more beneficial to do a transaction style
+	// Snapshot, Rollback or something similar
+	return &Lexer{
+		input:     l.input,
+		offset:    l.offset,
+		position:  l.position,
+		column:    l.column,
+		line:      l.line,
+		peekToken: l.peekToken,
+	}
+}
+
 func (l *Lexer) Next() (*token.Token, error) {
 	// any peek token?
 	if l.peekToken == nil {

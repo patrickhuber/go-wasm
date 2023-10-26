@@ -65,6 +65,11 @@ func parseModule(lexer *lex.Lexer) (res types.Result[*ast.Module]) {
 		case "global":
 			g := parseGlobal(lexer).Unwrap()
 			m.Globals = append(m.Globals, g)
+		case "memory":
+			mem := parseMemory(lexer).Unwrap()
+			m.Memory = append(m.Memory, mem)
+		default:
+			return result.Errorf[*ast.Module]("unrecognized module section '%s'", tok.Capture)
 		}
 		expect(lexer, token.CloseParen).Unwrap()
 	}
@@ -139,11 +144,21 @@ func parseParameter(lexer *lex.Lexer) (res types.Result[*ast.Parameter]) {
 	expectValue(lexer, token.Reserved, "param").Unwrap()
 
 	id := parseOptionalId(lexer).Unwrap()
-	ty := parseValType(lexer).Unwrap()
+	var types []ast.ValType
+	if id.IsSome() {
+		types = append(types, parseValType(lexer).Unwrap())
+	} else {
+		tok := peek(lexer).Unwrap()
+		for tok.Type == token.Reserved {
+			ty := parseValType(lexer).Unwrap()
+			types = append(types, ty)
+			tok = peek(lexer).Unwrap()
+		}
+	}
 
 	return result.Ok(&ast.Parameter{
-		ID:   id,
-		Type: ty,
+		ID:    id,
+		Types: types,
 	})
 }
 
@@ -287,6 +302,15 @@ func parseGlobalType(lexer *lex.Lexer) (res types.Result[ast.GlobalType]) {
 	})
 }
 
+func parseMemory(lexer *lex.Lexer) (res types.Result[ast.Memory]) {
+	defer handle.Error(&res)
+	expectValue(lexer, token.Reserved, "memory").Unwrap()
+	return result.Ok(ast.Memory{
+		ID:     parseOptionalId(lexer).Unwrap(),
+		Limits: parseLimits(lexer).Unwrap(),
+	})
+}
+
 func parseLimits(lexer *lex.Lexer) (res types.Result[ast.Limits]) {
 	defer handle.Error(&res)
 	min := parseInt32(lexer).Unwrap()
@@ -379,9 +403,39 @@ func parseInstruction(lexer *lex.Lexer) (res types.Result[ast.Instruction]) {
 		inst = ast.LocalTee{
 			Index: parseIndex(lexer).Unwrap(),
 		}
+	case "global.get":
+		inst = ast.GlobalGet{
+			Index: parseIndex(lexer).Unwrap(),
+		}
+	case "global.set":
+		inst = ast.GlobalSet{
+			Index: parseIndex(lexer).Unwrap(),
+		}
+
+	// memory instructions
+	case "memory.grow":
+		inst = ast.MemoryGrow{}
+	case "i32.load":
+		inst = ast.I32Load{}
+	case "i32.store":
+		inst = ast.I32Store{}
+
+	// numeric instructions
 	case "i32.const":
 		inst = ast.I32Const{
 			Value: parseInt32(lexer).Unwrap(),
+		}
+	case "i64.const":
+		inst = ast.I64Const{
+			Value: parseInt64(lexer).Unwrap(),
+		}
+	case "f32.const":
+		inst = ast.F32Const{
+			Value: parseFloat32(lexer).Unwrap(),
+		}
+	case "f64.const":
+		inst = ast.F64Const{
+			Value: parseFloat64(lexer).Unwrap(),
 		}
 	case "i32.add":
 		inst = ast.I32Add{}
@@ -542,7 +596,7 @@ func parseIf(lexer *lex.Lexer) (res types.Result[ast.If]) {
 	var results []ast.Result
 	_else := option.None[ast.Else]()
 	var then ast.Then
-
+	var instructions []ast.Instruction
 	for eat(lexer, token.OpenParen).Unwrap() {
 		tok = peek(lexer).Unwrap()
 		switch tok.Capture {
@@ -554,6 +608,9 @@ func parseIf(lexer *lex.Lexer) (res types.Result[ast.If]) {
 		case "else":
 			e := parseElse(lexer).Unwrap()
 			_else = option.Some(e)
+		default:
+			i := parseInstruction(lexer).Unwrap()
+			instructions = append(instructions, i)
 		}
 		expect(lexer, token.CloseParen).Unwrap()
 	}
@@ -563,8 +620,9 @@ func parseIf(lexer *lex.Lexer) (res types.Result[ast.If]) {
 		BlockType: ast.BlockType{
 			Results: results,
 		},
-		Then: then,
-		Else: _else,
+		Clause: instructions,
+		Then:   then,
+		Else:   _else,
 	})
 }
 

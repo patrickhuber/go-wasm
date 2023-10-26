@@ -27,11 +27,11 @@ func TestParser(t *testing.T) {
 		t.Run(file.Name(), func(t *testing.T) {
 			full := path.Join(dir, file.Name())
 			bytes, err := os.ReadFile(full)
-			require.NoError(t, err)
+			require.NoError(t, err, "file: %s", full)
 
 			node, err := wit.Parse(string(bytes))
-			require.NoError(t, err)
-			require.NotNil(t, node)
+			require.NoError(t, err, "file: %s", full)
+			require.NotNil(t, node, "file: %s", full)
 		})
 	}
 }

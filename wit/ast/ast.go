@@ -5,11 +5,11 @@ import (
 )
 
 type Ast struct {
-	PackageName types.Option[PackageName]
-	Items       []AstItem
+	PackageDeclaration types.Option[PackageDeclaration]
+	Items              []AstItem
 }
 
-type PackageName struct {
+type PackageDeclaration struct {
 	Namespace string
 	Name      string
 	Version   types.Option[Version]
@@ -34,18 +34,17 @@ type Interface struct {
 	Items []InterfaceItem
 }
 
-type InterfaceItem struct {
-	TypeDef *TypeDef
-	Func    *NamedFunc
-	Use     *Use
+type InterfaceItem interface {
+	interfaceItem()
 }
 
-type NamedFunc struct {
-	Name string
-	Func *Func
+type FuncItem struct {
+	InterfaceItem
+	ID       string
+	FuncType *FuncType
 }
 
-type Func struct {
+type FuncType struct {
 	Params  []Parameter
 	Results *ResultList
 }
@@ -69,56 +68,48 @@ type WorldItem interface {
 	worldItem()
 }
 
-type Export interface {
-	worldItem()
-	exp()
+type Export struct {
+	WorldItem
+	ExternType ExternType
 }
 
-type ExportExternType struct {
-	Id         string
-	ExternType *ExternType
+type Import struct {
+	WorldItem
+	ExternType ExternType
 }
 
-func (imp *ExportExternType) imp()       {}
-func (imp *ExportExternType) worldItem() {}
-
-type Import interface {
-	worldItem()
-	imp()
+type ExternType interface {
+	externType()
 }
 
-type ImportInterface struct {
-	Interface *Interface
+type ExternTypeFunc struct {
+	ExternType
+	ID   string
+	Func *FuncType
 }
 
-func (imp *ImportInterface) imp()       {}
-func (imp *ImportInterface) worldItem() {}
-
-type ImportExternType struct {
-	Id         string
-	ExternType *ExternType
+type ExternTypeInterface struct {
+	ExternType
+	ID             string
+	InterfaceItems []InterfaceItem
 }
 
-func (imp *ImportExternType) imp()       {}
-func (imp *ImportExternType) worldItem() {}
-
-type ExternType struct {
-	Func      *Func
-	Interface *Interface
-	UsePath   *UsePath
+type ExternTypeUsePath struct {
+	ExternType
+	UsePath *UsePath
 }
 
 type Use struct {
+	WorldItem
+	InterfaceItem
 	From  *UsePath
 	Names []UseName
 }
 
-func (imp *Use) worldItem() {}
-
 type UsePath struct {
 	Id      string
 	Package struct {
-		Id   *PackageName
+		Id   *PackageDeclaration
 		Name string
 	}
 }
@@ -128,19 +119,17 @@ type UseName struct {
 	As   types.Option[string]
 }
 
-type TypeDef struct {
-	Name string
-	Type Type
+type TypeDef interface {
+	WorldItem
+	InterfaceItem
+	typedef()
 }
 
-func (*TypeDef) worldItem() {}
-
 type Include struct {
+	WorldItem
 	From  *UsePath
 	Names []IncludeName
 }
-
-func (*Include) worldItem() {}
 
 type IncludeName struct {
 	Name string
@@ -156,40 +145,36 @@ type Type interface {
 	ty()
 }
 
-type TypeImpl struct{}
-
-func (t *TypeImpl) ty() {}
-
-type U8 struct{ TypeImpl }
-type U16 struct{ TypeImpl }
-type U32 struct{ TypeImpl }
-type U64 struct{ TypeImpl }
-type S8 struct{ TypeImpl }
-type S16 struct{ TypeImpl }
-type S32 struct{ TypeImpl }
-type S64 struct{ TypeImpl }
-type Float32 struct{ TypeImpl }
-type Float64 struct{ TypeImpl }
-type Char struct{ TypeImpl }
-type Bool struct{ TypeImpl }
-type String struct{ TypeImpl }
+type U8 struct{ Type }
+type U16 struct{ Type }
+type U32 struct{ Type }
+type U64 struct{ Type }
+type S8 struct{ Type }
+type S16 struct{ Type }
+type S32 struct{ Type }
+type S64 struct{ Type }
+type Float32 struct{ Type }
+type Float64 struct{ Type }
+type Char struct{ Type }
+type Bool struct{ Type }
+type String struct{ Type }
 
 type Tuple struct {
-	TypeImpl
+	Type
 	Types []Type
 }
 
 type List struct {
-	TypeImpl
-	Type Type
+	Type
+	ItemType Type
 }
 
 type Option struct {
-	TypeImpl
-	Type Type
+	Type
+	ItemType Type
 }
 type Result struct {
-	TypeImpl
+	Type
 	Ok    types.Option[Type]
 	Error types.Option[Type]
 }
@@ -199,59 +184,58 @@ type Handle interface {
 }
 
 type Own struct {
-	TypeImpl
+	Handle
+	Type
 	Id string
 }
-
-func (Own) handle() {}
 
 type Borrow struct {
-	TypeImpl
+	Handle
+	Type
 	Id string
 }
 
-func (Borrow) handle() {}
-
 type Id struct {
-	TypeImpl
+	Type
 	Value string
 }
 
 type Stream struct {
-	TypeImpl
+	Type
 	Element types.Option[Type]
 	End     types.Option[Type]
 }
 
 type Resource struct {
-	TypeImpl
-	Functions []ResourceFunc
+	TypeDef
+	ID      string
+	Methods []ResourceMethod
 }
 
-type ResourceFunc interface {
-	resourceFunc()
+type ResourceMethod interface {
+	resourceMethod()
+}
+
+type Static struct {
+	ResourceMethod
+	ID       string
+	FuncType *FuncType
+}
+
+type Constructor struct {
+	ResourceMethod
+	ParameterList []Parameter
 }
 
 type Method struct {
-	NamedFunc *NamedFunc
+	ResourceMethod
+	ID   string
+	Func *FuncItem
 }
-
-func (*Method) resourceFunc() {}
-
-type Static struct {
-	NamedFunc *NamedFunc
-}
-
-func (*Static) resourceFunc() {}
-
-type Constructor struct {
-	NamedFunc *NamedFunc
-}
-
-func (*Constructor) resourceFunc() {}
 
 type Record struct {
-	TypeImpl
+	TypeDef
+	ID     string
 	Fields []Field
 }
 
@@ -261,7 +245,8 @@ type Field struct {
 }
 
 type Flags struct {
-	TypeImpl
+	TypeDef
+	ID    string
 	Flags []Flag
 }
 
@@ -270,7 +255,8 @@ type Flag struct {
 }
 
 type Variant struct {
-	TypeImpl
+	TypeDef
+	ID    string
 	Cases []Case
 }
 
@@ -279,17 +265,9 @@ type Case struct {
 	Type types.Option[Type]
 }
 
-type Union struct {
-	TypeImpl
-	Cases []UnionCase
-}
-
-type UnionCase struct {
-	Type Type
-}
-
 type Enum struct {
-	TypeImpl
+	TypeDef
+	ID    string
 	Cases []EnumCase
 }
 
@@ -297,7 +275,13 @@ type EnumCase struct {
 	Name string
 }
 
+type TypeItem struct {
+	TypeDef
+	ID   string
+	Type Type
+}
+
 type Future struct {
-	TypeImpl
-	Type types.Option[Type]
+	Type
+	ItemType types.Option[Type]
 }

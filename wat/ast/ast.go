@@ -13,7 +13,7 @@ func (*Component) ast() {}
 
 type Module struct {
 	Functions []Function
-	Memory    []Function
+	Memory    []Memory
 	Types     []Type
 	Tables    []Table
 	Globals   []Global
@@ -37,7 +37,7 @@ type Function struct {
 func (f *Function) section() {}
 
 type Memory struct {
-	ID     string
+	ID     types.Option[string]
 	Limits Limits
 }
 
@@ -83,8 +83,8 @@ type Limits struct {
 }
 
 type Parameter struct {
-	ID   types.Option[string]
-	Type ValType
+	ID    types.Option[string]
+	Types []ValType
 }
 
 type Local struct {
@@ -137,6 +137,24 @@ type I32Const struct {
 
 func (I32Const) inst() {}
 
+type I64Const struct {
+	Value int64
+}
+
+func (I64Const) inst() {}
+
+type F32Const struct {
+	Value float32
+}
+
+func (F32Const) inst() {}
+
+type F64Const struct {
+	Value float64
+}
+
+func (F64Const) inst() {}
+
 type I32Eqz struct {
 	Value int32
 }
@@ -187,6 +205,30 @@ type LocalTee struct {
 }
 
 func (LocalTee) inst() {}
+
+type GlobalGet struct {
+	Index Index
+}
+
+func (GlobalGet) inst() {}
+
+type GlobalSet struct {
+	Index Index
+}
+
+func (GlobalSet) inst() {}
+
+type MemoryGrow struct{}
+
+func (MemoryGrow) inst() {}
+
+type I32Load struct{}
+
+func (I32Load) inst() {}
+
+type I32Store struct{}
+
+func (I32Store) inst() {}
 
 type Drop struct{}
 
@@ -239,6 +281,7 @@ func (Loop) inst() {}
 
 type If struct {
 	Name      types.Option[string]
+	Clause    []Instruction
 	BlockType BlockType
 	Then      Then
 	Else      types.Option[Else]

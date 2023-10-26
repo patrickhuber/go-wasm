@@ -4,6 +4,7 @@ package wit
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/patrickhuber/go-types"
 	"github.com/patrickhuber/go-types/handle"
@@ -27,11 +28,11 @@ func parseAst(lexer *lex.Lexer) (res types.Result[*ast.Ast]) {
 
 	switch tok.Type {
 	case token.Package:
-		packageName := parsePackageName(lexer).Unwrap()
-		n.PackageName = option.Some(*packageName)
+		packageDeclaration := parsePackageDeclaration(lexer).Unwrap()
+		n.PackageDeclaration = option.Some(*packageDeclaration)
 		tok = next(lexer).Unwrap()
 	default:
-		n.PackageName = option.None[ast.PackageName]()
+		n.PackageDeclaration = option.None[ast.PackageDeclaration]()
 	}
 
 	for tok.Type != token.EndOfStream {
@@ -51,12 +52,12 @@ func parseAst(lexer *lex.Lexer) (res types.Result[*ast.Ast]) {
 	return result.Ok(n)
 }
 
-func parsePackageName(lexer *lex.Lexer) (res types.Result[*ast.PackageName]) {
+func parsePackageDeclaration(lexer *lex.Lexer) (res types.Result[*ast.PackageDeclaration]) {
 	defer handle.Error(&res)
 
 	// id
-	packageName := &ast.PackageName{}
-	packageName.Name = next(lexer).Unwrap().Capture
+	packageName := &ast.PackageDeclaration{}
+	packageName.Namespace = next(lexer).Unwrap().Capture
 
 	// ':'
 	expect(lexer, token.Colon).Unwrap()
@@ -67,19 +68,31 @@ func parsePackageName(lexer *lex.Lexer) (res types.Result[*ast.PackageName]) {
 	// @
 	if !eat(lexer, token.At).Unwrap() {
 		packageName.Version = option.None[ast.Version]()
-		return result.Ok(packageName)
+	} else {
+		version := parseVersion(lexer).Unwrap()
+		packageName.Version = option.Some(*version)
 	}
-
-	version := parseVersion(lexer).Unwrap()
-	packageName.Version = option.Some(*version)
-
+	// ;
+	expect(lexer, token.Semicolon).Unwrap()
 	return result.Ok(packageName)
 }
 
 func parseVersion(lexer *lex.Lexer) (res types.Result[*ast.Version]) {
 	defer handle.Error(&res)
-	version := &ast.Version{}
-	return result.Ok(version)
+
+	major := parseInteger(lexer).Unwrap()
+	expect(lexer, token.Period).Unwrap()
+
+	minor := parseInteger(lexer).Unwrap()
+	expect(lexer, token.Period).Unwrap()
+
+	patch := parseInteger(lexer).Unwrap()
+
+	return result.Ok(&ast.Version{
+		Major: uint64(major),
+		Minor: uint64(minor),
+		Patch: uint64(patch),
+	})
 }
 
 func parseTopLevelUse(lexer *lex.Lexer) (res types.Result[*ast.TopLevelUse]) {
@@ -104,142 +117,178 @@ func parseInterface(lexer *lex.Lexer) (res types.Result[*ast.Interface]) {
 	// id
 	inter.Name = parseId(lexer).Unwrap()
 
-	// '{'
-	expect(lexer, token.OpenBrace).Unwrap()
-
-	// exit on '}'
+	// '{' interface-items '}'
 	inter.Items = parseInterfaceItems(lexer).Unwrap()
+
 	return result.Ok(inter)
 }
 
 func parseInterfaceItems(lexer *lex.Lexer) (res types.Result[[]ast.InterfaceItem]) {
 	defer handle.Error(&res)
 	var items []ast.InterfaceItem
+	expect(lexer, token.OpenBrace).Unwrap()
 	for !eat(lexer, token.CloseBrace).Unwrap() {
-		items = append(items, *parseInterfaceItem(lexer).Unwrap())
+		items = append(items, parseInterfaceItem(lexer).Unwrap())
 	}
 	return result.Ok(items)
 }
 
-func parseInterfaceItem(lexer *lex.Lexer) (res types.Result[*ast.InterfaceItem]) {
+func parseInterfaceItem(lexer *lex.Lexer) (res types.Result[ast.InterfaceItem]) {
 	defer handle.Error(&res)
 
-	itemType := next(lexer).Unwrap()
-	item := &ast.InterfaceItem{}
+	itemType := peek(lexer).Unwrap()
+	var item ast.InterfaceItem
 
 	switch itemType.Type {
 	case token.Use:
-		item.Use = parseUse(lexer).Unwrap()
+		item = parseUse(lexer).Unwrap()
 	case token.Resource:
-		item.TypeDef = parseResource(lexer).Unwrap()
+		item = parseResource(lexer).Unwrap()
 	case token.Record:
-		item.TypeDef = parseRecord(lexer).Unwrap()
+		item = parseRecord(lexer).Unwrap()
 	case token.Flags:
-		item.TypeDef = parseFlags(lexer).Unwrap()
+		item = parseFlags(lexer).Unwrap()
 	case token.Variant:
-		item.TypeDef = parseVariant(lexer).Unwrap()
-	case token.Union:
-		item.TypeDef = parseUnion(lexer).Unwrap()
+		item = parseVariant(lexer).Unwrap()
 	case token.Enum:
-		item.TypeDef = parseEnum(lexer).Unwrap()
+		item = parseEnum(lexer).Unwrap()
 	case token.Type:
-		item.TypeDef = parseTypeDef(lexer).Unwrap()
+		item = parseTypeDef(lexer).Unwrap()
 
 	default:
 		// tok == id
-		item.Func = parseNamedFunc(itemType, lexer).Unwrap()
+		item = parseFuncItem(lexer).Unwrap()
 	}
 	return result.Ok(item)
 }
 
-func parseTypeDef(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
+func parseTypeDef(lexer *lex.Lexer) (res types.Result[ast.TypeDef]) {
 	defer handle.Error(&res)
 
-	name := parseId(lexer).Unwrap()
-	expect(lexer, token.Equal).Unwrap()
-	ty := parseType(lexer).Unwrap()
-	return result.Ok(
-		&ast.TypeDef{
-			Name: name,
-			Type: ty,
-		})
+	ty := peek(lexer).Unwrap()
+	var typeDef ast.TypeDef
+
+	// 'resource' | 'variant' | 'record' | 'flags' | 'enum' | 'type'
+	switch ty.Type {
+	case token.Resource:
+		typeDef = parseResource(lexer).Unwrap()
+	case token.Variant:
+		typeDef = parseVariant(lexer).Unwrap()
+	case token.Record:
+		typeDef = parseRecord(lexer).Unwrap()
+	case token.Flags:
+		typeDef = parseFlags(lexer).Unwrap()
+	case token.Enum:
+		typeDef = parseEnum(lexer).Unwrap()
+	case token.Type:
+		typeDef = parseTypeItem(lexer).Unwrap()
+	default:
+		return result.Errorf[ast.TypeDef]("error parsing TypeDef %w", parseError(ty))
+	}
+	return result.Ok(typeDef)
 }
 
-func parseResource(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
+func parseResource(lexer *lex.Lexer) (res types.Result[ast.Resource]) {
 	defer handle.Error(&res)
 
-	name := parseId(lexer).Unwrap()
-	resource := &ast.Resource{}
-	if eat(lexer, token.OpenBrace).Unwrap() {
-		for {
-			if eat(lexer, token.CloseBrace).Unwrap() {
-				break
-			}
-			resourceFunc := parseResourceFunc(lexer).Unwrap()
-			resource.Functions = append(resource.Functions, resourceFunc)
+	expect(lexer, token.Resource).Unwrap()
+
+	id := parseId(lexer).Unwrap()
+
+	var methods []ast.ResourceMethod
+
+	tok := peek(lexer).Unwrap()
+	switch tok.Type {
+	case token.Semicolon:
+		expect(lexer, token.Semicolon).Unwrap()
+	case token.OpenBrace:
+		expect(lexer, token.OpenBrace).Unwrap()
+
+		tok := peek(lexer).Unwrap()
+		for tok.Type != token.CloseBrace {
+			method := parseResourceMethod(lexer).Unwrap()
+			methods = append(methods, method)
+			tok = peek(lexer).Unwrap()
+		}
+		expect(lexer, token.CloseBrace).Unwrap()
+	}
+
+	return result.Ok(ast.Resource{
+		ID:      id,
+		Methods: methods,
+	})
+}
+
+func parseResourceMethod(lexer *lex.Lexer) (res types.Result[ast.ResourceMethod]) {
+
+	var resourceMethod ast.ResourceMethod
+
+	// resource-method ::= 'constructor' param-list ';'
+	if eat(lexer, token.Constructor).Unwrap() {
+		parameters := parseParameters(lexer).Unwrap()
+		expect(lexer, token.Semicolon).Unwrap()
+		resourceMethod = &ast.Constructor{
+			ParameterList: parameters,
+		}
+		return result.Ok(resourceMethod)
+	}
+
+	// the resource-method with func-item overlaps with the resource item static for the first two tokens
+	// create a clone of the lexer and commit the changes if the keyword 'static' occurs after the colon
+	// otherwise throw the clone away and parse as a func item
+	clone := lexer.Clone()
+
+	// id
+	id := parseId(clone).Unwrap()
+
+	// ';'
+	expect(clone, token.Colon).Unwrap()
+
+	if !eat(clone, token.Static).Unwrap() {
+		// resource-method ::= func-item
+		// func-item ::= id ':' func-type ';'
+		// throw away the clone
+		funcItem := parseFuncItem(lexer).Unwrap()
+		resourceMethod = ast.Method{
+			Func: funcItem,
+		}
+	} else {
+		// resource-method ::= id ':' 'static' func-type ';'
+		*lexer = *clone
+		funcType := parseFunc(lexer).Unwrap()
+		expect(lexer, token.Semicolon).Unwrap()
+		resourceMethod = ast.Static{
+			ID:       id,
+			FuncType: funcType,
 		}
 	}
-
-	return result.Ok(&ast.TypeDef{
-		Name: name,
-		Type: resource,
-	})
-}
-
-/*
-resource-method ::= func-item
-| id ':' 'static' func-type
-| id ':' func-type
-| 'constructor' param-list
-*/
-func parseResourceFunc(lexer *lex.Lexer) (res types.Result[ast.ResourceFunc]) {
-	defer handle.Error(&res)
-
-	namedFunc := &ast.NamedFunc{
-		Func: &ast.Func{},
-	}
-	if eat(lexer, token.Constructor).Unwrap() {
-		expect(lexer, token.OpenParen).Unwrap()
-		namedFunc.Func.Params = parseParameters(lexer).Unwrap()
-		namedFunc.Name = "constructor"
-		return result.Ok[ast.ResourceFunc](&ast.Constructor{
-			NamedFunc: namedFunc,
-		})
-	}
-
-	namedFunc.Name = parseId(lexer).Unwrap()
-	expect(lexer, token.Colon).Unwrap()
-
-	static := eat(lexer, token.Static).Unwrap()
-
-	expect(lexer, token.Func).Unwrap()
-	namedFunc.Func = parseFunc(lexer).Unwrap()
-
-	if static {
-		return result.Ok[ast.ResourceFunc](&ast.Static{
-			NamedFunc: namedFunc,
-		})
-	}
-	return result.Ok[ast.ResourceFunc](&ast.Method{
-		NamedFunc: namedFunc,
-	})
+	return result.Ok(resourceMethod)
 }
 
 func parseUse(lexer *lex.Lexer) (res types.Result[*ast.Use]) {
 	defer handle.Error(&res)
-	u := &ast.Use{
-		From: parseUsePath(lexer).Unwrap(),
-	}
+
+	// 'use'
+	expect(lexer, token.Use).Unwrap()
+
+	// use-path
+	from := parseUsePath(lexer).Unwrap()
 
 	// .
 	expect(lexer, token.Period).Unwrap()
-	u.Names = parseItemList[ast.UseName](
+	names := parseItemList[ast.UseName](
 		lexer,
 		token.OpenBrace,
 		token.CloseBrace,
 		parseUseName).Unwrap()
 
-	return result.Ok(u)
+	// ;
+	expect(lexer, token.Semicolon).Unwrap()
+
+	return result.Ok(&ast.Use{
+		From:  from,
+		Names: names,
+	})
 }
 
 func parseUseName(lexer *lex.Lexer) types.Result[ast.UseName] {
@@ -300,53 +349,53 @@ func parsePath(lexer *lex.Lexer, namespace string) (res types.Result[*ast.UsePat
 	expect(lexer, token.Slash).Unwrap()
 	name := parseId(lexer).Unwrap()
 	version := parseOptionalVersion(lexer).Unwrap()
-	return result.Ok(&ast.UsePath{
+	usePath := &ast.UsePath{
+		Id: "string",
 		Package: struct {
-			Id   *ast.PackageName
+			Id   *ast.PackageDeclaration
 			Name string
 		}{
-			Id: &ast.PackageName{
+			Id: &ast.PackageDeclaration{
 				Namespace: namespace,
 				Name:      pkgName,
 				Version:   version,
 			},
 			Name: name,
 		},
-	})
+	}
+	return result.Ok(usePath)
 }
 
 func parseOptionalVersion(lexer *lex.Lexer) (res types.Result[types.Option[ast.Version]]) {
 	return result.Errorf[types.Option[ast.Version]]("not implemented")
 }
 
-func parseNamedFunc(name *token.Token, lexer *lex.Lexer) (res types.Result[*ast.NamedFunc]) {
-
+func parseFuncItem(lexer *lex.Lexer) (res types.Result[*ast.FuncItem]) {
 	defer handle.Error(&res)
 
-	named := &ast.NamedFunc{
-		Name: name.Capture,
-	}
-
+	// func-item ::= id ':' func-type ';'
+	id := parseId(lexer).Unwrap()
 	expect(lexer, token.Colon).Unwrap()
-	expect(lexer, token.Func).Unwrap()
+	funcType := parseFunc(lexer).Unwrap()
+	expect(lexer, token.Semicolon).Unwrap()
 
-	_func := parseFunc(lexer).Unwrap()
-	named.Func = _func
-
-	return result.Ok(named)
+	return result.Ok(&ast.FuncItem{
+		ID:       id,
+		FuncType: funcType,
+	})
 }
 
-func parseFunc(lexer *lex.Lexer) (res types.Result[*ast.Func]) {
+func parseFunc(lexer *lex.Lexer) (res types.Result[*ast.FuncType]) {
 
 	defer handle.Error(&res)
 
-	// (
-	expect(lexer, token.OpenParen).Unwrap()
+	expect(lexer, token.Func).Unwrap()
 
 	parameters := parseParameters(lexer).Unwrap()
 	results := &ast.ResultList{}
 	if eat(lexer, token.RightArrow).Unwrap() {
-		if eat(lexer, token.OpenParen).Unwrap() {
+		tok := peek(lexer).Unwrap()
+		if tok.Type == token.OpenParen {
 			results.Named = parseParameters(lexer).Unwrap()
 		} else {
 			results.Anonymous = parseType(lexer).Unwrap()
@@ -355,7 +404,7 @@ func parseFunc(lexer *lex.Lexer) (res types.Result[*ast.Func]) {
 		results.Named = nil // ? []ast.Parameter{}
 	}
 
-	return result.Ok(&ast.Func{
+	return result.Ok(&ast.FuncType{
 		Params:  parameters,
 		Results: results,
 	})
@@ -363,6 +412,9 @@ func parseFunc(lexer *lex.Lexer) (res types.Result[*ast.Func]) {
 
 func parseParameters(lexer *lex.Lexer) (res types.Result[[]ast.Parameter]) {
 	var parameters []ast.Parameter
+
+	expect(lexer, token.OpenParen).Unwrap()
+
 	for {
 
 		// )
@@ -399,6 +451,23 @@ func parseParameter(lexer *lex.Lexer) (res types.Result[*ast.Parameter]) {
 	parameter.Type = parseType(lexer).Unwrap()
 
 	return result.Ok(parameter)
+}
+
+func parseTypeItem(lexer *lex.Lexer) (res types.Result[*ast.TypeItem]) {
+	defer handle.Error(&res)
+
+	expect(lexer, token.Type).Unwrap()
+
+	id := parseId(lexer).Unwrap()
+	expect(lexer, token.Equal).Unwrap()
+
+	ty := parseType(lexer).Unwrap()
+	expect(lexer, token.Semicolon).Unwrap()
+
+	return result.Ok(&ast.TypeItem{
+		ID:   id,
+		Type: ty,
+	})
 }
 
 func parseType(lexer *lex.Lexer) (res types.Result[ast.Type]) {
@@ -474,12 +543,17 @@ func parseStream(lexer *lex.Lexer) (res types.Result[*ast.Stream]) {
 
 func parseFuture(lexer *lex.Lexer) (res types.Result[*ast.Future]) {
 	defer handle.Error(&res)
-	future := &ast.Future{}
+
+	future := &ast.Future{
+		ItemType: option.None[ast.Type](),
+	}
+
 	if eat(lexer, token.Less).Unwrap() {
 		ty := parseType(lexer).Unwrap()
-		future.Type = option.Some(ty)
+		future.ItemType = option.Some(ty)
 		expect(lexer, token.Greater).Unwrap()
 	}
+
 	return result.Ok(future)
 }
 
@@ -563,68 +637,64 @@ func parseWorldItems(lexer *lex.Lexer) (res types.Result[[]ast.WorldItem]) {
 func parseWorldItem(lexer *lex.Lexer) (res types.Result[ast.WorldItem]) {
 	defer handle.Error(&res)
 
-	itemType := next(lexer).Unwrap()
+	itemType := peek(lexer).Unwrap()
+	var worldItem ast.WorldItem
 	switch itemType.Type {
 	case token.Export:
-		return parseExport(lexer)
+		worldItem = parseExport(lexer).Unwrap()
 	case token.Import:
-		return parseImport(lexer)
+		worldItem = parseImport(lexer).Unwrap()
 	case token.Use:
-		return result.Ok[ast.WorldItem](
-			parseUse(lexer).Unwrap(),
-		)
+		worldItem = parseUse(lexer).Unwrap()
 	case token.Type:
-		return result.Ok[ast.WorldItem](
-			parseTypeDef(lexer).Unwrap(),
-		)
+		worldItem = parseTypeDef(lexer).Unwrap()
 	case token.Record:
-		return result.Ok[ast.WorldItem](
-			parseRecord(lexer).Unwrap(),
-		)
+		worldItem = parseRecord(lexer).Unwrap()
 	case token.Variant:
-		return result.Ok[ast.WorldItem](
-			parseVariant(lexer).Unwrap(),
-		)
+		worldItem = parseVariant(lexer).Unwrap()
 	case token.Resource:
-		return result.Ok[ast.WorldItem](
-			parseResource(lexer).Unwrap(),
-		)
+		worldItem = parseResource(lexer).Unwrap()
 	case token.Include:
-		return parseInclude(lexer)
+		worldItem = parseInclude(lexer).Unwrap()
+
+	default:
+		return result.Errorf[ast.WorldItem]("%w : Unrecognized world item '%s'. Expected (export, import, resource, use, type, include). Found token.%v",
+			parseErrorFromLexer(lexer),
+			itemType.Capture,
+			itemType.Type)
 	}
-	return result.Errorf[ast.WorldItem]("%w : Unrecognized world item '%s'. Expected (export, import, resource, use, type, include). Found token.%v",
-		parseErrorFromLexer(lexer),
-		itemType.Capture,
-		itemType.Type)
+	return result.Ok(worldItem)
 }
 
-func parseExport(lexer *lex.Lexer) (res types.Result[ast.WorldItem]) {
+func parseExport(lexer *lex.Lexer) (res types.Result[*ast.Export]) {
 	defer handle.Error(&res)
-
-	// this ID can have different meanings depending on what follows
-	id := parseId(lexer).Unwrap()
-
-	return result.Ok[ast.WorldItem](&ast.ExportExternType{
-		ExternType: parseExternType(lexer, id).Unwrap(),
+	expect(lexer, token.Export).Unwrap()
+	ty := parseExternType(lexer).Unwrap()
+	return result.Ok(&ast.Export{
+		ExternType: ty,
 	})
 }
 
-func parseImport(lexer *lex.Lexer) (res types.Result[ast.WorldItem]) {
+func parseImport(lexer *lex.Lexer) (res types.Result[*ast.Import]) {
 	defer handle.Error(&res)
-
-	// this ID can have different meanings depending on what follows
-	id := parseId(lexer).Unwrap()
-
-	return result.Ok[ast.WorldItem](&ast.ImportExternType{
-		ExternType: parseExternType(lexer, id).Unwrap(),
+	expect(lexer, token.Import).Unwrap()
+	ty := parseExternType(lexer).Unwrap()
+	return result.Ok(&ast.Import{
+		ExternType: ty,
 	})
 }
 
 func parseInclude(lexer *lex.Lexer) (res types.Result[ast.WorldItem]) {
 	defer handle.Error(&res)
+
+	expect(lexer, token.Include).Unwrap()
+
+	// include-item = 'include' use-path ';'
+	// include-item = 'include' use-path 'with' '{' include-names-list '}'
 	include := &ast.Include{
 		From: parseUsePath(lexer).Unwrap(),
 	}
+
 	if eat(lexer, token.With).Unwrap() {
 		expect(lexer, token.OpenBrace).Unwrap()
 		for !eat(lexer, token.CloseBrace).Unwrap() {
@@ -636,138 +706,176 @@ func parseInclude(lexer *lex.Lexer) (res types.Result[ast.WorldItem]) {
 				As:   as,
 			})
 		}
+	} else {
+		expect(lexer, token.Semicolon).Unwrap()
 	}
+
 	return result.Ok[ast.WorldItem](include)
 }
 
-func parseExternType(lexer *lex.Lexer, id string) (res types.Result[*ast.ExternType]) {
+func parseExternType(lexer *lex.Lexer) (res types.Result[ast.ExternType]) {
 	defer handle.Error(&res)
 
-	et := &ast.ExternType{}
-	if eat(lexer, token.Colon).Unwrap() {
-		if eat(lexer, token.Func).Unwrap() {
-			// import foo: func(...)
-			//                 ^
-			et.Func = parseFunc(lexer).Unwrap()
-		} else if eat(lexer, token.Interface).Unwrap() {
-			// import foo: interface{...}
-			//                      ^
-			expect(lexer, token.OpenBrace).Unwrap()
-			et.Interface = &ast.Interface{
-				Items: parseInterfaceItems(lexer).Unwrap(),
-			}
-		}
-	} else {
-		// import foo
-		//           ^
-		et.UsePath = &ast.UsePath{
-			Id: id,
-		}
-	}
-	return result.Ok(et)
-}
+	// There is some ambiguity in how functions, interface and use path import/export overlap.
+	// Clone the lexer and try to make progress with interface and function import/export
+	// if successful, apply the clone's progress to the input lexer and continue parsing
+	// if failed, try to parse using a use path
+	clone := lexer.Clone()
+	id := parseId(clone).Unwrap()
+	if !eat(clone, token.Colon).Unwrap() {
 
-// record ::= id '{' fields '}'
-// fields ::= field | field ',' fields | λ
-// field  ::= id ':' ty
-func parseRecord(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
-	defer handle.Error(&res)
+		usePath := parseUsePath(lexer).Unwrap()
+		expect(lexer, token.Semicolon).Unwrap()
 
-	name := parseId(lexer).Unwrap()
-	record := &ast.Record{
-		Fields: parseItemList(lexer, token.OpenBrace, token.CloseBrace,
-			func(l *lex.Lexer) types.Result[ast.Field] {
-				id := parseId(lexer).Unwrap()
-				expect(lexer, token.Colon).Unwrap()
-				ty := parseType(lexer).Unwrap()
-				return result.Ok(ast.Field{Name: id, Type: ty})
-			}).Unwrap(),
+		return result.Ok[ast.ExternType](&ast.ExternTypeUsePath{
+			UsePath: usePath,
+		})
 	}
 
-	return result.Ok(&ast.TypeDef{
-		Name: name,
-		Type: record,
-	})
-}
+	tok := peek(clone).Unwrap()
+	switch tok.Type {
+	case token.Func:
+		*lexer = *clone
+		function := parseFunc(lexer).Unwrap()
 
-func parseFlags(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
-	defer handle.Error(&res)
+		expect(lexer, token.Semicolon).Unwrap()
+		return result.Ok[ast.ExternType](&ast.ExternTypeFunc{
+			ID:   id,
+			Func: function,
+		})
+	case token.Interface:
+		*lexer = *clone
 
-	name := parseId(lexer).Unwrap()
-	flags := &ast.Flags{
-		Flags: parseItemList(lexer, token.OpenBrace, token.CloseBrace, func(l *lex.Lexer) types.Result[ast.Flag] {
-			id := parseId(lexer).Unwrap()
-			return result.Ok(ast.Flag{
-				Id: id,
-			})
-		}).Unwrap(),
+		expect(lexer, token.Interface).Unwrap()
+		return result.Ok[ast.ExternType](&ast.ExternTypeInterface{
+			ID:             id,
+			InterfaceItems: parseInterfaceItems(lexer).Unwrap(),
+		})
 	}
-	return result.Ok(&ast.TypeDef{
-		Name: name,
-		Type: flags,
-	})
+
+	return result.Errorf[ast.ExternType]("unable to parse ExternType %w", parseError(tok))
 }
 
-func parseVariant(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
+// record-item ::= 'record' id '{' record-fields '}'
+// record-fields ::= record-field | record-field ',' record-fields?
+// record-field ::= id ':' ty
+func parseRecord(lexer *lex.Lexer) (res types.Result[*ast.Record]) {
 	defer handle.Error(&res)
+
+	// 'record'
+	expect(lexer, token.Record).Unwrap()
 
 	name := parseId(lexer).Unwrap()
 
-	cases := parseItemList(lexer, token.OpenBrace, token.CloseBrace, func(l *lex.Lexer) types.Result[ast.Case] {
-		name := parseId(lexer).Unwrap()
-		c := &ast.Case{
-			Name: name,
-			Type: option.None[ast.Type](),
-		}
-		if eat(lexer, token.OpenParen).Unwrap() {
-			ty := parseType(lexer).Unwrap()
-			expect(lexer, token.CloseParen).Unwrap()
-			c.Type = option.Some(ty)
-		}
-		return result.Ok(*c)
-	}).Unwrap()
-	return result.Ok(&ast.TypeDef{
-		Name: name,
-		Type: &ast.Variant{
-			Cases: cases,
-		},
+	fields := parseItemList(
+		lexer,
+		token.OpenBrace, token.CloseBrace,
+		parseRecordField).Unwrap()
+
+	return result.Ok(&ast.Record{
+		ID:     name,
+		Fields: fields,
 	})
 }
 
-func parseUnion(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
+func parseRecordField(lexer *lex.Lexer) (res types.Result[ast.Field]) {
 	defer handle.Error(&res)
 	id := parseId(lexer).Unwrap()
-	cases := parseItemList(lexer, token.OpenBrace, token.CloseBrace, func(l *lex.Lexer) types.Result[ast.UnionCase] {
-		ty := parseType(lexer).Unwrap()
-		return result.Ok(ast.UnionCase{
-			Type: ty,
+	expect(lexer, token.Colon).Unwrap()
+	ty := parseType(lexer).Unwrap()
+	return result.Ok(ast.Field{Name: id, Type: ty})
+}
+
+// flags-items ::= 'flags' id '{' flags-fields '}'
+// flags-fields ::= id  | id ',' flags-fields?
+func parseFlags(lexer *lex.Lexer) (res types.Result[*ast.Flags]) {
+	defer handle.Error(&res)
+
+	// 'flags'
+	expect(lexer, token.Flags).Unwrap()
+
+	name := parseId(lexer).Unwrap()
+	flagList := parseItemList(lexer, token.OpenBrace, token.CloseBrace, func(l *lex.Lexer) types.Result[ast.Flag] {
+		id := parseId(lexer).Unwrap()
+		return result.Ok(ast.Flag{
+			Id: id,
 		})
 	}).Unwrap()
-	union := &ast.Union{
-		Cases: cases,
-	}
-	return result.Ok(&ast.TypeDef{
-		Name: id,
-		Type: union,
+
+	return result.Ok(&ast.Flags{
+		ID:    name,
+		Flags: flagList,
 	})
 }
 
-func parseEnum(lexer *lex.Lexer) (res types.Result[*ast.TypeDef]) {
+// variant-items ::= 'variant' id '{' variant-cases '}'
+// variant-cases ::= variant-case | variant-case ',' variant-cases?
+// variant-case ::= id | id '(' ty ')'
+func parseVariant(lexer *lex.Lexer) (res types.Result[*ast.Variant]) {
+	defer handle.Error(&res)
+
+	// 'variant'
+	expect(lexer, token.Variant).Unwrap()
+
+	// id
+	name := parseId(lexer).Unwrap()
+
+	// '{' variant-cases '}'
+	cases := parseItemList(
+		lexer,
+		token.OpenBrace, token.CloseBrace,
+		parseVariantCase).Unwrap()
+
+	return result.Ok(
+		&ast.Variant{
+			ID:    name,
+			Cases: cases,
+		})
+}
+
+func parseVariantCase(lexer *lex.Lexer) (res types.Result[ast.Case]) {
+	defer handle.Error(&res)
+	name := parseId(lexer).Unwrap()
+	c := &ast.Case{
+		Name: name,
+		Type: option.None[ast.Type](),
+	}
+	if eat(lexer, token.OpenParen).Unwrap() {
+		ty := parseType(lexer).Unwrap()
+		expect(lexer, token.CloseParen).Unwrap()
+		c.Type = option.Some(ty)
+	}
+	return result.Ok(*c)
+}
+
+// enum-items ::= 'enum' id '{' enum-cases '}'
+// enum-cases ::= id | id ',' enum-cases?
+func parseEnum(lexer *lex.Lexer) (res types.Result[*ast.Enum]) {
+	defer handle.Error(&res)
+
+	// 'enum'
+	expect(lexer, token.Enum).Unwrap()
+
+	// id
+	id := parseId(lexer).Unwrap()
+
+	// '{' enum-cases '}'
+	cases := parseItemList(
+		lexer,
+		token.OpenBrace, token.CloseBrace,
+		parseEnumCase).Unwrap()
+
+	return result.Ok(&ast.Enum{
+		Cases: cases,
+		ID:    id,
+	})
+}
+
+func parseEnumCase(lexer *lex.Lexer) (res types.Result[ast.EnumCase]) {
 	defer handle.Error(&res)
 	id := parseId(lexer).Unwrap()
-	cases := parseItemList(lexer, token.OpenBrace, token.CloseBrace,
-		func(l *lex.Lexer) types.Result[ast.EnumCase] {
-			id := parseId(lexer).Unwrap()
-			return result.Ok(ast.EnumCase{
-				Name: id,
-			})
-		}).Unwrap()
-	enum := &ast.Enum{
-		Cases: cases,
-	}
-	return result.Ok(&ast.TypeDef{
+	return result.Ok(ast.EnumCase{
 		Name: id,
-		Type: enum,
 	})
 }
 
@@ -784,6 +892,17 @@ func parseId(lexer *lex.Lexer) (res types.Result[string]) {
 	}
 }
 
+func parseInteger(lexer *lex.Lexer) (res types.Result[int64]) {
+	defer handle.Error(&res)
+	tok := next(lexer).Unwrap()
+	switch tok.Type {
+	case token.Integer:
+		i, err := strconv.ParseInt(tok.Capture, 0, 32)
+		return result.New(i, err)
+	default:
+		return result.Errorf[int64]("%w: found value '%s', type '%v' but expected (integer) ", parseError(tok), tok.Capture, tok.Type)
+	}
+}
 func eat(lexer *lex.Lexer, tokenType token.TokenType) (res types.Result[bool]) {
 	defer handle.Error(&res)
 
@@ -809,11 +928,15 @@ func peek(lexer *lex.Lexer) (res types.Result[*token.Token]) {
 	defer handle.Error(&res)
 	for {
 		p := result.New(lexer.Peek())
-		r := p.Unwrap()
-		if r.Type != token.Whitespace {
+		tok := p.Unwrap()
+
+		if tok.Type != token.Whitespace &&
+			tok.Type != token.BlockComment &&
+			tok.Type != token.LineComment {
 			return p
 		}
-		// consume whitespace
+
+		// consume ignore tokens
 		_ = result.New(lexer.Next()).Unwrap()
 	}
 }
