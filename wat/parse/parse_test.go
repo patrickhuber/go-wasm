@@ -14,7 +14,7 @@ func TestParse(t *testing.T) {
 	type test struct {
 		name     string
 		text     string
-		expected ast.Ast
+		expected ast.Wat
 	}
 	tests := []test{
 		{"empty_module", "(module)", &ast.Module{}},

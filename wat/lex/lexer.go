@@ -160,11 +160,14 @@ func (l *Lexer) token(ty token.Type) types.Result[*token.Token] {
 		Capture:  l.input[l.offset:l.position],
 	}
 
+	// classify the reserved token
 	if tok.Type == token.Reserved {
 		if isInteger(tok.Capture) {
 			tok.Type = token.Integer
 		} else if isFloat(tok.Capture) {
 			tok.Type = token.Float
+		} else if kw, ok := keyword(tok.Capture); ok {
+			tok.Type = kw
 		}
 	}
 
@@ -586,6 +589,16 @@ func isInteger(s string) bool {
 		}
 	}
 	return false
+}
+
+var keywordMap = map[string]token.Type{
+	string(token.Module):    token.Module,
+	string(token.Component): token.Component,
+}
+
+func keyword(s string) (token.Type, bool) {
+	kw, ok := keywordMap[s]
+	return kw, ok
 }
 
 // identifier ~ $([\w]|[^ ",;\[\]])+

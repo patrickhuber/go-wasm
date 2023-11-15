@@ -2,24 +2,22 @@ package ast
 
 import "github.com/patrickhuber/go-types"
 
-type Ast interface {
-	ast()
+type Wat interface {
+	wat()
 }
 
 type Component struct {
+	Wat
 }
 
-func (*Component) ast() {}
-
 type Module struct {
+	Wat
 	Functions []Function
 	Memory    []Memory
 	Types     []Type
 	Tables    []Table
 	Globals   []Global
 }
-
-func (*Module) ast() {}
 
 type Section interface {
 	section()

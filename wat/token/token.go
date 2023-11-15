@@ -15,6 +15,8 @@ const (
 	Integer      Type = "integer"
 	Float        Type = "float"
 	EndOfStream  Type = "eof"
+	Module       Type = "module"
+	Component    Type = "component"
 )
 
 type Token struct {

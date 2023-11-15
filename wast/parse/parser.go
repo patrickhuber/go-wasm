@@ -8,32 +8,31 @@ import (
 	"github.com/patrickhuber/go-types/option"
 	"github.com/patrickhuber/go-types/result"
 	"github.com/patrickhuber/go-wasm/wast/ast"
-	wat "github.com/patrickhuber/go-wasm/wat/ast"
 	"github.com/patrickhuber/go-wasm/wat/lex"
 	watparse "github.com/patrickhuber/go-wasm/wat/parse"
 	"github.com/patrickhuber/go-wasm/wat/token"
 )
 
 // Parse parses the wast spec https://github.com/WebAssembly/spec/tree/master/interpreter/#scripts
-func Parse(input string) ([]ast.Directive, error) {
-	return parse(input).Deconstruct()
+func Parse(input string) (*ast.Wast, error) {
+	lexer := lex.New(input)
+	return parseWast(lexer).Deconstruct()
 }
 
-func parse(input string) (res types.Result[[]ast.Directive]) {
+func parseWast(lexer *lex.Lexer) (res types.Result[*ast.Wast]) {
 	defer handle.Error(&res)
-
 	var directives []ast.Directive
-	lexer := lex.New(input)
 	for {
-		peek := result.New(lexer.Peek()).Unwrap()
-		if peek.Type == token.EndOfStream {
+		tok := peek(lexer).Unwrap()
+		if tok.Type == token.EndOfStream {
 			break
 		}
 		directive := parseDirective(lexer).Unwrap()
 		directives = append(directives, directive)
 	}
-
-	return result.Ok(directives)
+	return result.Ok(&ast.Wast{
+		Directives: directives,
+	})
 }
 
 func parseDirective(lexer *lex.Lexer) (res types.Result[ast.Directive]) {
@@ -50,11 +49,9 @@ func parseDirective(lexer *lex.Lexer) (res types.Result[ast.Directive]) {
 	tok := peek(clone).Unwrap()
 
 	switch tok.Capture {
-	case "module":
-		fallthrough
-	case "component":
-		dir = ast.Wat{
-			Wat: result.New(watparse.Parse(lexer)).Unwrap(),
+	case "module", "component":
+		dir = ast.WatDirective{
+			Wat: parseQuoteWat(lexer).Unwrap(),
 		}
 		// exit early as wat parse will eat the last close paren
 		return result.Ok(dir)
@@ -84,7 +81,7 @@ func parseAssertReturn(lexer *lex.Lexer) (res types.Result[ast.Directive]) {
 	// ( assert_return <action> <result>* )
 
 	// assert_return
-	expect(lexer, token.Reserved).Unwrap()
+	expectValue(lexer, token.Reserved, "assert_return").Unwrap()
 
 	// <action>
 	action := parseAction(lexer).Unwrap()
@@ -101,20 +98,10 @@ func parseAssertInvalid(lexer *lex.Lexer) (res types.Result[ast.Directive]) {
 	// ( assert_invalid <module> <failure> )
 	defer handle.Error(&res)
 
-	// ( assert_invalid <module> <failure> )
-
 	// assert_invalid
-	expect(lexer, token.Reserved).Unwrap()
+	expectValue(lexer, token.Reserved, "assert_invalid").Unwrap()
 
-	m, err := watparse.Parse(lexer)
-	if err != nil {
-		return result.Error[ast.Directive](err)
-	}
-	module, ok := m.(*wat.Module)
-	if !ok {
-		return result.Errorf[ast.Directive]("expected module but found %T", m)
-	}
-
+	module := parseQuoteWat(lexer).Unwrap()
 	failure := parseString(lexer).Unwrap()
 
 	return result.Ok[ast.Directive](ast.AssertInvalid{
@@ -124,7 +111,81 @@ func parseAssertInvalid(lexer *lex.Lexer) (res types.Result[ast.Directive]) {
 }
 
 func parseAssertMalformed(lexer *lex.Lexer) (res types.Result[ast.Directive]) {
-	return result.Errorf[ast.Directive]("parseAssertMalformed not implemented")
+
+	// (assert_malformed <module> <failure> )
+	defer handle.Error(&res)
+
+	expectValue(lexer, token.Reserved, "assert_malformed").Unwrap()
+
+	module := parseQuoteWat(lexer).Unwrap()
+	failure := parseString(lexer).Unwrap()
+
+	return result.Ok[ast.Directive](
+		ast.AssertMalformed{
+			Module:  module,
+			Failure: failure,
+		},
+	)
+}
+
+func parseQuoteWat(lexer *lex.Lexer) (res types.Result[ast.QuoteWat]) {
+	defer handle.Error(&res)
+
+	// we need to look ahead 2 for the word 'quote'
+	clone := lexer.Clone()
+
+	expect(clone, token.OpenParen).Unwrap()
+
+	var ty token.Type
+	if eat(clone, token.Component).Unwrap() {
+		ty = token.Component
+	} else if eat(clone, token.Module).Unwrap() {
+		ty = token.Module
+	} else {
+		tok := next(clone).Unwrap()
+		return result.Errorf[ast.QuoteWat]("error parsing QuoteWat : %w", parseError(tok))
+	}
+
+	// 'quote'
+	tok := next(clone).Unwrap()
+	if tok.Type != token.Reserved || tok.Capture != "quote" {
+		// this is a regular wat module, throw away the clone
+		var wat ast.QuoteWat = parseWat(lexer).Unwrap()
+		return result.Ok(wat)
+	}
+
+	// we are in a (module quote "") or (component quote "")
+	// so we need to use the clone as the new lexer
+	*lexer = *clone
+
+	var quoteWat ast.QuoteWat
+	switch ty {
+	case token.Component:
+		quoteWat = &ast.QuoteComponent{
+			Quote: parseString(lexer).Unwrap(),
+		}
+	case token.Module:
+		quoteWat = &ast.QuoteModule{
+			Quote: parseString(lexer).Unwrap(),
+		}
+	default:
+		return result.Errorf[ast.QuoteWat]("error parsing QuoteWat : unrecognized directive '%s'", ty)
+	}
+
+	expect(lexer, token.CloseParen).Unwrap()
+
+	return result.Ok(quoteWat)
+
+}
+
+func parseWat(lexer *lex.Lexer) (res types.Result[*ast.Wat]) {
+	wat, err := watparse.Parse(lexer)
+	if err != nil {
+		return result.Error[*ast.Wat](err)
+	}
+	return result.Ok(&ast.Wat{
+		Wat: wat,
+	})
 }
 
 func parseAssertTrap(lexer *lex.Lexer) (res types.Result[ast.Directive]) {
@@ -230,12 +291,26 @@ func parseConst(lexer *lex.Lexer) (res types.Result[ast.Const]) {
 			Value: parseInt64(lexer).Unwrap(),
 		}
 	case "f32.const":
+		// some times constants can be ambiguous like '0'
+		var f32 float32
+		if peekFloat(lexer).Unwrap() {
+			f32 = parseFloat32(lexer).Unwrap()
+		} else {
+			f32 = float32(parseInt32(lexer).Unwrap())
+		}
 		c = ast.F32Const{
-			Value: parseFloat32(lexer).Unwrap(),
+			Value: f32,
 		}
 	case "f64.const":
+		// some times constants can be ambiguous like '0'
+		var f64 float64
+		if peekFloat(lexer).Unwrap() {
+			f64 = parseFloat64(lexer).Unwrap()
+		} else if peekInteger(lexer).Unwrap() {
+			f64 = float64(parseInt64(lexer).Unwrap())
+		}
 		c = ast.F64Const{
-			Value: parseFloat64(lexer).Unwrap(),
+			Value: f64,
 		}
 	case "ref.null":
 	case "ref.extern":
@@ -267,6 +342,14 @@ func parseResults(lexer *lex.Lexer) (res types.Result[[]ast.Result]) {
 	return result.Ok(results)
 }
 
+func peekFloat(lexer *lex.Lexer) (res types.Result[bool]) {
+	tok, err := watparse.Peek(lexer)
+	if err != nil {
+		return result.New(false, err)
+	}
+	return result.Ok(tok.Type == token.Float)
+}
+
 func parseFloat32(lexer *lex.Lexer) (res types.Result[float32]) {
 	return result.New(watparse.ParseFloat32(lexer))
 }
@@ -285,6 +368,18 @@ func eat(lexer *lex.Lexer, ty token.Type) (res types.Result[bool]) {
 
 	expect(lexer, ty).Unwrap()
 	return result.Ok(true)
+}
+
+func expectValue(lexer *lex.Lexer, ty token.Type, value string) (res types.Result[any]) {
+	defer handle.Error(&res)
+	tok := next(lexer).Unwrap()
+	if tok.Type != ty {
+		return result.Errorf[any]("%w. expected '%v' but found '%v'", parseError(tok), ty, tok.Type)
+	}
+	if tok.Capture != value {
+		return result.Errorf[any]("%w. expected '%v' value '%s' but found '%v' value '%s' ", parseError(tok), ty, value, tok, tok.Capture)
+	}
+	return result.Ok[any](nil)
 }
 
 func expect(lexer *lex.Lexer, ty token.Type) (res types.Result[any]) {
@@ -321,7 +416,9 @@ func peek(lexer *lex.Lexer) (res types.Result[*token.Token]) {
 	for {
 		p := result.New(lexer.Peek())
 		r := p.Unwrap()
-		if r.Type != token.Whitespace {
+		if r.Type != token.Whitespace &&
+			r.Type != token.BlockComment &&
+			r.Type != token.LineComment {
 			return p
 		}
 		// consume whitespace
@@ -342,6 +439,14 @@ func parseError(tok *token.Token) error {
 func parseString(lexer *lex.Lexer) types.Result[string] {
 	str, err := watparse.ParseString(lexer)
 	return result.New(str, err)
+}
+
+func peekInteger(lexer *lex.Lexer) types.Result[bool] {
+	i, err := watparse.Peek(lexer)
+	if err != nil {
+		return result.New(false, err)
+	}
+	return result.Ok(i.Type == token.Integer)
 }
 
 func parseInt32(lexer *lex.Lexer) types.Result[int32] {

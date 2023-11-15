@@ -12,14 +12,14 @@ func TestLexer(t *testing.T) {
 	t.Run("module", func(t *testing.T) {
 		CanTokenize(t, "(module)",
 			token.OpenParen,
-			token.Reserved,
+			token.Module,
 			token.CloseParen)
 	})
 	t.Run("module_whitespace", func(t *testing.T) {
 		CanTokenize(t, " (module ) ",
 			token.Whitespace,
 			token.OpenParen,
-			token.Reserved,
+			token.Module,
 			token.Whitespace,
 			token.CloseParen,
 			token.Whitespace)
@@ -32,17 +32,22 @@ func TestLexer(t *testing.T) {
 			(memory (; in the middle ;) 1)
 		)`,
 			token.Whitespace,
+			// ;; Line Comment
 			token.LineComment,
 			token.Whitespace,
+			// ( module
 			token.OpenParen,
 			token.Whitespace,
-			token.Reserved,
+			token.Module,
 			token.Whitespace,
+			// ( memory
 			token.OpenParen,
 			token.Reserved,
 			token.Whitespace,
+			// (; in the middle ;)
 			token.BlockComment,
 			token.Whitespace,
+			// 1)
 			token.Integer,
 			token.CloseParen,
 			token.Whitespace,
@@ -61,7 +66,7 @@ func TestLexer(t *testing.T) {
 			token.Whitespace,
 			token.OpenParen,
 			token.Whitespace,
-			token.Reserved,
+			token.Module,
 			token.Whitespace,
 			// ( func $add
 			token.OpenParen,
@@ -125,7 +130,7 @@ func TestLexer(t *testing.T) {
 			token.LineComment,
 			token.Whitespace,
 			// (module
-			token.OpenParen, token.Reserved, token.Whitespace,
+			token.OpenParen, token.Module, token.Whitespace,
 			// (func
 			token.OpenParen, token.Reserved, token.Whitespace,
 			// (export "add")

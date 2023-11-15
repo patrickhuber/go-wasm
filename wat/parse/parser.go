@@ -15,7 +15,7 @@ import (
 	"github.com/patrickhuber/go-wasm/wat/token"
 )
 
-func Parse(lexer *lex.Lexer) (ast.Ast, error) {
+func Parse(lexer *lex.Lexer) (ast.Wat, error) {
 	return parse(lexer).Deconstruct()
 }
 
@@ -23,21 +23,18 @@ func Peek(lexer *lex.Lexer) (*token.Token, error) {
 	return peek(lexer).Deconstruct()
 }
 
-func parse(lexer *lex.Lexer) (res types.Result[ast.Ast]) {
+func parse(lexer *lex.Lexer) (res types.Result[ast.Wat]) {
 	defer handle.Error(&res)
 	expect(lexer, token.OpenParen).Unwrap()
 	tok := peek(lexer).Unwrap()
-	if tok.Type != token.Reserved {
-		return result.Errorf[ast.Ast]("%w : unrecognized token", parseError(tok))
-	}
-	var root ast.Ast
-	switch tok.Capture {
-	case "module":
+	var root ast.Wat
+	switch tok.Type {
+	case token.Module:
 		root = parseModule(lexer).Unwrap()
-	case "component":
+	case token.Component:
 		root = parseComponent(lexer).Unwrap()
 	default:
-		return result.Errorf[ast.Ast](
+		return result.Errorf[ast.Wat](
 			"%w : expected module, component but found '%s'",
 			parseError(tok), tok.Capture)
 	}
@@ -47,7 +44,7 @@ func parse(lexer *lex.Lexer) (res types.Result[ast.Ast]) {
 
 func parseModule(lexer *lex.Lexer) (res types.Result[*ast.Module]) {
 	defer handle.Error(&res)
-	expect(lexer, token.Reserved).Unwrap()
+	expect(lexer, token.Module).Unwrap()
 
 	m := &ast.Module{}
 	for eat(lexer, token.OpenParen).Unwrap() {
@@ -78,7 +75,7 @@ func parseModule(lexer *lex.Lexer) (res types.Result[*ast.Module]) {
 
 func parseComponent(lexer *lex.Lexer) (res types.Result[*ast.Component]) {
 	defer handle.Error(&res)
-	expect(lexer, token.Reserved).Unwrap()
+	expect(lexer, token.Component).Unwrap()
 	return result.Ok(&ast.Component{})
 }
 
@@ -430,12 +427,25 @@ func parseInstruction(lexer *lex.Lexer) (res types.Result[ast.Instruction]) {
 			Value: parseInt64(lexer).Unwrap(),
 		}
 	case "f32.const":
+		var f32 float32
+		if peekFloat(lexer).Unwrap() {
+			f32 = parseFloat32(lexer).Unwrap()
+		} else {
+			f32 = float32(parseInt32(lexer).Unwrap())
+		}
 		inst = ast.F32Const{
-			Value: parseFloat32(lexer).Unwrap(),
+			Value: f32,
 		}
 	case "f64.const":
+		// some times constants can be ambiguous like '0'
+		var f64 float64
+		if peekFloat(lexer).Unwrap() {
+			f64 = parseFloat64(lexer).Unwrap()
+		} else {
+			f64 = float64(parseInt64(lexer).Unwrap())
+		}
 		inst = ast.F64Const{
-			Value: parseFloat64(lexer).Unwrap(),
+			Value: f64,
 		}
 	case "i32.add":
 		inst = ast.I32Add{}
@@ -767,6 +777,12 @@ func parseInt64(lexer *lex.Lexer) (res types.Result[int64]) {
 	}
 	i, err := strconv.ParseUint(tok.Capture, 0, 32)
 	return result.New(int64(i), err)
+}
+
+func peekFloat(lexer *lex.Lexer) (res types.Result[bool]) {
+	defer handle.Error(&res)
+	tok := peek(lexer).Unwrap()
+	return result.Ok(tok.Type == token.Float)
 }
 
 func ParseFloat32(lexer *lex.Lexer) (float32, error) {

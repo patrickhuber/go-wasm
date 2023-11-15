@@ -9,52 +9,73 @@ type Directive interface {
 	directive()
 }
 
+type Wast struct {
+	Directives []Directive
+}
+
+type QuoteWat interface {
+	quoteWat()
+}
+
+type WatDirective struct {
+	Directive
+	Wat QuoteWat
+}
+
+type Wat struct {
+	QuoteWat
+	Wat wat.Wat
+}
+
+type QuoteModule struct {
+	QuoteWat
+	Quote string
+}
+
+type QuoteComponent struct {
+	QuoteWat
+	Quote string
+}
+
+type AssertInvalid struct {
+	Directive
+	Module  QuoteWat
+	Failure string
+}
+
+type AssertMalformed struct {
+	Directive
+	Module  QuoteWat
+	Failure string
+}
+
+type AssertTrap struct {
+	Directive
+	Action  Action
+	Failure string
+}
+
 type AssertReturn struct {
+	Directive
 	Action  Action
 	Results []Result
 }
-
-func (AssertReturn) directive() {}
-
-type Wat struct {
-	Wat wat.Ast
-}
-
-func (Wat) directive() {}
-
-type AssertInvalid struct {
-	Module  *wat.Module
-	Failure string
-}
-
-func (AssertInvalid) directive() {}
-
-type AssertMalformed struct{}
-
-func (AssertMalformed) directive() {}
-
-type AssertTrap struct {
-	Action  Action
-	Failure string
-}
-
-func (AssertTrap) directive() {}
 
 type Action interface {
 	action()
 }
 
 type Invoke struct {
+	Action
+	Directive
 	Name   types.Option[string]
 	String string
 	Const  []Const
 }
 
-func (Invoke) action() {}
-
-type Get struct{}
-
-func (Get) action() {}
+type Get struct {
+	Action
+}
 
 type Const interface {
 	const_()
@@ -65,29 +86,25 @@ type Result interface {
 }
 
 type I32Const struct {
+	Const
+	Result
 	Value int32
 }
 
-func (I32Const) const_() {}
-func (I32Const) result() {}
-
 type I64Const struct {
+	Const
+	Result
 	Value int64
 }
 
-func (I64Const) const_() {}
-func (I64Const) result() {}
-
 type F32Const struct {
+	Const
+	Result
 	Value float32
 }
 
-func (F32Const) const_() {}
-func (F32Const) result() {}
-
 type F64Const struct {
+	Const
+	Result
 	Value float64
 }
-
-func (F64Const) const_() {}
-func (F64Const) result() {}
