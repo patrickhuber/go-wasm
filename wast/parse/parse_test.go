@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"path"
-	"regexp"
 	"testing"
 
 	"github.com/patrickhuber/go-types/option"
@@ -22,11 +21,13 @@ func TestIntegration(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, files)
 
-	filter, err := regexp.Compile("i32.wast")
+	includes := map[string]struct{}{
+		"i32.wast": {},
+	}
 	require.NoError(t, err)
 
 	for _, file := range files {
-		if !filter.MatchString(file.Name()) {
+		if _, ok := includes[file.Name()]; !ok {
 			continue
 		}
 		t.Run(file.Name(), func(t *testing.T) {
