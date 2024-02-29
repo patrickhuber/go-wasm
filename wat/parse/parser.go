@@ -2,6 +2,7 @@ package parse
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -447,6 +448,31 @@ func parseInstruction(lexer *lex.Lexer) (res types.Result[ast.Instruction]) {
 		inst = ast.F64Const{
 			Value: f64,
 		}
+	// f32 math instructions
+	case "f32.add":
+		inst = ast.F32Add{}
+	case "f32.sub":
+		inst = ast.F32Sub{}
+	case "f32.mul":
+		inst = ast.F32Mul{}
+	case "f32.div":
+		inst = ast.F32Div{}
+	case "f32.sqrt":
+		inst = ast.F32Sqrt{}
+	case "f32.min":
+		inst = ast.F32Min{}
+	case "f32.max":
+		inst = ast.F32Max{}
+	case "f32.ceil":
+		inst = ast.F32Ceil{}
+	case "f32.floor":
+		inst = ast.F32Floor{}
+	case "f32.trunc":
+		inst = ast.F32Trunc{}
+	case "f32.nearest":
+		inst = ast.F32Nearest{}
+
+	// i32 math instructions
 	case "i32.add":
 		inst = ast.I32Add{}
 	case "i32.sub":
@@ -794,6 +820,46 @@ func parseFloat32(lexer *lex.Lexer) (res types.Result[float32]) {
 	tok := next(lexer).Unwrap()
 	if tok.Type != token.Float {
 		return result.Errorf[float32]("expected float %w", parseError(tok))
+	}
+	negative := false
+	capture := tok.Capture
+	if strings.HasPrefix(capture, "-") {
+		negative = true
+		capture = capture[1:]
+	}
+	if strings.HasPrefix(capture, "nan") {
+		capture = capture[3:]
+
+		var u32 uint64
+		if strings.HasPrefix(capture, ":") {
+			capture = capture[1:]
+
+			var err error
+			if len(capture) > 0 {
+				if strings.HasPrefix(capture, "canonical") {
+					// https://en.wikipedia.org/wiki/NaN#Canonical_NaN
+					var val uint32 = 0b_1111_1111_1100_0000_0000_0000_0000_0000
+					return result.Ok(math.Float32frombits(val))
+				}
+				if strings.HasPrefix(capture, "arithmetic") {
+					var val uint32 = 0b_1111_1111_1100_0000_0000_0000_0000_0000
+					return result.Ok(math.Float32frombits(val))
+				}
+				u32, err = strconv.ParseUint(capture, 0, 32)
+				if err != nil {
+					return result.Error[float32](err)
+				}
+			}
+		}
+
+		// create float from data
+		// s111 1111 1xxx xxxx xxxx xxxx xxxx xxxx
+		if negative {
+			u32 |= 0b_1111_1111_1000_0000_0000_0000_0000_0000
+		} else {
+			u32 |= 0b_0111_1111_1000_0000_0000_0000_0000_0000
+		}
+		return result.Ok(math.Float32frombits(uint32(u32)))
 	}
 	f, err := strconv.ParseFloat(tok.Capture, 32)
 	return result.New(float32(f), err)

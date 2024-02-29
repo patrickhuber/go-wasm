@@ -153,6 +153,50 @@ type F64Const struct {
 
 func (F64Const) inst() {}
 
+type F32Add struct{}
+
+func (F32Add) inst() {}
+
+type F32Sub struct{}
+
+func (F32Sub) inst() {}
+
+type F32Mul struct{}
+
+func (F32Mul) inst() {}
+
+type F32Div struct{}
+
+func (F32Div) inst() {}
+
+type F32Sqrt struct{}
+
+func (F32Sqrt) inst() {}
+
+type F32Min struct{}
+
+func (F32Min) inst() {}
+
+type F32Max struct{}
+
+func (F32Max) inst() {}
+
+type F32Ceil struct{}
+
+func (F32Ceil) inst() {}
+
+type F32Floor struct{}
+
+func (F32Floor) inst() {}
+
+type F32Trunc struct{}
+
+func (F32Trunc) inst() {}
+
+type F32Nearest struct{}
+
+func (F32Nearest) inst() {}
+
 type I32Eqz struct {
 	Value int32
 }

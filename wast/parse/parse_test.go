@@ -23,6 +23,7 @@ func TestIntegration(t *testing.T) {
 
 	includes := map[string]struct{}{
 		"i32.wast": {},
+		"f32.wast": {},
 	}
 	require.NoError(t, err)
 
