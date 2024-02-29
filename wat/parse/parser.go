@@ -842,6 +842,7 @@ func parseFloat32(lexer *lex.Lexer) (res types.Result[float32]) {
 					return result.Ok(math.Float32frombits(val))
 				}
 				if strings.HasPrefix(capture, "arithmetic") {
+					// https://webassembly.github.io/spec/core/syntax/values.html#floating-point
 					var val uint32 = 0b_1111_1111_1100_0000_0000_0000_0000_0000
 					return result.Ok(math.Float32frombits(val))
 				}
@@ -851,7 +852,6 @@ func parseFloat32(lexer *lex.Lexer) (res types.Result[float32]) {
 				}
 			}
 		}
-
 		// create float from data
 		// s111 1111 1xxx xxxx xxxx xxxx xxxx xxxx
 		if negative {
@@ -861,6 +861,7 @@ func parseFloat32(lexer *lex.Lexer) (res types.Result[float32]) {
 		}
 		return result.Ok(math.Float32frombits(uint32(u32)))
 	}
+	// not nan, so parse normally
 	f, err := strconv.ParseFloat(tok.Capture, 32)
 	return result.New(float32(f), err)
 }
