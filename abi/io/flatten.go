@@ -28,9 +28,9 @@ func FlattenType(t types.ValType) ([]kind.Kind, error) {
 		return []kind.Kind{kind.U64}, nil
 	case types.S8, types.S16, types.S32:
 		return []kind.Kind{kind.U32}, nil
-	case types.Float32:
+	case types.F32:
 		return []kind.Kind{kind.Float32}, nil
-	case types.Float64:
+	case types.F64:
 		return []kind.Kind{kind.Float64}, nil
 	case types.Char:
 		return []kind.Kind{kind.U32}, nil

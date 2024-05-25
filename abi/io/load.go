@@ -32,9 +32,9 @@ func Load(cx *types.CallContext, t types.ValType, ptr uint32) (any, error) {
 		return LoadInt(cx, ptr, t)
 	case types.S64:
 		return LoadInt(cx, ptr, t)
-	case types.Float32:
+	case types.F32:
 		return LoadFloat(cx, ptr, t)
-	case types.Float64:
+	case types.F64:
 		return LoadFloat(cx, ptr, t)
 	case types.Char:
 		return LoadChar(cx, ptr, t)
@@ -185,14 +185,14 @@ func LoadIntWithSize(c *types.CallContext, ptr uint32, nbytes uint32, sign bool)
 
 func LoadFloat(cx *types.CallContext, ptr uint32, t types.ValType) (any, error) {
 	switch t.(type) {
-	case types.Float32:
+	case types.F32:
 		i, err := LoadUInt32(cx, ptr)
 		if err != nil {
 			return nil, err
 		}
 		f := math.Float32frombits(i)
 		return CanonicalizeFloat32(f), nil
-	case types.Float64:
+	case types.F64:
 		i, err := LoadUInt64(cx, ptr)
 		if err != nil {
 			return nil, err

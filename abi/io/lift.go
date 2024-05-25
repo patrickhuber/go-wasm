@@ -46,9 +46,9 @@ func LiftFlat(cx *types.CallContext, vi values.ValueIterator, t types.ValType) (
 		return LiftFlatS32(vi)
 	case types.S64:
 		return LiftFlatS64(vi)
-	case types.Float32:
+	case types.F32:
 		return LiftFlatFloat32(vi)
-	case types.Float64:
+	case types.F64:
 		return LiftFlatFloat64(vi)
 	case types.Char:
 		return LiftFlatChar(vi)

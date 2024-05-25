@@ -29,9 +29,9 @@ func Size(vt types.ValType) (uint32, error) {
 		return SizeOfU8, nil
 	case types.U16, types.S16:
 		return SizeOfU16, nil
-	case types.U32, types.S32, types.Float32:
+	case types.U32, types.S32, types.F32:
 		return SizeOfU32, nil
-	case types.U64, types.S64, types.Float64:
+	case types.U64, types.S64, types.F64:
 		return SizeOfU64, nil
 	case types.Char:
 		return SizeOfChar, nil
