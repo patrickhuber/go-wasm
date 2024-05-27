@@ -43,9 +43,9 @@ func Store(c *types.CallContext, val any, t types.ValType, ptr uint32) error {
 		return StoreInt(c, val, ptr, SizeOfS32, true)
 	case types.S64:
 		return StoreInt(c, val, ptr, SizeOfS64, true)
-	case types.Float32:
+	case types.F32:
 		return StoreFloat(c, val, ptr, SizeOfFloat32)
-	case types.Float64:
+	case types.F64:
 		return StoreFloat(c, val, ptr, SizeOfFloat64)
 	case types.Char:
 		r, ok := val.(rune)

@@ -32,9 +32,9 @@ func Alignment(t types.ValType) (uint32, error) {
 		return 4, nil
 	case types.S64:
 		return 8, nil
-	case types.Float32:
+	case types.F32:
 		return 4, nil
-	case types.Float64:
+	case types.F64:
 		return 8, nil
 	case types.Char:
 		return 4, nil

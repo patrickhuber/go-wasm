@@ -31,9 +31,9 @@ func LowerFlat(cx *types.CallContext, v any, t types.ValType) ([]values.Value, e
 		return LowerU32(v)
 	case types.U64:
 		return LowerU64(v)
-	case types.Float32:
+	case types.F32:
 		return LowerFloat32(v)
-	case types.Float64:
+	case types.F64:
 		return LowerFloat64(v)
 	case types.Char:
 		return LowerChar(v)
