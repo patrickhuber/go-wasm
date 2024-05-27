@@ -1,6 +1,5 @@
-package instructions
+package instruction
 
 type Instruction interface {
 	instruction()
 }
-

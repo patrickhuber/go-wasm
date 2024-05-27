@@ -9,6 +9,8 @@ const (
 	Nop         Opcode = 0x01
 	Bloc        Opcode = 0x02
 
+	End Opcode = 0x0b
+
 	Return Opcode = 0x0f
 	Call   Opcode = 0x10
 

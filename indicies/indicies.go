@@ -6,36 +6,36 @@ type Index interface {
 
 type Function uint32
 
-func (*Function) index() {}
+func (Function) index() {}
 
 type Type uint32
 
-func (*Type) index() {}
+func (Type) index() {}
 
 type Table uint32
 
-func (*Table) index() {}
+func (Table) index() {}
 
 type Memory uint32
 
-func (*Memory) index() {}
+func (Memory) index() {}
 
 type Global uint32
 
-func (*Global) index() {}
+func (Global) index() {}
 
 type Element uint32
 
-func (*Element) index() {}
+func (Element) index() {}
 
 type Data uint32
 
-func (*Data) index() {}
+func (Data) index() {}
 
 type Local uint32
 
-func (*Local) index() {}
+func (Local) index() {}
 
 type Label uint32
 
-func (*Label) index() {}
+func (Label) index() {}

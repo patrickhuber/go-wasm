@@ -1,4 +1,4 @@
-package instructions
+package instruction
 
 type I32Const uint32
 

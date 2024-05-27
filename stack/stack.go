@@ -2,7 +2,7 @@ package stack
 
 import (
 	"github.com/patrickhuber/go-wasm/instance"
-	"github.com/patrickhuber/go-wasm/instructions"
+	"github.com/patrickhuber/go-wasm/instruction"
 	"github.com/patrickhuber/go-wasm/values"
 )
 
@@ -11,7 +11,7 @@ type Item interface {
 }
 
 type Label struct {
-	Instructions []instructions.Instruction
+	Instructions []instruction.Instruction
 }
 
 func (*Label) item() {}

@@ -1,4 +1,4 @@
-package instructions
+package instruction
 
 import (
 	"github.com/patrickhuber/go-wasm/indicies"
@@ -90,3 +90,7 @@ type CallIndirect struct {
 }
 
 func (*CallIndirect) instruction() {}
+
+type End struct {
+	Instruction
+}

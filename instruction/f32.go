@@ -1,4 +1,4 @@
-package instructions
+package instruction
 
 type F32Const float32
 

@@ -1,18 +1,20 @@
 package store
 
-import "github.com/patrickhuber/go-wasm/wasm"
+import (
+	"github.com/patrickhuber/go-wasm/engine"
+	"github.com/patrickhuber/go-wasm/instance"
+	"github.com/patrickhuber/go-wasm/wasm"
+)
 
-func New() *Store {
-	return &Store{}
+func New(engine *engine.Engine) *Store {
+	return &Store{
+		Engine: engine,
+	}
 }
 
 type Store struct {
-	Functions []FunctionInstance
-	Tables    []TableInstance
-	Memories  []MemoryInstance
-	Globals   []GlobalInstance
-	Elements  []ElementInstance
-	Datas     []DataInstance
+	Engine    *engine.Engine
+	Directive instance.Directive
 }
 
 type FunctionInstance struct{}

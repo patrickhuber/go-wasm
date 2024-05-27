@@ -2,7 +2,7 @@ package module
 
 import (
 	"github.com/patrickhuber/go-wasm/indicies"
-	"github.com/patrickhuber/go-wasm/instructions"
+	"github.com/patrickhuber/go-wasm/instruction"
 	"github.com/patrickhuber/go-wasm/types"
 )
 
@@ -25,7 +25,7 @@ type FuncType struct {
 type Function struct {
 	Type   indicies.Type
 	Locals []types.Value
-	Body   instructions.Expression
+	Body   instruction.Expression
 }
 
 type Table struct {
@@ -38,12 +38,12 @@ type Memory struct {
 
 type Global struct {
 	Type indicies.Global
-	Init instructions.Expression
+	Init instruction.Expression
 }
 
 type Element struct {
 	Type types.Reference
-	Init []instructions.Expression
+	Init []instruction.Expression
 	Mode ElementMode
 }
 
@@ -57,7 +57,7 @@ func (*PassiveElementMode) elementmode() {}
 
 type ActiveElementMode struct {
 	Table  indicies.Table
-	Offset instructions.Expression
+	Offset instruction.Expression
 }
 
 func (*ActiveElementMode) elementmode() {}
@@ -81,7 +81,7 @@ func (*PassiveDataMode) elementmode() {}
 
 type ActiveDataMode struct {
 	Memory indicies.Memory
-	Offset instructions.Expression
+	Offset instruction.Expression
 }
 
 func (*ActiveDataMode) elementmode() {}

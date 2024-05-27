@@ -6,6 +6,7 @@ import (
 )
 
 type Module struct {
+	Directive
 	Types             []types.Function
 	FunctionAddresses []address.Function
 	TableAddresses    []address.Table

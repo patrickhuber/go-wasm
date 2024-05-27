@@ -1,14 +1,28 @@
 package binary
 
-type Header struct{}
+import "github.com/patrickhuber/go-wasm/instruction"
+
+var Magic = []byte{0x00, 0x61, 0x73, 0x6d}
+
 type Document struct {
 	Header *Header
 	Root   Root
 }
 
+type Version uint32
+
+const ModuleVersion Version = 0x01
+const ComponentVersion Version = 0x0d
+
+type Header struct {
+	Number uint32
+	Type   Version
+}
+
 type Root interface {
 	root()
 }
+
 type Component struct{}
 
 func (Component) root() {}
@@ -23,6 +37,57 @@ type Section interface {
 	section()
 }
 
-type Function struct{}
+type SectionID uint8
 
-func (Function) section() {}
+const (
+	CustomSectionID   SectionID = 0
+	TypeSectionID     SectionID = 1
+	FunctionSectionID SectionID = 3
+	CodeSectionID     SectionID = 10
+)
+
+type TypeSection struct {
+	ID    SectionID
+	Size  uint32
+	Types []*FunctionType
+}
+
+func (TypeSection) section() {}
+
+type FunctionType struct {
+	Parameters []ValueType
+	Results    []ValueType
+}
+
+type FunctionSection struct {
+	ID    SectionID
+	Size  uint32
+	Types []uint32
+}
+
+func (FunctionSection) section() {}
+
+type CodeSection struct {
+	ID    SectionID
+	Size  uint32
+	Codes []*Code
+}
+
+func (CodeSection) section() {}
+
+type Code struct {
+	Size       uint32
+	Locals     []Local
+	Expression []instruction.Instruction
+}
+
+type Local struct {
+	ValueTypes []ValueType
+}
+
+type ValueType byte
+
+const I32 ValueType = 0x7f
+const I64 ValueType = 0x7e
+const F32 ValueType = 0x7d
+const F64 ValueType = 0x7c
