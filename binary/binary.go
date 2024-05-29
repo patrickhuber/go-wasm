@@ -5,18 +5,17 @@ import "github.com/patrickhuber/go-wasm/instruction"
 var Magic = []byte{0x00, 0x61, 0x73, 0x6d}
 
 type Document struct {
-	Header *Header
-	Root   Root
+	Preamble *Preamble
+	Root     Root
 }
 
-type Version uint32
+const ModuleVersion uint16 = 0x01
+const ComponentVersion uint16 = 0x0d
 
-const ModuleVersion Version = 0x01
-const ComponentVersion Version = 0x0d
-
-type Header struct {
-	Number uint32
-	Type   Version
+type Preamble struct {
+	Magic   [4]byte
+	Version uint16
+	Layer   uint16
 }
 
 type Root interface {

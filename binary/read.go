@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 
 	"encoding/binary"
 
@@ -15,18 +16,13 @@ import (
 
 func Read(reader io.Reader) (*Document, error) {
 
-	err := ValidateMagic(reader)
-	if err != nil {
-		return nil, err
-	}
-
-	header, err := ReadHeader(reader)
+	preamble, err := ReadPreamble(reader)
 	if err != nil {
 		return nil, err
 	}
 
 	var root Root
-	switch header.Type {
+	switch preamble.Version {
 	case ComponentVersion:
 		return nil, fmt.Errorf("component binary format not supported yet")
 	case ModuleVersion:
@@ -34,47 +30,41 @@ func Read(reader io.Reader) (*Document, error) {
 		if err != nil {
 			return nil, err
 		}
+	default:
+		return nil, fmt.Errorf("invalid version %d", preamble.Version)
 	}
 
 	return &Document{
-		Header: header,
-		Root:   root,
+		Preamble: preamble,
+		Root:     root,
 	}, nil
 }
 
-func ValidateMagic(reader io.Reader) error {
-	var data uint32
-	err := binary.Read(reader, binary.LittleEndian, &data)
-	if err != nil {
-		return err
-	}
-	magic := binary.LittleEndian.Uint32(Magic)
+func ReadPreamble(reader io.Reader) (*Preamble, error) {
+	preamble := &Preamble{}
 
-	if magic != data {
-		return fmt.Errorf("invalid magic number")
-	}
-	return nil
-}
+	var err error
 
-func ReadHeader(reader io.Reader) (*Header, error) {
-	version, err := ReadUInt32(reader)
+	preamble.Magic, err = read[[4]byte](reader)
 	if err != nil {
 		return nil, err
 	}
-	switch version {
-	case uint32(ModuleVersion):
-		return &Header{
-			Number: version,
-			Type:   ModuleVersion,
-		}, nil
-	case uint32(ComponentVersion):
-		return &Header{
-			Number: version,
-			Type:   ComponentVersion,
-		}, nil
-	default:
-		return nil, fmt.Errorf("unrecognized payload version %d", version)
+
+	if !slices.Equal(Magic, preamble.Magic[0:]) {
+		return nil, fmt.Errorf("expected magic %v found %v", Magic, preamble.Magic)
 	}
+
+	preamble.Version, err = ReadUInt16(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	preamble.Layer, err = ReadUInt16(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	return preamble, nil
 }
 
 func ReadModule(reader io.Reader) (*Module, error) {
@@ -133,6 +123,7 @@ func ReadTypeSection(size uint32, reader io.Reader) (*TypeSection, error) {
 	}
 	return &TypeSection{
 		ID:    TypeSectionID,
+		Size:  size,
 		Types: types,
 	}, nil
 }
@@ -320,22 +311,23 @@ func ReadOpCode(reader io.Reader) (opcode.Opcode, error) {
 }
 
 func ReadUInt32(reader io.Reader) (uint32, error) {
-	var data uint32
-	err := binary.Read(reader, binary.LittleEndian, &data)
-	if err != nil {
-		return 0, err
-	}
-	return data, nil
+	return read[uint32](reader)
+}
+
+func ReadUInt16(reader io.Reader) (uint16, error) {
+	return read[uint16](reader)
 }
 
 func ReadByte(reader io.Reader) (byte, error) {
-	var data byte
-	err := binary.Read(reader, binary.LittleEndian, &data)
-	if err != nil {
-		return 0, err
-	}
-	return data, nil
+	return read[byte](reader)
 }
+
+func read[T any](reader io.Reader) (T, error) {
+	var data T
+	err := binary.Read(reader, binary.LittleEndian, &data)
+	return data, err
+}
+
 func ReadLebU128(reader io.Reader) (uint32, error) {
 	value, _, err := leb128.DecodeReader(reader)
 	return value, err
