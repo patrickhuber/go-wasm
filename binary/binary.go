@@ -10,7 +10,7 @@ type Document struct {
 }
 
 const ModuleVersion uint16 = 0x01
-const ComponentVersion uint16 = 0x0d
+const ComponentVersion uint16 = 0x0a
 
 type Preamble struct {
 	Magic   []byte

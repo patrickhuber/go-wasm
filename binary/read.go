@@ -24,7 +24,10 @@ func Read(reader io.Reader) (*Document, error) {
 	var directive Directive
 	switch preamble.Version {
 	case ComponentVersion:
-		return nil, fmt.Errorf("component binary format not supported yet")
+		directive, err = ReadComponent(reader)
+		if err != nil {
+			return nil, err
+		}
 	case ModuleVersion:
 		directive, err = ReadModule(reader)
 		if err != nil {
@@ -82,6 +85,10 @@ func ReadModule(reader io.Reader) (*Module, error) {
 	return &Module{
 		Sections: sections,
 	}, nil
+}
+
+func ReadComponent(reader io.Reader) (*Component, error) {
+	return &Component{}, nil
 }
 
 func ReadSection(reader io.Reader) (Section, error) {

@@ -126,6 +126,18 @@ func TestDecode(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "component",
+			path: "../fixtures/component/empty.wasm",
+			document: &binary.Document{
+				Preamble: &binary.Preamble{
+					Magic:   binary.Magic,
+					Version: binary.ComponentVersion,
+					Layer:   1,
+				},
+				Directive: &binary.Component{},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
