@@ -5,32 +5,32 @@ import "github.com/patrickhuber/go-wasm/instruction"
 var Magic = []byte{0x00, 0x61, 0x73, 0x6d}
 
 type Document struct {
-	Preamble *Preamble
-	Root     Root
+	Preamble  *Preamble
+	Directive Directive
 }
 
 const ModuleVersion uint16 = 0x01
 const ComponentVersion uint16 = 0x0d
 
 type Preamble struct {
-	Magic   [4]byte
+	Magic   []byte
 	Version uint16
 	Layer   uint16
 }
 
-type Root interface {
-	root()
+type Directive interface {
+	directive()
 }
 
 type Component struct{}
 
-func (Component) root() {}
+func (Component) directive() {}
 
 type Module struct {
 	Sections []Section
 }
 
-func (Module) root() {}
+func (Module) directive() {}
 
 type Section interface {
 	section()

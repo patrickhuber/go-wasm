@@ -21,12 +21,12 @@ func Read(reader io.Reader) (*Document, error) {
 		return nil, err
 	}
 
-	var root Root
+	var directive Directive
 	switch preamble.Version {
 	case ComponentVersion:
 		return nil, fmt.Errorf("component binary format not supported yet")
 	case ModuleVersion:
-		root, err = ReadModule(reader)
+		directive, err = ReadModule(reader)
 		if err != nil {
 			return nil, err
 		}
@@ -35,8 +35,8 @@ func Read(reader io.Reader) (*Document, error) {
 	}
 
 	return &Document{
-		Preamble: preamble,
-		Root:     root,
+		Preamble:  preamble,
+		Directive: directive,
 	}, nil
 }
 
@@ -45,7 +45,7 @@ func ReadPreamble(reader io.Reader) (*Preamble, error) {
 
 	var err error
 
-	preamble.Magic, err = read[[4]byte](reader)
+	preamble.Magic, err = ReadBytes(reader, len(Magic))
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func ReadModule(reader io.Reader) (*Module, error) {
 	for {
 		section, err := ReadSection(reader)
 		if err != nil {
-			if errors.Is(io.EOF, err) {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			return nil, err
@@ -320,6 +320,12 @@ func ReadUInt16(reader io.Reader) (uint16, error) {
 
 func ReadByte(reader io.Reader) (byte, error) {
 	return read[byte](reader)
+}
+
+func ReadBytes(reader io.Reader, size int) ([]byte, error) {
+	buf := make([]byte, size)
+	err := binary.Read(reader, binary.LittleEndian, buf)
+	return buf, err
 }
 
 func read[T any](reader io.Reader) (T, error) {
