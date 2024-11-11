@@ -2,12 +2,12 @@ package instance
 
 import (
 	"github.com/patrickhuber/go-wasm/address"
-	"github.com/patrickhuber/go-wasm/types"
+	"github.com/patrickhuber/go-wasm/api"
 )
 
 type Module struct {
 	Directive
-	Types             []types.Function
+	Types             []api.FuncType
 	FunctionAddresses []address.Function
 	TableAddresses    []address.Table
 	MemoryAddresses   []address.Memory

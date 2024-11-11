@@ -1,6 +1,8 @@
 package binary
 
-import "github.com/patrickhuber/go-wasm/instruction"
+import (
+	"github.com/patrickhuber/go-wasm/api"
+)
 
 var Magic = []byte{0x00, 0x61, 0x73, 0x6d}
 
@@ -54,8 +56,12 @@ type TypeSection struct {
 func (TypeSection) section() {}
 
 type FunctionType struct {
-	Parameters []ValueType
-	Results    []ValueType
+	Parameters ResultType
+	Returns    ResultType
+}
+
+type ResultType struct {
+	Types []ValType
 }
 
 type FunctionSection struct {
@@ -77,16 +83,16 @@ func (CodeSection) section() {}
 type Code struct {
 	Size       uint32
 	Locals     []Local
-	Expression []instruction.Instruction
+	Expression []api.Instruction
 }
 
 type Local struct {
-	ValueTypes []ValueType
+	ValueTypes []ValType
 }
 
-type ValueType byte
+type ValType byte
 
-const I32 ValueType = 0x7f
-const I64 ValueType = 0x7e
-const F32 ValueType = 0x7d
-const F64 ValueType = 0x7c
+const I32 ValType = 0x7f
+const I64 ValType = 0x7e
+const F32 ValType = 0x7d
+const F64 ValType = 0x7c

@@ -1,53 +1,58 @@
-package instruction
+package api
 
-import "github.com/patrickhuber/go-wasm/indicies"
+type Table struct {
+	Limits    Limits
+	Reference Reference
+}
+
+func (*Table) external() {}
 
 type TableGet struct {
-	Index indicies.Table
+	Index TableIndex
 }
 
 func (*TableGet) instruction() {}
 
 type TableSet struct {
-	Index indicies.Table
+	Index TableIndex
 }
 
 func (*TableSet) instruction() {}
 
 type TableSize struct {
-	Index indicies.Table
+	Index TableIndex
 }
 
 func (*TableSize) instruction() {}
 
 type TableGrow struct {
-	Index indicies.Table
+	Index TableIndex
 }
 
 func (*TableGrow) instruction() {}
 
 type TableFill struct {
-	Index indicies.Table
+	Index TableIndex
 }
 
 func (*TableFill) instruction() {}
 
 type TableCopy struct {
-	Source      indicies.Table
-	Destination indicies.Table
+	Source      TableIndex
+	Destination TableIndex
 }
 
 func (*TableCopy) instruction() {}
 
 type TableInit struct {
-	Destination indicies.Table
-	Source      indicies.Element
+	Destination TableIndex
+	Source      ElementIndex
 }
 
 func (*TableInit) instruction() {}
 
 type ElementDrop struct {
-	Index indicies.Element
+	Index ElementIndex
 }
 
 func (*ElementDrop) instruction() {}

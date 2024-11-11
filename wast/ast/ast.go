@@ -24,7 +24,7 @@ type WatDirective struct {
 
 type Wat struct {
 	QuoteWat
-	Wat wat.Wat
+	Wat wat.Directive
 }
 
 type QuoteModule struct {

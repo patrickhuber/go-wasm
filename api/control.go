@@ -1,22 +1,17 @@
-package instruction
-
-import (
-	"github.com/patrickhuber/go-wasm/indicies"
-	"github.com/patrickhuber/go-wasm/types"
-)
+package api
 
 type BlockType interface {
 	blocktype()
 }
 
 type BlockTypeIndex struct {
-	Index indicies.Index
+	Index Index
 }
 
 func (*BlockTypeIndex) blocktype() {}
 
 type BlockTypeValue struct {
-	ValueType types.Value
+	ValueType ValType
 }
 
 func (*BlockTypeValue) blocktype() {}
@@ -56,20 +51,20 @@ type Else struct {
 }
 
 type Branch struct {
-	Index indicies.Label
+	Index LabelIndex
 }
 
 func (*Branch) instruction() {}
 
 type BranchIf struct {
-	Index indicies.Label
+	Index LabelIndex
 }
 
 func (*BranchIf) instruction() {}
 
 type BranchTable struct {
-	Indicies []indicies.Label
-	Index    indicies.Label
+	Indicies []LabelIndex
+	Index    LabelIndex
 }
 
 func (*BranchTable) instruction() {}
@@ -79,14 +74,14 @@ type Return struct{}
 func (*Return) instruction() {}
 
 type Call struct {
-	Index indicies.Function
+	Index FunctionIndex
 }
 
 func (*Call) instruction() {}
 
 type CallIndirect struct {
-	Table indicies.Table
-	Type  indicies.Type
+	Table TableIndex
+	Type  TypeIndex
 }
 
 func (*CallIndirect) instruction() {}

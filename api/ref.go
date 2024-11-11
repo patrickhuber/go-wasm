@@ -1,12 +1,7 @@
-package instruction
-
-import (
-	"github.com/patrickhuber/go-wasm/indicies"
-	"github.com/patrickhuber/go-wasm/types"
-)
+package api
 
 type RefNull struct {
-	ReferenceType types.Reference
+	ReferenceType Reference
 }
 
 func (*RefNull) instruction() {}
@@ -17,7 +12,7 @@ type RefIsNull struct {
 func (*RefIsNull) instruction() {}
 
 type RefFunc struct {
-	FunctionIndex indicies.Function
+	FunctionIndex FunctionIndex
 }
 
 func (*RefFunc) instruction() {}

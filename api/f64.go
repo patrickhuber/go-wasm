@@ -1,4 +1,4 @@
-package instruction
+package api
 
 type F64Const float64
 

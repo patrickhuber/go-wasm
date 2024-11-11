@@ -1,9 +1,9 @@
 package instance
 
-import "github.com/patrickhuber/go-wasm/types"
+import "github.com/patrickhuber/go-wasm/api"
 
 type Memory struct {
-	Type types.Memory
+	Type api.Mem
 	Data []byte
 }
 

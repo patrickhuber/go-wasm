@@ -1,6 +1,4 @@
-package instruction
-
-import "github.com/patrickhuber/go-wasm/indicies"
+package api
 
 type MemoryArg struct {
 	Offset uint32
@@ -110,13 +108,13 @@ type MemoryCopy struct{}
 func (*MemoryCopy) instruction() {}
 
 type MemoryInit struct {
-	Index indicies.Data
+	Index DataIndex
 }
 
 func (*MemoryInit) instruction() {}
 
 type DataDrop struct {
-	Index indicies.Data
+	Index DataIndex
 }
 
 func (*DataDrop) instruction() {}

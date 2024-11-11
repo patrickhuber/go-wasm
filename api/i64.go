@@ -1,4 +1,4 @@
-package instruction
+package api
 
 type I64Const uint64
 

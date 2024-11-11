@@ -16,7 +16,7 @@ import (
 	"github.com/patrickhuber/go-wasm/wat/token"
 )
 
-func Parse(lexer *lex.Lexer) (ast.Wat, error) {
+func Parse(lexer *lex.Lexer) (ast.Directive, error) {
 	return parse(lexer).Deconstruct()
 }
 
@@ -24,18 +24,18 @@ func Peek(lexer *lex.Lexer) (*token.Token, error) {
 	return peek(lexer).Deconstruct()
 }
 
-func parse(lexer *lex.Lexer) (res types.Result[ast.Wat]) {
+func parse(lexer *lex.Lexer) (res types.Result[ast.Directive]) {
 	defer handle.Error(&res)
 	expect(lexer, token.OpenParen).Unwrap()
 	tok := peek(lexer).Unwrap()
-	var root ast.Wat
+	var root ast.Directive
 	switch tok.Type {
 	case token.Module:
 		root = parseModule(lexer).Unwrap()
 	case token.Component:
 		root = parseComponent(lexer).Unwrap()
 	default:
-		return result.Errorf[ast.Wat](
+		return result.Errorf[ast.Directive](
 			"%w : expected module, component but found '%s'",
 			parseError(tok), tok.Capture)
 	}

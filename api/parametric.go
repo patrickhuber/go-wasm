@@ -1,13 +1,11 @@
-package instruction
-
-import "github.com/patrickhuber/go-wasm/types"
+package api
 
 type Drop struct{}
 
 func (*Drop) instruction() {}
 
 type Select struct {
-	Types []types.Value
+	Types []ValType
 }
 
 func (*Select) instruction() {}

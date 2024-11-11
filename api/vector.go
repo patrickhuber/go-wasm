@@ -1,4 +1,4 @@
-package types
+package api
 
 type Vector interface {
 	vector()

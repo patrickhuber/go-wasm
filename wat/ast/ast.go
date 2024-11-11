@@ -2,16 +2,16 @@ package ast
 
 import "github.com/patrickhuber/go-types"
 
-type Wat interface {
-	wat()
+type Directive interface {
+	directive()
 }
 
 type Component struct {
-	Wat
+	Directive
 }
 
 type Module struct {
-	Wat
+	Directive
 	Functions []Function
 	Memory    []Memory
 	Types     []Type

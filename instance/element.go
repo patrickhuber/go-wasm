@@ -1,12 +1,12 @@
 package instance
 
 import (
-	"github.com/patrickhuber/go-wasm/types"
+	"github.com/patrickhuber/go-wasm/api"
 	"github.com/patrickhuber/go-wasm/values"
 )
 
 type Element struct {
-	Type     types.Reference
+	Type     api.Reference
 	Elements []values.Reference
 }
 

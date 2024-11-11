@@ -1,17 +1,17 @@
-package types
+package api
 
 type Reference interface {
 	reference()
 }
 
 type FunctionReference struct {
-	ValueImpl
 }
 
 func (*FunctionReference) reference() {}
+func (*FunctionReference) valType()   {}
 
 type ExternalReference struct {
-	ValueImpl
 }
 
 func (*ExternalReference) reference() {}
+func (*ExternalReference) valType()   {}

@@ -4,9 +4,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/patrickhuber/go-wasm/api"
 	"github.com/patrickhuber/go-wasm/binary"
-	"github.com/patrickhuber/go-wasm/indicies"
-	"github.com/patrickhuber/go-wasm/instruction"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,8 +43,12 @@ func TestDecode(t *testing.T) {
 							Size: 4,
 							Types: []*binary.FunctionType{
 								{
-									Parameters: []binary.ValueType{},
-									Results:    []binary.ValueType{},
+									Parameters: binary.ResultType{
+										Types: []binary.ValType{},
+									},
+									Returns: binary.ResultType{
+										Types: []binary.ValType{},
+									},
 								},
 							},
 						},
@@ -61,8 +64,8 @@ func TestDecode(t *testing.T) {
 								{
 									Size:   2,
 									Locals: []binary.Local{},
-									Expression: []instruction.Instruction{
-										instruction.End{},
+									Expression: []api.Instruction{
+										api.End{},
 									},
 								},
 							},
@@ -87,12 +90,16 @@ func TestDecode(t *testing.T) {
 							Size: 7,
 							Types: []*binary.FunctionType{
 								{
-									Parameters: []binary.ValueType{
-										binary.I32,
-										binary.I32,
+									Parameters: binary.ResultType{
+										Types: []binary.ValType{
+											binary.I32,
+											binary.I32,
+										},
 									},
-									Results: []binary.ValueType{
-										binary.I32,
+									Returns: binary.ResultType{
+										Types: []binary.ValType{
+											binary.I32,
+										},
 									},
 								},
 							},
@@ -109,15 +116,15 @@ func TestDecode(t *testing.T) {
 								{
 									Size:   7,
 									Locals: []binary.Local{},
-									Expression: []instruction.Instruction{
-										instruction.LocalGet{
-											Index: indicies.Local(0),
+									Expression: []api.Instruction{
+										api.LocalGet{
+											Index: api.LocalIndex(0),
 										},
-										instruction.LocalGet{
-											Index: indicies.Local(1),
+										api.LocalGet{
+											Index: api.LocalIndex(1),
 										},
-										instruction.I32Add{},
-										instruction.End{},
+										api.I32Add{},
+										api.End{},
 									},
 								},
 							},

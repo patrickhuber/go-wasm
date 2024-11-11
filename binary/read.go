@@ -8,8 +8,7 @@ import (
 
 	"encoding/binary"
 
-	"github.com/patrickhuber/go-wasm/indicies"
-	"github.com/patrickhuber/go-wasm/instruction"
+	"github.com/patrickhuber/go-wasm/api"
 	"github.com/patrickhuber/go-wasm/leb128"
 	"github.com/patrickhuber/go-wasm/opcode"
 )
@@ -143,27 +142,37 @@ func ReadType(reader io.Reader) (*FunctionType, error) {
 	if b != 0x60 {
 		return nil, fmt.Errorf("expected byte 0x60 but found %b", b)
 	}
-	parameters, err := ReadValueTypeVector(reader)
+	parameters, err := ReadResultType(reader)
 	if err != nil {
 		return nil, err
 	}
-	results, err := ReadValueTypeVector(reader)
+	results, err := ReadResultType(reader)
 	if err != nil {
 		return nil, err
 	}
 	return &FunctionType{
 		Parameters: parameters,
-		Results:    results,
+		Returns:    results,
 	}, nil
 }
 
-func ReadValueTypeVector(reader io.Reader) ([]ValueType, error) {
+func ReadResultType(reader io.Reader) (ResultType, error) {
+	valueTypeVector, err := ReadValueTypeVector(reader)
+	if err != nil {
+		return ResultType{}, err
+	}
+	return ResultType{
+		Types: valueTypeVector,
+	}, nil
+}
+
+func ReadValueTypeVector(reader io.Reader) ([]ValType, error) {
 	// read the size of the vector
 	size, err := ReadLebU128(reader)
 	if err != nil {
 		return nil, err
 	}
-	valueTypes := make([]ValueType, size)
+	valueTypes := make([]ValType, size)
 	for i := uint32(0); i < size; i++ {
 		vt, err := ReadValueType(reader)
 		if err != nil {
@@ -174,12 +183,12 @@ func ReadValueTypeVector(reader io.Reader) ([]ValueType, error) {
 	return valueTypes, nil
 }
 
-func ReadValueType(reader io.Reader) (ValueType, error) {
+func ReadValueType(reader io.Reader) (ValType, error) {
 	b, err := ReadByte(reader)
 	if err != nil {
 		return 0, err
 	}
-	switch ValueType(b) {
+	switch ValType(b) {
 	case I32:
 		return I32, nil
 	case I64:
@@ -257,14 +266,14 @@ func ReadCode(reader io.Reader) (*Code, error) {
 		locals[i] = local
 	}
 
-	var insts []instruction.Instruction
+	var insts []api.Instruction
 	for {
 		inst, err := ReadInstruction(reader)
 		if err != nil {
 			return nil, err
 		}
 		insts = append(insts, inst)
-		_, ok := inst.(instruction.End)
+		_, ok := inst.(api.End)
 		if ok {
 			break
 		}
@@ -287,24 +296,24 @@ func ReadLocal(reader io.Reader) (Local, error) {
 	}, nil
 }
 
-func ReadInstruction(reader io.Reader) (instruction.Instruction, error) {
+func ReadInstruction(reader io.Reader) (api.Instruction, error) {
 	opCode, err := ReadOpCode(reader)
 	if err != nil {
 		return nil, err
 	}
 	switch opCode {
 	case opcode.End:
-		return instruction.End{}, nil
+		return api.End{}, nil
 	case opcode.LocalGet:
 		index, err := ReadLebU128(reader)
 		if err != nil {
 			return nil, err
 		}
-		return instruction.LocalGet{
-			Index: indicies.Local(index),
+		return api.LocalGet{
+			Index: api.LocalIndex(index),
 		}, nil
 	case opcode.I32Add:
-		return instruction.I32Add{}, nil
+		return api.I32Add{}, nil
 	}
 	return nil, fmt.Errorf("invalid opcode %d", opCode)
 }

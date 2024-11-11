@@ -1,33 +1,31 @@
-package instruction
-
-import "github.com/patrickhuber/go-wasm/indicies"
+package api
 
 type LocalGet struct {
-	Index indicies.Local
+	Index LocalIndex
 }
 
 func (LocalGet) instruction() {}
 
 type LocalSet struct {
-	Index indicies.Local
+	Index LocalIndex
 }
 
 func (LocalSet) instruction() {}
 
 type LocalTee struct {
-	Index indicies.Local
+	Index LocalIndex
 }
 
 func (LocalTee) instruction() {}
 
 type GlobalGet struct {
-	Index indicies.Global
+	Index GlobalIndex
 }
 
 func (GlobalGet) instruction() {}
 
 type GlobalSet struct {
-	Index indicies.Global
+	Index GlobalIndex
 }
 
 func (GlobalSet) instruction() {}

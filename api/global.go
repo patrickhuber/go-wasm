@@ -1,4 +1,4 @@
-package types
+package api
 
 type Mutable int
 
@@ -9,7 +9,7 @@ const (
 
 type Global struct {
 	Mutable Mutable
-	Value   Value
+	Value   ValType
 }
 
 // external implements External interface
