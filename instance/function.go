@@ -1,12 +1,16 @@
 package instance
 
-import "github.com/patrickhuber/go-wasm/api"
+import (
+	"github.com/patrickhuber/go-wasm/api"
+)
 
 type Function interface {
 }
 
 type ModuleFunction struct {
-	Type api.FuncType
+	Type   api.FuncType
+	Module *Module
+	Code   *api.Func
 }
 
 func (*ModuleFunction) instance() {}
