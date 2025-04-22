@@ -1,9 +1,12 @@
 package runtime
 
 import (
+	"fmt"
+
 	"github.com/patrickhuber/go-wasm/address"
 	"github.com/patrickhuber/go-wasm/api"
 	"github.com/patrickhuber/go-wasm/instance"
+	"github.com/patrickhuber/go-wasm/values"
 )
 
 // Machine models execution behavior in terms of an abstract machine that models the program state.
@@ -20,19 +23,26 @@ func NewMachine() *Machine {
 }
 
 // Execute executes a wasm program
-func (m *Machine) Execute(module *api.Module, externals []api.External) error {
+func (m *Machine) Execute(module *api.Module, externals []values.Value) ([]values.Value, error) {
 	err := m.validate(module, externals)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return m.allocate(module, externals)
+	err = m.allocate(module)
+	if err != nil {
+		return nil, err
+	}
+	return []values.Value{}, nil
 }
 
-func (m *Machine) validate(module *api.Module, externals []api.External) error {
+func (m *Machine) validate(module *api.Module, externals []values.Value) error {
+	if len(externals) != len(module.Imports) {
+		return fmt.Errorf("module imports should match external values")
+	}
 	return nil
 }
 
-func (m *Machine) allocate(module *api.Module, externals []api.External) error {
+func (m *Machine) allocate(module *api.Module) error {
 	moduleInstance := &instance.Module{}
 	for _, fn := range module.Funcs {
 		funcAddr, err := m.allocFunc(moduleInstance, fn)
