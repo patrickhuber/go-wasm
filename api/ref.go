@@ -12,7 +12,7 @@ type RefIsNull struct {
 func (*RefIsNull) instruction() {}
 
 type RefFunc struct {
-	FunctionIndex FunctionIndex
+	FunctionIndex FuncIndex
 }
 
 func (*RefFunc) instruction() {}

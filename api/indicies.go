@@ -4,9 +4,9 @@ type Index interface {
 	index()
 }
 
-type FunctionIndex uint32
+type FuncIndex uint32
 
-func (FunctionIndex) index() {}
+func (FuncIndex) index() {}
 
 type TypeIndex uint32
 

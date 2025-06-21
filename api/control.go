@@ -74,7 +74,7 @@ type Return struct{}
 func (*Return) instruction() {}
 
 type Call struct {
-	Index FunctionIndex
+	Index FuncIndex
 }
 
 func (*Call) instruction() {}
