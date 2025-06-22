@@ -206,13 +206,13 @@ func ReadValueType(reader io.Reader) (api.ValType, error) {
 	}
 	switch ValType(b) {
 	case I32:
-		return &api.I32Type{}, nil
+		return api.I32Type, nil
 	case I64:
-		return &api.I64Type{}, nil
+		return api.I64Type, nil
 	case F32:
-		return &api.F32Type{}, nil
+		return api.F32Type, nil
 	case F64:
-		return &api.F64Type{}, nil
+		return api.F64Type, nil
 	}
 	return nil, fmt.Errorf("invalid ValueType found %b", b)
 }
@@ -332,8 +332,13 @@ func ReadExpression(reader io.Reader) (*api.Expression, error) {
 }
 
 func UpdateFuncsWithCode(module *api.Module, size uint32, reader io.Reader) error {
-	index := 0
-	for {
+
+	count, err := ReadLebU128(reader)
+	if err != nil {
+		return err
+	}
+
+	for index := 0; index < int(count); index++ {
 		if index >= len(module.Funcs) {
 			return fmt.Errorf("code section has more functions than function section, index %d, funcs %d", index, len(module.Funcs))
 		}
@@ -341,6 +346,7 @@ func UpdateFuncsWithCode(module *api.Module, size uint32, reader io.Reader) erro
 			return fmt.Errorf("code section has negative index %d", index)
 		}
 
+		// function size
 		_, err := ReadLebU128(reader)
 		if err != nil {
 			return err
@@ -358,6 +364,7 @@ func UpdateFuncsWithCode(module *api.Module, size uint32, reader io.Reader) erro
 		}
 		fn.Body = body
 	}
+	return nil
 }
 
 func ReadInstruction(reader io.Reader) (api.Instruction, error) {

@@ -36,7 +36,7 @@ func TestDecode(t *testing.T) {
 				},
 				Directive: &api.Module{
 					Types: []*api.FuncType{
-						&api.FuncType{
+						{
 							Parameters: api.ResultType{
 								Types: []api.ValType{},
 							},
@@ -46,7 +46,7 @@ func TestDecode(t *testing.T) {
 						},
 					},
 					Funcs: []*api.Func{
-						&api.Func{
+						{
 							Locals: []api.ValType{},
 							Body: &api.Expression{
 								Instructions: []api.Instruction{
@@ -68,22 +68,22 @@ func TestDecode(t *testing.T) {
 				},
 				Directive: &api.Module{
 					Types: []*api.FuncType{
-						&api.FuncType{
+						{
 							Parameters: api.ResultType{
 								Types: []api.ValType{
-									&api.I32Type{},
-									&api.I32Type{},
+									api.I32Type,
+									api.I32Type,
 								},
 							},
 							Returns: api.ResultType{
 								Types: []api.ValType{
-									&api.I32Type{},
+									api.I32Type,
 								},
 							},
 						},
 					},
 					Funcs: []*api.Func{
-						&api.Func{
+						{
 							Type:   api.TypeIndex(0),
 							Locals: []api.ValType{},
 							Body: &api.Expression{
