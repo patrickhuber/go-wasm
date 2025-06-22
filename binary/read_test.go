@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDecode(t *testing.T) {
+func TestRead(t *testing.T) {
 	tests := []struct {
 		name     string
 		path     string
