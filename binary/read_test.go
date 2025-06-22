@@ -50,7 +50,7 @@ func TestDecode(t *testing.T) {
 							Locals: []api.ValType{},
 							Body: &api.Expression{
 								Instructions: []api.Instruction{
-									&api.End{},
+									api.End{},
 								},
 							},
 						},
@@ -88,14 +88,14 @@ func TestDecode(t *testing.T) {
 							Locals: []api.ValType{},
 							Body: &api.Expression{
 								Instructions: []api.Instruction{
-									&api.LocalGet{
+									api.LocalGet{
 										Index: api.LocalIndex(0),
 									},
-									&api.LocalGet{
+									api.LocalGet{
 										Index: api.LocalIndex(1),
 									},
-									&api.I32Add{},
-									&api.End{},
+									api.I32Add{},
+									api.End{},
 								},
 							},
 						},
