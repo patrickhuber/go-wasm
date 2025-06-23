@@ -1,8 +1,6 @@
 package address
 
-type Function struct {
-	Address uint32
-}
+type Function uint32
 
-func (*Function) address()       {}
-func (*Function) externalvalue() {}
+func (Function) address()       {}
+func (Function) externalvalue() {}
