@@ -6,6 +6,7 @@ import (
 )
 
 type ModuleInstance struct {
+	store             *Store
 	Types             []api.FuncType
 	FunctionAddresses []address.Function
 	Exports           []ExportInstance
@@ -25,7 +26,9 @@ type FunctionExternalValue struct {
 }
 
 func NewModuleInstance(store *Store, module *api.Module) (*ModuleInstance, error) {
-	moduleInstance := &ModuleInstance{}
+	moduleInstance := &ModuleInstance{
+		store: store,
+	}
 	for _, fn := range module.Funcs {
 		funcAddr := len(store.Funcs)
 		store.Funcs = append(store.Funcs, fn)
