@@ -14,15 +14,7 @@ type ModuleInstance struct {
 
 type ExportInstance struct {
 	Name  string
-	Value ExternalValue
-}
-
-type ExternalValue interface {
-	externalValue()
-}
-
-type FunctionExternalValue struct {
-	Func address.Function
+	Value address.ExternalValue
 }
 
 func NewModuleInstance(store *Store, module *api.Module) (*ModuleInstance, error) {
@@ -35,4 +27,13 @@ func NewModuleInstance(store *Store, module *api.Module) (*ModuleInstance, error
 		moduleInstance.FunctionAddresses = append(moduleInstance.FunctionAddresses, address.Function(funcAddr))
 	}
 	return moduleInstance, nil
+}
+
+func (m *ModuleInstance) GetExport(name string) (ExportInstance, bool) {
+	for _, export := range m.Exports {
+		if export.Name == name {
+			return export, true
+		}
+	}
+	return ExportInstance{}, false
 }
